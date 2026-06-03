@@ -1,0 +1,8 @@
+sessions/
+data/
+__pycache__/
+*.pyc
+ripple.config.json
+*.log
+.env
+node_modules/

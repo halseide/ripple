@@ -1,0 +1,28 @@
+{
+  "projects": [
+    {
+      "key": "my-project",
+      "name": "My Project",
+      "url": "https://my-project.com",
+      "sessions_dir": "./sessions",
+      "git_repo": ".",
+      "goals": [
+        "Increase user engagement — get median session above 60 seconds",
+        "Reduce bounce rate on the landing page",
+        "Drive users to the [key feature] within their first session"
+      ],
+      "interaction_events": [
+        "button_clicked",
+        "feature_used",
+        "purchase_completed"
+      ]
+    }
+  ],
+  "output_dir": "./data",
+  "max_sessions_stored": 300,
+  "thresholds": {
+    "bot_max_duration_s": 2,
+    "ghost_min_duration_s": 300,
+    "deep_min_duration_s": 60
+  }
+}
