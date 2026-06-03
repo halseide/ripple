@@ -424,6 +424,125 @@
             display: none !important;
             opacity: 0;
         }
+
+        /* Session Card Styles */
+        .session-card {
+            background-color: rgba(18, 22, 32, 0.75);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.2rem;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .session-card:hover {
+            border-color: #2e3b56;
+            background-color: var(--bg-card-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+        }
+
+        .session-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .session-visitor-id {
+            font-family: var(--font-mono);
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .session-card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .session-detail-path {
+            background: rgba(0, 0, 0, 0.25);
+            border-left: 3px solid var(--accent-blue);
+            padding: 0.6rem 0.8rem;
+            border-radius: 0 6px 6px 0;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0.2rem 0;
+        }
+
+        /* User journey timeline styles */
+        .journey-session-row {
+            border-left: 2px dashed var(--border-color);
+            padding-left: 1.2rem;
+            margin-left: 0.6rem;
+            position: relative;
+            padding-bottom: 1rem;
+        }
+
+        .journey-session-row:last-child {
+            padding-bottom: 0.2rem;
+            border-left: none;
+        }
+
+        .journey-session-row::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            background: var(--border-color);
+            border-radius: 50%;
+            border: 2px solid var(--bg-card);
+        }
+
+        .journey-session-row.deep::before { background: var(--accent-purple); }
+        .journey-session-row.engaged::before { background: var(--accent-green); }
+        .journey-session-row.glancer::before { background: var(--accent-blue); }
+        .journey-session-row.bounce::before { background: var(--text-muted); }
+        .journey-session-row.ghost::before { background: var(--accent-amber); }
+        .journey-session-row.bot::before { background: var(--accent-red); }
+
+        /* Commit row enhancements */
+        .commit-row {
+            transition: all 0.2s;
+            cursor: pointer;
+            padding: 0.8rem;
+            border-radius: 8px;
+            margin: 0.2rem 0;
+            border: 1px solid transparent;
+        }
+
+        .commit-row:hover {
+            background-color: var(--bg-card-hover);
+            border-color: rgba(34, 42, 61, 0.6);
+        }
+
+        .commit-row.selected {
+            background-color: rgba(56, 139, 253, 0.08);
+            border-color: rgba(56, 139, 253, 0.4);
+            border-left: 4px solid var(--accent-blue);
+            padding-left: calc(0.8rem - 4px);
+        }
+
+        /* Tabs styling */
+        .btn-tab {
+            transition: all 0.2s;
+        }
+        .btn-tab:hover {
+            color: var(--text-main) !important;
+        }
     </style>
 </head>
 <body>
@@ -545,6 +664,100 @@
                     </div>
                 </section>
 
+                <!-- Session Explorer & Journey Analyzer -->
+                <section class="card" id="sessionExplorerSection">
+                    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
+                        <span>🔍 Session Explorer & Journey Analyzer</span>
+                        <span id="explorerModeLabel" style="font-size: 0.85rem; font-weight: normal; color: var(--accent-blue);">All Cumulative Sessions</span>
+                    </h2>
+
+                    <!-- Drill-down active filter info (hidden by default) -->
+                    <div id="drilldownFilterInfo" class="hidden" style="background: rgba(56, 139, 253, 0.1); border: 1px solid rgba(56, 139, 253, 0.25); border-radius: 8px; padding: 0.8rem 1.2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.85rem; color: var(--text-main);">
+                            Showing sessions for commit: <strong id="drilldownCommitHash" style="font-family: var(--font-mono); color: var(--accent-blue);">—</strong> 
+                            (<span id="drilldownCommitMsg"></span>)
+                        </span>
+                        <button class="btn-status" onclick="clearCommitDrilldown()" style="border-color: var(--accent-red); color: var(--accent-red);">Clear Filter</button>
+                    </div>
+
+                    <!-- Explorer Tabs & Summary Metrics -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; text-align: center;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Cumulative Sessions</div>
+                            <div id="statTotalSessions" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); margin-top: 0.2rem; color: var(--accent-blue);">—</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; text-align: center;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Unique Visitors</div>
+                            <div id="statUniqueVisitors" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); margin-top: 0.2rem; color: var(--accent-green);">—</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; text-align: center;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Inferred Journeys</div>
+                            <div id="statInferredJourneys" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); margin-top: 0.2rem; color: var(--accent-purple);">—</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; text-align: center;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Bounce Rate</div>
+                            <div id="statBounceRate" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); margin-top: 0.2rem; color: var(--accent-amber);">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Controls Menu (Filters, Tabs) -->
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.2rem; border-bottom: 1px solid rgba(34, 42, 61, 0.4); padding-bottom: 1rem;">
+                        <!-- Perspective Tabs -->
+                        <div style="display: flex; background: rgba(34, 42, 61, 0.4); padding: 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <button id="tabCumulative" class="btn-tab active" onclick="setExplorerMode('cumulative')" style="background: var(--bg-card); color: var(--text-main); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 600; font-family: var(--font-main);">📁 Cumulative Sessions</button>
+                            <button id="tabUnique" class="btn-tab" onclick="setExplorerMode('unique')" style="background: transparent; color: var(--text-muted); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 600; font-family: var(--font-main); margin-left: 0.25rem;">👥 Inferred Journeys (Unique Visitors)</button>
+                        </div>
+
+                        <!-- Search & Classification Filters -->
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="text" id="explorerSearch" placeholder="Search paths / visitors..." oninput="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.8rem; outline: none; width: 180px; font-family: var(--font-main);">
+                            
+                            <select id="explorerClassFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.8rem; outline: none; cursor: pointer; font-family: var(--font-main);">
+                                <option value="all">All Classifications</option>
+                                <option value="deep">🔥 Deep Users</option>
+                                <option value="engaged">⚡ Engaged Users</option>
+                                <option value="glancer">👀 Glancers</option>
+                                <option value="bounce">🚪 Bounces</option>
+                                <option value="ghost">👻 Ghost Tabs</option>
+                                <option value="bot">🤖 Bots / Directs</option>
+                            </select>
+
+                            <select id="explorerDeviceFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.8rem; outline: none; cursor: pointer; font-family: var(--font-main);">
+                                <option value="all">All Devices</option>
+                                <option value="desktop">💻 Desktop</option>
+                                <option value="mobile">📱 Mobile</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Active Deploy Drilldown Stats Comparison (Visible only in drilldown mode) -->
+                    <div id="drilldownStatsComparison" class="hidden" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.1);">
+                        <div style="padding: 1rem; border-right: 1px solid var(--border-color);">
+                            <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">⏪ Before Deploy (Next Prior Window)</div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Session Count:</span> <strong id="drilldownBeforeCount">—</strong></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median Duration:</span> <strong id="drilldownBeforeDuration">—</strong></div>
+                            <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">Bounce Rate:</span> <strong id="drilldownBeforeBounce">—</strong></div>
+                        </div>
+                        <div style="padding: 1rem; background: rgba(63, 185, 80, 0.03);">
+                            <div style="font-size: 0.8rem; font-weight: 600; color: var(--accent-green); margin-bottom: 0.5rem; text-transform: uppercase;">⏩ After Deploy (Since This Commit)</div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Session Count:</span> <strong id="drilldownAfterCount">—</strong></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median Duration:</span> <strong id="drilldownAfterDuration">—</strong></div>
+                            <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">Bounce Rate:</span> <strong id="drilldownAfterBounce">—</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Active Deploy Tab Selector (Before/After) when drilldown is active -->
+                    <div id="drilldownTabWrapper" class="hidden" style="display:flex; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                        <button id="drilldownTabBefore" onclick="setDrilldownPerspective('before')" style="background:transparent; border:none; border-bottom: 2px solid transparent; color:var(--text-muted); padding: 0.5rem 1rem; font-weight:600; font-size:0.85rem; cursor:pointer; font-family:var(--font-main);">Sessions Before Deploy (<span id="drilldownBeforeTabCount">0</span>)</button>
+                        <button id="drilldownTabAfter" onclick="setDrilldownPerspective('after')" style="background:transparent; border:none; border-bottom: 2px solid var(--accent-green); color:var(--text-main); padding: 0.5rem 1rem; font-weight:600; font-size:0.85rem; cursor:pointer; font-family:var(--font-main);">Sessions After Deploy (<span id="drilldownAfterTabCount">0</span>)</button>
+                    </div>
+
+                    <!-- Session Cards Container -->
+                    <div id="sessionCardsContainer" style="display: flex; flex-direction: column; gap: 0.8rem; max-height: 500px; overflow-y: auto; padding-right: 0.5rem;">
+                        <!-- Dynamic Session cards -->
+                    </div>
+                </section>
+
             </div>
 
         </div>
@@ -555,6 +768,10 @@
         let analyticsData = null;
         let suggestionsData = null;
         let activeProjectKey = "";
+        let explorerMode = "cumulative"; // "cumulative" or "unique"
+        let drilldownCommitHash = null;
+        let drilldownCommitMsgText = "";
+        let drilldownPerspective = "after"; // "before" or "after"
 
         // Initial Data Fetch
         async function init() {
@@ -617,6 +834,8 @@
         function loadProject(projectKey) {
             const project = analyticsData.projects.find(p => p.project_key === projectKey);
             if (!project) return;
+
+            clearCommitDrilldown();
 
             // 1. Render Url & Core Vitals
             document.getElementById('projectUrl').textContent = project.url || '';
@@ -795,6 +1014,9 @@
 
                     const row = document.createElement('div');
                     row.className = "commit-row";
+                    row.onclick = () => {
+                        drilldownToCommit(commit.hash, commit.message_short, row);
+                    };
                     row.innerHTML = `
                         <div class="commit-hash">${hashShort}</div>
                         <div class="commit-info">
@@ -811,6 +1033,489 @@
             } else {
                 commitsContainer.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-muted); padding: 1rem 0; text-align: center;">No deployment events correlated yet.</p>';
             }
+
+            // Fill explorer with initial data
+            applyFilters();
+        }
+
+        // ── Session Explorer & Drill-down Helper Functions ────────────────────────
+
+        function clearCommitDrilldown() {
+            drilldownCommitHash = null;
+            drilldownCommitMsgText = "";
+            document.querySelectorAll('.commit-row').forEach(r => r.classList.remove('selected'));
+            document.getElementById('drilldownFilterInfo').classList.add('hidden');
+            document.getElementById('drilldownStatsComparison').classList.add('hidden');
+            document.getElementById('drilldownTabWrapper').classList.add('hidden');
+            
+            updateModeLabel();
+            applyFilters();
+        }
+
+        function drilldownToCommit(commitHash, commitMsg, rowElement) {
+            const project = analyticsData.projects.find(p => p.project_key === activeProjectKey);
+            if (!project) return;
+
+            const windows = project.deployment_windows || [];
+            const win = windows.find(w => w.commit.hash === commitHash);
+            if (!win) return;
+
+            drilldownCommitHash = commitHash;
+            drilldownCommitMsgText = commitMsg;
+            
+            // Highlight selected commit row
+            document.querySelectorAll('.commit-row').forEach(r => r.classList.remove('selected'));
+            if (rowElement) {
+                rowElement.classList.add('selected');
+            } else {
+                // Try to find row by hash if rowElement is not provided
+                const rows = document.querySelectorAll('.commit-row');
+                rows.forEach(r => {
+                    if (r.querySelector('.commit-hash')?.textContent === commitHash.substring(0,8)) {
+                        r.classList.add('selected');
+                    }
+                });
+            }
+
+            // Fill commit details
+            document.getElementById('drilldownCommitHash').textContent = commitHash.substring(0, 8);
+            document.getElementById('drilldownCommitMsg').textContent = commitMsg;
+            document.getElementById('drilldownFilterInfo').classList.remove('hidden');
+
+            // Compute comparison stats
+            const beforeStats = getWindowStats(win.sessions_before || []);
+            const afterStats = getWindowStats(win.sessions_after || []);
+
+            document.getElementById('drilldownBeforeCount').textContent = beforeStats.count;
+            document.getElementById('drilldownBeforeDuration').textContent = beforeStats.medianDuration;
+            document.getElementById('drilldownBeforeBounce').textContent = beforeStats.bounceRate;
+
+            document.getElementById('drilldownAfterCount').textContent = afterStats.count;
+            document.getElementById('drilldownAfterDuration').textContent = afterStats.medianDuration;
+            document.getElementById('drilldownAfterBounce').textContent = afterStats.bounceRate;
+
+            // Update tab badge numbers
+            document.getElementById('drilldownBeforeTabCount').textContent = beforeStats.count;
+            document.getElementById('drilldownAfterTabCount').textContent = afterStats.count;
+
+            // Show panels
+            document.getElementById('drilldownStatsComparison').classList.remove('hidden');
+            document.getElementById('drilldownTabWrapper').classList.remove('hidden');
+
+            updateModeLabel();
+            applyFilters();
+        }
+
+        function setExplorerMode(mode) {
+            explorerMode = mode;
+            
+            // Toggle active tabs UI
+            document.getElementById('tabCumulative').classList.toggle('active', mode === 'cumulative');
+            document.getElementById('tabUnique').classList.toggle('active', mode === 'unique');
+            
+            // Styles for tabs
+            if (mode === 'cumulative') {
+                document.getElementById('tabCumulative').style.background = 'var(--bg-card)';
+                document.getElementById('tabCumulative').style.color = 'var(--text-main)';
+                document.getElementById('tabUnique').style.background = 'transparent';
+                document.getElementById('tabUnique').style.color = 'var(--text-muted)';
+            } else {
+                document.getElementById('tabUnique').style.background = 'var(--bg-card)';
+                document.getElementById('tabUnique').style.color = 'var(--text-main)';
+                document.getElementById('tabCumulative').style.background = 'transparent';
+                document.getElementById('tabCumulative').style.color = 'var(--text-muted)';
+            }
+
+            updateModeLabel();
+            applyFilters();
+        }
+
+        function updateModeLabel() {
+            const label = document.getElementById('explorerModeLabel');
+            let txt = explorerMode === 'cumulative' ? 'All Cumulative Sessions' : 'Inferred Journeys';
+            if (drilldownCommitHash) {
+                txt += ` (Drilldown: Commit ${drilldownCommitHash.substring(0,8)})`;
+            }
+            label.textContent = txt;
+        }
+
+        function setDrilldownPerspective(perspective) {
+            drilldownPerspective = perspective;
+
+            // Toggle active tab styles
+            const btnBefore = document.getElementById('drilldownTabBefore');
+            const btnAfter = document.getElementById('drilldownTabAfter');
+
+            if (perspective === 'before') {
+                btnBefore.style.borderBottomColor = 'var(--accent-blue)';
+                btnBefore.style.color = 'var(--text-main)';
+                btnAfter.style.borderBottomColor = 'transparent';
+                btnAfter.style.color = 'var(--text-muted)';
+            } else {
+                btnAfter.style.borderBottomColor = 'var(--accent-green)';
+                btnAfter.style.color = 'var(--text-main)';
+                btnBefore.style.borderBottomColor = 'transparent';
+                btnBefore.style.color = 'var(--text-muted)';
+            }
+
+            applyFilters();
+        }
+
+        function getWindowStats(sessions) {
+            if (!sessions || sessions.length === 0) {
+                return { count: 0, medianDuration: "0s", bounceRate: "0.0%" };
+            }
+            const count = sessions.length;
+            
+            // Median duration
+            const sortedDurs = sessions.map(s => s.duration_s || 0).sort((a, b) => a - b);
+            const medianS = sortedDurs[Math.floor(sortedDurs.length / 2)];
+            
+            // Format duration
+            let medianDisplay = "0s";
+            if (medianS < 60) {
+                medianDisplay = Math.round(medianS) + "s";
+            } else {
+                const m = Math.floor(medianS / 60);
+                const s = Math.round(medianS % 60);
+                medianDisplay = `${m}m ${s}s`;
+            }
+            
+            // Bounce rate
+            const bounceCount = sessions.filter(s => s.classification === 'bounce').length;
+            const bounceRate = ((bounceCount / count) * 100).toFixed(1) + "%";
+            
+            return { count, medianDuration: medianDisplay, bounceRate };
+        }
+
+        function applyFilters() {
+            const project = analyticsData.projects.find(p => p.project_key === activeProjectKey);
+            if (!project) return;
+
+            // 1. Get raw base list of sessions
+            let baseSessions = [];
+            if (drilldownCommitHash) {
+                const windows = project.deployment_windows || [];
+                const win = windows.find(w => w.commit.hash === drilldownCommitHash);
+                if (win) {
+                    baseSessions = drilldownPerspective === 'after' ? (win.sessions_after || []) : (win.sessions_before || []);
+                }
+            } else {
+                baseSessions = project.sessions || [];
+            }
+
+            // 2. Apply query, classification, and device filters
+            const query = document.getElementById('explorerSearch').value.toLowerCase().trim();
+            const classFilter = document.getElementById('explorerClassFilter').value;
+            const deviceFilter = document.getElementById('explorerDeviceFilter').value;
+
+            let filtered = baseSessions.filter(s => {
+                // Search query matching
+                const visitorId = s.id.split('_')[1] || s.id;
+                const pathMatch = s.path && s.path.toLowerCase().includes(query);
+                const visitorMatch = visitorId.toLowerCase().includes(query);
+                const refMatch = s.referrer && s.referrer.toLowerCase().includes(query);
+                const queryMatch = !query || pathMatch || visitorMatch || refMatch;
+
+                // Classification matching
+                const classMatch = classFilter === 'all' || s.classification === classFilter;
+
+                // Device matching
+                const deviceMatch = deviceFilter === 'all' || s.device === deviceFilter;
+
+                return queryMatch && classMatch && deviceMatch;
+            });
+
+            // 3. Update summary metrics for the explorer panel
+            updateExplorerMetrics(baseSessions);
+
+            // 4. Render based on explorerMode
+            renderSessionList(filtered);
+        }
+
+        function updateExplorerMetrics(baseList) {
+            const listToUse = baseList || [];
+            
+            // Total sessions
+            const totalSess = listToUse.length;
+            document.getElementById('statTotalSessions').textContent = totalSess;
+
+            // Group by visitor ID to find unique visitors & multi-session users
+            const visitorsMap = {};
+            listToUse.forEach(s => {
+                const vid = s.id.split('_')[1] || s.id;
+                if (!visitorsMap[vid]) visitorsMap[vid] = [];
+                visitorsMap[vid].push(s);
+            });
+
+            const uniqueCount = Object.keys(visitorsMap).length;
+            document.getElementById('statUniqueVisitors').textContent = uniqueCount;
+
+            let multiSessionCount = 0;
+            Object.values(visitorsMap).forEach(sList => {
+                if (sList.length > 1) {
+                    multiSessionCount++;
+                }
+            });
+            document.getElementById('statInferredJourneys').textContent = multiSessionCount;
+
+            // Bounce rate
+            const bounceCount = listToUse.filter(s => s.classification === 'bounce').length;
+            const bounceRate = totalSess > 0 ? ((bounceCount / totalSess) * 100).toFixed(1) + '%' : '0.0%';
+            document.getElementById('statBounceRate').textContent = bounceRate;
+        }
+
+        function renderSessionList(sessions) {
+            const container = document.getElementById('sessionCardsContainer');
+            container.innerHTML = "";
+
+            if (!sessions || sessions.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-style: italic; font-size: 0.9rem;">
+                        No sessions match the current filters.
+                    </div>
+                `;
+                return;
+            }
+
+            if (explorerMode === 'cumulative') {
+                // Render list of individual session cards
+                sessions.forEach(s => {
+                    const card = createSessionCard(s);
+                    container.appendChild(card);
+                });
+            } else {
+                // Render list of visitors (Inferred Journeys)
+                // Group the sessions by visitor ID
+                const visitorsMap = {};
+                sessions.forEach(s => {
+                    const vid = s.id.split('_')[1] || s.id;
+                    if (!visitorsMap[vid]) visitorsMap[vid] = [];
+                    visitorsMap[vid].push(s);
+                });
+
+                // Convert to array and sort visitors by their latest session startTime descending
+                const visitorsList = Object.entries(visitorsMap).map(([vid, sList]) => {
+                    // Sort sessions within this visitor by startTime descending
+                    sList.sort((a, b) => new Date(b.start) - new Date(a.start));
+                    return {
+                        visitorId: vid,
+                        sessions: sList,
+                        latestStart: sList[0].start
+                    };
+                }).sort((a, b) => new Date(b.latestStart) - new Date(a.latestStart));
+
+                visitorsList.forEach(v => {
+                    const card = createVisitorCard(v);
+                    container.appendChild(card);
+                });
+            }
+        }
+
+        function createSessionCard(s) {
+            const visitorId = s.id.split('_')[1] || s.id;
+            const card = document.createElement('div');
+            card.className = "session-card";
+            card.onclick = (e) => {
+                // Prevent toggle if clicking on interactive elements inside
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.session-expanded-details')) return;
+                toggleSessionDetails(s.id);
+            };
+
+            const classBadges = {
+                deep: { label: "🔥 deep", color: "var(--accent-purple)", bg: "rgba(188, 140, 255, 0.1)" },
+                engaged: { label: "⚡ engaged", color: "var(--accent-green)", bg: "rgba(63, 185, 80, 0.1)" },
+                glancer: { label: "👀 glancer", color: "var(--accent-blue)", bg: "rgba(56, 139, 253, 0.1)" },
+                bounce: { label: "🚪 bounce", color: "var(--text-muted)", bg: "rgba(139, 148, 158, 0.1)" },
+                ghost: { label: "👻 ghost", color: "var(--accent-amber)", bg: "rgba(210, 153, 34, 0.1)" },
+                bot: { label: "🤖 bot", color: "var(--accent-red)", bg: "rgba(248, 81, 73, 0.1)" }
+            };
+
+            const badge = classBadges[s.classification] || { label: s.classification, color: "var(--text-muted)", bg: "rgba(255,255,255,0.05)" };
+            const formattedDate = new Date(s.start).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            
+            const deviceIcon = s.device === 'mobile' ? '📱 Mobile' : '💻 Desktop';
+            const referrerDisplay = s.referrer === 'direct' ? 'direct traffic' : `from ${s.referrer}`;
+
+            // Create views sub-markup
+            const viewsList = s.views || [];
+            const viewsMarkup = viewsList.map(v => `
+                <span style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-main);">
+                    ${v.view}: <strong style="color: var(--accent-blue);">${v.duration}</strong>
+                </span>
+            `).join('');
+
+            // Create events sub-markup
+            const eventsList = s.events || [];
+            let eventsMarkup = "";
+            if (eventsList.length === 0) {
+                eventsMarkup = `<div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No interactive events registered.</div>`;
+            } else {
+                eventsMarkup = eventsList.map(e => {
+                    const t = new Date(e.timestamp);
+                    const timeOnly = t.toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    
+                    let detailsStr = "";
+                    if (e.details) {
+                        if (e.details.conclusion) detailsStr = `<span style="color: var(--accent-green);">[conclusion: ${e.details.conclusion}]</span>`;
+                        else if (e.details.to) detailsStr = `<span style="color: var(--text-muted);">→ ${e.details.to}</span>`;
+                        else if (e.details.title) detailsStr = `<span style="color: var(--accent-amber); font-weight: 500;">"${e.details.title}"</span>`;
+                        else if (e.details.modal) detailsStr = `<span style="color: var(--accent-purple);">[modal: ${e.details.modal}]</span>`;
+                        else if (e.details.timeOnPage) detailsStr = `<span style="color: var(--text-muted);">(stayed ${parseFloat(e.details.timeOnPage).toFixed(1)}s)</span>`;
+                    }
+                    
+                    return `
+                        <div style="font-size: 0.75rem; font-family: var(--font-mono); display: flex; gap: 0.6rem; color: var(--text-muted); line-height: 1.4;">
+                            <span style="color: var(--accent-blue); font-weight: 500;">${timeOnly}</span>
+                            <span style="color: var(--text-main); font-weight: 600; min-width: 100px;">${e.name}</span>
+                            <span>${detailsStr}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            card.innerHTML = `
+                <div class="session-card-header">
+                    <span class="session-visitor-id" title="${s.id}">👤 ${visitorId}</span>
+                    <span style="background:${badge.bg}; color:${badge.color}; padding:0.15rem 0.4rem; border-radius:4px; font-size:0.7rem; font-weight:700; text-transform:uppercase; border: 1px solid ${badge.color}33;">${badge.label}</span>
+                </div>
+                <div class="session-card-meta">
+                    <span>📅 ${formattedDate}</span>
+                    <span>•</span>
+                    <span>⏱️ Duration: <strong>${s.duration}</strong></span>
+                    <span>•</span>
+                    <span>${deviceIcon} (${s.browser})</span>
+                    <span>•</span>
+                    <span>🔗 ${referrerDisplay}</span>
+                </div>
+                <div class="session-detail-path">
+                    <span>${s.path || '(no path)'}</span>
+                    <span style="font-size: 0.75rem; color: var(--accent-blue); font-weight: 600;">Details ▾</span>
+                </div>
+                
+                <div id="details-${s.id}" class="session-expanded-details hidden" style="margin-top: 0.8rem; border-top: 1px solid rgba(34, 42, 61, 0.4); padding-top: 0.8rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                    <div>
+                        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">View Durations</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            ${viewsMarkup}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">Behavior Timeline</div>
+                        <div style="display: flex; flex-direction: column; gap: 0.3rem; background: rgba(0,0,0,0.2); padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid rgba(34,42,61,0.25);">
+                            ${eventsMarkup}
+                        </div>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        function createVisitorCard(v) {
+            const card = document.createElement('div');
+            card.className = "session-card";
+            card.style.cursor = "default";
+            
+            const firstSess = v.sessions[v.sessions.length - 1];
+            const latestSess = v.sessions[0];
+            const deviceIcon = latestSess.device === 'mobile' ? '📱 Mobile' : '💻 Desktop';
+            
+            const sessionsTimelineMarkup = v.sessions.map(s => {
+                const sDate = new Date(s.start).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                
+                const classBadges = {
+                    deep: { label: "deep", color: "var(--accent-purple)", bg: "rgba(188, 140, 255, 0.1)" },
+                    engaged: { label: "engaged", color: "var(--accent-green)", bg: "rgba(63, 185, 80, 0.1)" },
+                    glancer: { label: "glancer", color: "var(--accent-blue)", bg: "rgba(56, 139, 253, 0.1)" },
+                    bounce: { label: "bounce", color: "var(--text-muted)", bg: "rgba(139, 148, 158, 0.1)" },
+                    ghost: { label: "ghost", color: "var(--accent-amber)", bg: "rgba(210, 153, 34, 0.1)" },
+                    bot: { label: "bot", color: "var(--accent-red)", bg: "rgba(248, 81, 73, 0.1)" }
+                };
+                const badge = classBadges[s.classification] || { label: s.classification, color: "var(--text-muted)", bg: "rgba(255,255,255,0.05)" };
+                
+                const viewsMarkup = (s.views || []).map(v => `
+                    <span style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-family: var(--font-mono); color: var(--text-muted);">
+                        ${v.view}: <strong>${v.duration}</strong>
+                    </span>
+                `).join('');
+
+                const eventsMarkup = (s.events || []).map(e => {
+                    const t = new Date(e.timestamp);
+                    const timeOnly = t.toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    let detailsStr = "";
+                    if (e.details) {
+                        if (e.details.conclusion) detailsStr = `<span style="color: var(--accent-green);">[conclusion: ${e.details.conclusion}]</span>`;
+                        else if (e.details.to) detailsStr = `<span style="color: var(--text-muted);">→ ${e.details.to}</span>`;
+                        else if (e.details.title) detailsStr = `<span style="color: var(--accent-amber); font-weight: 500;">"${e.details.title}"</span>`;
+                        else if (e.details.modal) detailsStr = `<span style="color: var(--accent-purple);">[modal: ${e.details.modal}]</span>`;
+                        else if (e.details.timeOnPage) detailsStr = `<span style="color: var(--text-muted);">(stayed ${parseFloat(e.details.timeOnPage).toFixed(1)}s)</span>`;
+                    }
+                    return `
+                        <div style="font-size: 0.7rem; font-family: var(--font-mono); display: flex; gap: 0.5rem; color: var(--text-muted); line-height: 1.4;">
+                            <span style="color: var(--accent-blue);">${timeOnly}</span>
+                            <span style="color: var(--text-main); font-weight: 600;">${e.name}</span>
+                            <span>${detailsStr}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="journey-session-row ${s.classification}">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; cursor:pointer;" onclick="toggleSessionDetails('${s.id}')">
+                            <div>
+                                <span style="font-weight:600; color:var(--text-main);">${sDate}</span>
+                                <span style="color:var(--text-muted); margin-left:0.5rem;">⏱️ ${s.duration}</span>
+                                <span style="color:var(--text-muted); margin-left:0.5rem;">🔗 ${s.referrer === 'direct' ? 'direct' : s.referrer}</span>
+                            </div>
+                            <span style="background:${badge.bg}; color:${badge.color}; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.65rem; font-weight:700; text-transform:uppercase; border: 1px solid ${badge.color}22;">${badge.label}</span>
+                        </div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem; font-family:var(--font-mono); display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSessionDetails('${s.id}')">
+                            <span>Path: <strong style="color:var(--text-main);">${s.path || '(no path)'}</strong></span>
+                            <span style="font-size: 0.7rem; color: var(--accent-blue);">Inspect ▾</span>
+                        </div>
+                        
+                        <div id="details-${s.id}" class="session-expanded-details hidden" style="margin-top: 0.6rem; border-top: 1px solid rgba(34, 42, 61, 0.3); padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                            <div>
+                                <div style="font-size: 0.68rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase;">View Durations</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">
+                                    ${viewsMarkup || '<span style="color:var(--text-muted); font-style:italic; font-size:0.7rem;">None</span>'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.68rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase;">Behavior Timeline</div>
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem; background: rgba(0,0,0,0.18); padding: 0.5rem 0.7rem; border-radius: 6px; border: 1px solid rgba(34,42,61,0.2);">
+                                    ${eventsMarkup || '<div style="color:var(--text-muted); font-style:italic; font-size:0.7rem;">None</div>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            card.innerHTML = `
+                <div class="session-visitor-id" style="font-size: 0.9rem; border-bottom: 1px solid rgba(34, 42, 61, 0.4); padding-bottom: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span>👥 Visitor: ${v.visitorId}</span>
+                    <span style="font-size: 0.75rem; background: rgba(56, 139, 253, 0.1); border: 1px solid rgba(56, 139, 253, 0.2); padding: 0.15rem 0.5rem; border-radius: 20px; color: var(--text-main); font-weight: 600;">
+                        ${v.sessions.length} visit${v.sessions.length > 1 ? 's' : ''}
+                    </span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; gap: 0.8rem;">
+                    <span>📱 Device: ${deviceIcon} (${latestSess.browser})</span>
+                    <span>•</span>
+                    <span>⏱️ Total visits span: ${v.sessions.length > 1 ? 'Multi-session' : 'Single session'}</span>
+                </div>
+                
+                <div style="display: flex; flex-direction: column;">
+                    ${sessionsTimelineMarkup}
+                </div>
+            `;
+            return card;
+        }
+
+        function toggleSessionDetails(sessionId) {
+            const detailsDiv = document.getElementById(`details-${sessionId}`);
+            if (!detailsDiv) return;
+            detailsDiv.classList.toggle('hidden');
         }
 
         function acknowledgeSuggestion(id) {
