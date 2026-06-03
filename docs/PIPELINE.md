@@ -95,8 +95,10 @@ Answer these in order — the first one that fails means re-evaluate:
 - [x] Extract session_analytics.py → `src/analytics/session_analytics.py`
 - [x] Write `ripple.config.json` format, example, and live example config
 - [x] Write `scripts/analyze.py` standalone entry point
-- [ ] **NOW:** Build `src/git/git_reader.py` — reads git log → structured deployment events
-- [ ] Build `src/intelligence/agent.py` — diffs + deployments + goals → `data/ripple_suggestions.json`
+- [x] **DONE:** Build `src/git/git_reader.py` — reads git log → structured deployment events
+  - Live test: 3 commits read from example.com, 3 deployment windows computed (before=101/after=0, before=0/after=101)
+  - Full pipeline runs clean: sessions + git + windows all wired, written to `data/project_analytics.json`
+- [ ] **NOW:** Build `src/intelligence/agent.py` — diffs + deployments + goals → `data/ripple_suggestions.json`
 - [ ] Build minimal `src/dashboard/index.html` — deployments + suggestions view
 - [ ] Run `scripts/analyze.py` against example.com live data end-to-end
 - [ ] **GATE CHECK:** Are first 2 suggestions specific and grounded? Yes → advance to Test stage
