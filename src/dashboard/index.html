@@ -700,33 +700,104 @@
                         </div>
                     </div>
 
-                    <!-- Controls Menu (Filters, Tabs) -->
-                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.2rem; border-bottom: 1px solid rgba(34, 42, 61, 0.4); padding-bottom: 1rem;">
+                    <!-- Perspective Tabs & Search -->
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(34, 42, 61, 0.2);">
                         <!-- Perspective Tabs -->
                         <div style="display: flex; background: rgba(34, 42, 61, 0.4); padding: 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
                             <button id="tabCumulative" class="btn-tab active" onclick="setExplorerMode('cumulative')" style="background: var(--bg-card); color: var(--text-main); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 600; font-family: var(--font-main);">📁 Cumulative Sessions</button>
                             <button id="tabUnique" class="btn-tab" onclick="setExplorerMode('unique')" style="background: transparent; color: var(--text-muted); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 600; font-family: var(--font-main); margin-left: 0.25rem;">👥 Inferred Journeys (Unique Visitors)</button>
                         </div>
+                        <!-- Search Query -->
+                        <div style="display: flex; flex-grow: 1; max-width: 400px; position: relative;">
+                            <input type="text" id="explorerSearch" placeholder="Search path, visitor, referrer, details..." oninput="applyFilters()" style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                        </div>
+                    </div>
 
-                        <!-- Search & Classification Filters -->
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <input type="text" id="explorerSearch" placeholder="Search paths / visitors..." oninput="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.8rem; outline: none; width: 180px; font-family: var(--font-main);">
+                    <!-- Consolidated Filters & Sorting Controls -->
+                    <div style="background: rgba(34, 42, 61, 0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                        <!-- Filters Grid -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.8rem;">
+                            <!-- Project Select -->
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Project</label>
+                                <select id="explorerProjectFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <option value="all">All Projects</option>
+                                </select>
+                            </div>
+                            <!-- Date Select -->
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Date</label>
+                                <select id="explorerDateFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <option value="all">All Dates</option>
+                                </select>
+                            </div>
+                            <!-- Duration Filter -->
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Duration</label>
+                                <select id="explorerDurationFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <option value="all">All Durations</option>
+                                    <option value="bounce">&lt; 10s</option>
+                                    <option value="short">10s - 1m</option>
+                                    <option value="medium">1m - 5m</option>
+                                    <option value="long">&gt; 5m</option>
+                                </select>
+                            </div>
+                            <!-- Platform/Device Filter -->
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Platform</label>
+                                <select id="explorerDeviceFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <option value="all">All Platforms</option>
+                                    <option value="desktop">💻 Desktop</option>
+                                    <option value="mobile">📱 Mobile</option>
+                                </select>
+                            </div>
+                            <!-- Browser Filter -->
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Browser</label>
+                                <select id="explorerBrowserFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <option value="all">All Browsers</option>
+                                </select>
+                            </div>
+                            <!-- Traffic Source Filter -->
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Traffic Source</label>
+                                <select id="explorerSourceFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <option value="all">All Sources</option>
+                                </select>
+                            </div>
+                            <!-- User Type Filter -->
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">User Type</label>
+                                <select id="explorerClassFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <option value="all">All Types</option>
+                                    <option value="deep">🔥 Deep User</option>
+                                    <option value="engaged">⚡ Engaged User</option>
+                                    <option value="glancer">👀 Glancer</option>
+                                    <option value="bounce">🚪 Bounce</option>
+                                    <option value="ghost">👻 Ghost Tab</option>
+                                    <option value="bot">🤖 Bot / Direct</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Sorting Bar -->
+                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 0.8rem; margin-top: 0.2rem; gap: 0.8rem;">
+                            <!-- Reset filters button -->
+                            <button onclick="resetAllFilters()" style="background: transparent; border: 1px solid rgba(248, 81, 73, 0.3); color: var(--accent-red); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">🧹 Reset All Filters</button>
                             
-                            <select id="explorerClassFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.8rem; outline: none; cursor: pointer; font-family: var(--font-main);">
-                                <option value="all">All Classifications</option>
-                                <option value="deep">🔥 Deep Users</option>
-                                <option value="engaged">⚡ Engaged Users</option>
-                                <option value="glancer">👀 Glancers</option>
-                                <option value="bounce">🚪 Bounces</option>
-                                <option value="ghost">👻 Ghost Tabs</option>
-                                <option value="bot">🤖 Bots / Directs</option>
-                            </select>
-
-                            <select id="explorerDeviceFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.8rem; outline: none; cursor: pointer; font-family: var(--font-main);">
-                                <option value="all">All Devices</option>
-                                <option value="desktop">💻 Desktop</option>
-                                <option value="mobile">📱 Mobile</option>
-                            </select>
+                            <!-- Sort Controls -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Sort By</span>
+                                <select id="explorerSortBy" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <option value="start">🕒 Start Time</option>
+                                    <option value="duration">⏱️ Session Duration</option>
+                                    <option value="visits" id="sortOptionVisits" class="hidden">👥 Visits Count</option>
+                                </select>
+                                <select id="explorerSortOrder" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <option value="desc">Descending ▾</option>
+                                    <option value="asc">Ascending ▴</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -804,44 +875,103 @@
         }
 
         function populateProjectSelector() {
-            const select = document.getElementById('projectSelect');
-            select.innerHTML = "";
+            const selectTop = document.getElementById('projectSelect');
+            const selectBottom = document.getElementById('explorerProjectFilter');
+            
+            selectTop.innerHTML = "";
+            selectBottom.innerHTML = "";
 
             if (!analyticsData.projects || analyticsData.projects.length === 0) {
-                select.innerHTML = '<option value="">No projects found</option>';
+                const opt = '<option value="">No projects found</option>';
+                selectTop.innerHTML = opt;
+                selectBottom.innerHTML = opt;
                 return;
             }
 
+            // Options list
+            const options = [];
+            options.push({ value: "all", text: "All Projects (Combined)" });
             analyticsData.projects.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.project_key;
-                opt.textContent = p.project;
-                select.appendChild(opt);
+                options.push({ value: p.project_key, text: p.project });
             });
 
-            // Set first active project
-            if (select.options.length > 0) {
-                activeProjectKey = select.options[0].value;
-                loadProject(activeProjectKey);
-            }
+            options.forEach(optData => {
+                const opt1 = document.createElement('option');
+                opt1.value = optData.value;
+                opt1.textContent = optData.text;
+                selectTop.appendChild(opt1);
 
-            select.addEventListener('change', (e) => {
-                activeProjectKey = e.target.value;
-                loadProject(activeProjectKey);
+                const opt2 = document.createElement('option');
+                opt2.value = optData.value;
+                opt2.textContent = optData.text;
+                selectBottom.appendChild(opt2);
+            });
+
+            // Set default active project
+            activeProjectKey = "all";
+            selectTop.value = "all";
+            selectBottom.value = "all";
+            loadProjectDetails("all");
+            applyFilters();
+
+            // Event Listeners for Selector Synchronization
+            selectTop.addEventListener('change', (e) => {
+                const val = e.target.value;
+                selectBottom.value = val;
+                activeProjectKey = val;
+                loadProjectDetails(val);
+                applyFilters();
+            });
+
+            selectBottom.addEventListener('change', (e) => {
+                const val = e.target.value;
+                selectTop.value = val;
+                activeProjectKey = val;
+                loadProjectDetails(val);
+                applyFilters();
             });
         }
 
-        function loadProject(projectKey) {
-            const project = analyticsData.projects.find(p => p.project_key === projectKey);
+        function loadProjectDetails(projectKey) {
+            let project = null;
+            if (projectKey === "all") {
+                project = getCombinedProjectVirtual();
+            } else {
+                project = analyticsData.projects.find(p => p.project_key === projectKey);
+                if (project) {
+                    if (project.sessions) {
+                        project.sessions.forEach(s => {
+                            s.project_key = project.project_key;
+                            s.project_name = project.project;
+                        });
+                    }
+                    if (project.deployment_windows) {
+                        project.deployment_windows.forEach(w => {
+                            w.project_key = project.project_key;
+                            w.project_name = project.project;
+                            if (w.sessions_before) {
+                                w.sessions_before.forEach(s => {
+                                    s.project_key = project.project_key;
+                                    s.project_name = project.project;
+                                });
+                            }
+                            if (w.sessions_after) {
+                                w.sessions_after.forEach(s => {
+                                    s.project_key = project.project_key;
+                                    s.project_name = project.project;
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
             if (!project) return;
 
             clearCommitDrilldown();
 
-            // 1. Render Url & Core Vitals
+            // 1. Render Url
             document.getElementById('projectUrl').textContent = project.url || '';
-            document.getElementById('metricRealUsers').textContent = project.real_user_count || 0;
-            document.getElementById('metricEngRate').textContent = (project.engagement_rate_pct || 0).toFixed(1) + '%';
-            document.getElementById('metricMedianDuration').textContent = project.duration?.median_display || '0s';
 
             // 2. Render Goals
             const goalsContainer = document.getElementById('goalsList');
@@ -860,94 +990,14 @@
                 goalsContainer.innerHTML = '<p style="font-size: 0.8rem; color: var(--text-muted);">No goals defined for this project.</p>';
             }
 
-            // 2b. Render Raw Traffic Classification
-            const rawContainer = document.getElementById('classificationBreakdown');
-            rawContainer.innerHTML = "";
-            
-            if (project.error && project.error !== "No session files found") {
-                rawContainer.innerHTML = `<p style="color: var(--accent-red); font-size: 0.8rem;">${project.error}</p>`;
-            } else {
-                const breakdown = project.classification_breakdown || {};
-                const total = project.total_raw || 0;
-                
-                const classes = [
-                    { key: "deep", label: "🔥 Deep Users", color: "var(--accent-purple)" },
-                    { key: "engaged", label: "⚡ Engaged Users", color: "var(--accent-green)" },
-                    { key: "glancer", label: "👀 Glancers", color: "var(--accent-blue)" },
-                    { key: "bounce", label: "🚪 Bounces", color: "var(--text-muted)" },
-                    { key: "ghost", label: "👻 Ghost Tabs", color: "var(--accent-amber)" },
-                    { key: "bot", label: "🤖 Bots / Directs", color: "var(--accent-red)" }
-                ];
-                
-                if (total === 0) {
-                    rawContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">No session traffic logged yet.</p>`;
-                } else {
-                    classes.forEach(c => {
-                        const val = breakdown[c.key] || 0;
-                        const pct = total > 0 ? (val / total * 100).toFixed(0) : 0;
-                        
-                        const row = document.createElement('div');
-                        row.style.marginBottom = "0.5rem";
-                        row.innerHTML = `
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.15rem; font-size: 0.8rem;">
-                                <span style="color:${c.color}">${c.label}</span>
-                                <span><strong>${val}</strong> (${pct}%)</span>
-                            </div>
-                            <div style="width:100%; height:4px; background:var(--border-color); border-radius:2px; overflow:hidden;">
-                                <div style="width:${pct}%; height:100%; background:${c.color}"></div>
-                            </div>
-                        `;
-                        rawContainer.appendChild(row);
-                    });
-                }
-            }
-
-            // 2c. Render Devices & Referrers
-            const devRefContainer = document.getElementById('deviceReferrerStats');
-            devRefContainer.innerHTML = "";
-            
-            if (project.error && project.error !== "No session files found") {
-                devRefContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem;">No device telemetry available.</p>`;
-            } else {
-                const total = project.total_raw || 0;
-                if (total === 0) {
-                    devRefContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">Awaiting connection data...</p>`;
-                } else {
-                    // Devices
-                    const dev = project.device || {};
-                    const devStrings = [];
-                    if (dev.desktop) devStrings.push(`💻 Desktop: ${dev.desktop}`);
-                    if (dev.mobile) devStrings.push(`📱 Mobile: ${dev.mobile}`);
-                    if (dev.tablet) devStrings.push(`📟 Tablet: ${dev.tablet}`);
-                    
-                    const devDiv = document.createElement('div');
-                    devDiv.innerHTML = `
-                        <div style="font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">Device Split</div>
-                        <div style="color:var(--text-muted); font-family:var(--font-mono);">${devStrings.join(' | ') || 'None'}</div>
-                    `;
-                    devRefContainer.appendChild(devDiv);
-                    
-                    // Referrers
-                    const refs = project.top_referrers || [];
-                    const refItems = refs.map(r => `<li>${r.referrer}: <strong>${r.count}</strong></li>`).join('');
-                    
-                    const refDiv = document.createElement('div');
-                    refDiv.innerHTML = `
-                        <div style="font-weight:600; color:var(--text-main); margin-bottom:0.3rem; margin-top:0.5rem;">Top Referrers</div>
-                        <ul style="color:var(--text-muted); list-style:none; padding-left:0; font-family:var(--font-mono); font-size:0.8rem; display:flex; flex-direction:column; gap:0.25rem;">
-                            ${refItems || '<li>Direct / unknown</li>'}
-                        </ul>
-                    `;
-                    devRefContainer.appendChild(refDiv);
-                }
-            }
-
             // 3. Render Suggestions
             const suggestionsContainer = document.getElementById('suggestionsContainer');
             suggestionsContainer.innerHTML = "";
             
             // Filter suggestions for active project
-            const projectSuggestions = (suggestionsData.suggestions || []).filter(s => s.project_key === projectKey);
+            const projectSuggestions = (suggestionsData.suggestions || []).filter(s => {
+                return projectKey === 'all' || s.project_key === projectKey;
+            });
             document.getElementById('suggestionCount').textContent = projectSuggestions.length;
 
             if (projectSuggestions.length > 0) {
@@ -985,57 +1035,100 @@
                 `;
             }
 
-            // 4. Render Commits & Correlation Loops
-            const commitsContainer = document.getElementById('commitsContainer');
-            commitsContainer.innerHTML = "";
+            // Populate filter selections dynamically based on the project's sessions
+            populateFilterDropdowns(project);
+        }
 
-            const windows = project.deployment_windows || [];
-            if (windows.length > 0) {
-                windows.forEach(w => {
-                    const commit = w.commit;
-                    const hashShort = commit.hash.substring(0, 8);
-                    
-                    // Compute before/after diff indicators
-                    let diffClass = "none";
-                    let diffSymbol = "";
-                    let diffDisplay = "no diff";
+        // ── Combined Projects Virtual Aggregator ──────────────────────────────────
 
-                    if (w.before_count > 0 && w.after_count > 0) {
-                        const delta = w.after_count - w.before_count;
-                        const pct = Math.abs(delta / w.before_count * 100);
-                        if (pct >= 5) {
-                            diffClass = delta >= 0 ? "up" : "down";
-                            diffSymbol = delta >= 0 ? "+" : "-";
-                            diffDisplay = `${diffSymbol}${pct.toFixed(0)}%`;
+        function getCombinedProjectVirtual() {
+            const allProjects = analyticsData.projects;
+            const project = {
+                project: "All Projects (Combined)",
+                project_key: "all",
+                url: "multi-tenant system",
+                real_user_count: allProjects.reduce((acc, p) => acc + (p.real_user_count || 0), 0),
+                total_raw: allProjects.reduce((acc, p) => acc + (p.total_raw || 0), 0),
+                goals: ["Select a specific project to view and check off individual goals."],
+                classification_breakdown: {},
+                device: { mobile: 0, desktop: 0 },
+                top_referrers: [],
+                top_events: [],
+                sessions: [],
+                deployment_windows: []
+            };
+
+            allProjects.forEach(p => {
+                if (p.classification_breakdown) {
+                    Object.entries(p.classification_breakdown).forEach(([k, v]) => {
+                        project.classification_breakdown[k] = (project.classification_breakdown[k] || 0) + v;
+                    });
+                }
+                if (p.device) {
+                    project.device.mobile += (p.device.mobile || 0);
+                    project.device.desktop += (p.device.desktop || 0);
+                }
+                if (p.top_referrers) {
+                    p.top_referrers.forEach(r => {
+                        const existing = project.top_referrers.find(x => x.source === r.source);
+                        if (existing) {
+                            existing.count += r.count;
                         } else {
-                            diffDisplay = "stable";
+                            project.top_referrers.push({ source: r.source, count: r.count });
                         }
-                    }
+                    });
+                }
+                if (p.sessions) {
+                    p.sessions.forEach(s => {
+                        project.sessions.push({ ...s, project_key: p.project_key, project_name: p.project });
+                    });
+                }
+                if (p.deployment_windows) {
+                    p.deployment_windows.forEach(w => {
+                        const winCopy = {
+                            ...w,
+                            project_key: p.project_key,
+                            project_name: p.project,
+                            sessions_before: (w.sessions_before || []).map(s => ({ ...s, project_key: p.project_key, project_name: p.project })),
+                            sessions_after: (w.sessions_after || []).map(s => ({ ...s, project_key: p.project_key, project_name: p.project }))
+                        };
+                        project.deployment_windows.push(winCopy);
+                    });
+                }
+            });
 
-                    const row = document.createElement('div');
-                    row.className = "commit-row";
-                    row.onclick = () => {
-                        drilldownToCommit(commit.hash, commit.message_short, row);
-                    };
-                    row.innerHTML = `
-                        <div class="commit-hash">${hashShort}</div>
-                        <div class="commit-info">
-                            <h4>${commit.message_short}</h4>
-                            <p>${commit.date_display} • by ${commit.author_name}</p>
-                        </div>
-                        <div class="diff-metric-pill">
-                            <div class="diff-side before">${w.before_count} sess</div>
-                            <div class="diff-side after ${diffClass}">${w.after_count} sess (${diffDisplay})</div>
-                        </div>
-                    `;
-                    commitsContainer.appendChild(row);
-                });
+            project.top_referrers.sort((a, b) => b.count - a.count);
+            project.deployment_windows.sort((a, b) => b.commit.date_ts - a.commit.date_ts);
+            
+            // Calculate combined engagement rate
+            let totalHuman = 0;
+            let totalEngaged = 0;
+            allProjects.forEach(p => {
+                const breakdown = p.classification_breakdown || {};
+                const botCount = breakdown.bot || 0;
+                const human = (p.total_raw || 0) - botCount;
+                const engaged = (breakdown.engaged || 0) + (breakdown.deep || 0);
+                totalHuman += human;
+                totalEngaged += engaged;
+            });
+            project.engagement_rate_pct = totalHuman > 0 ? (totalEngaged / totalHuman * 100) : 0.0;
+
+            // Combined median duration
+            const allDurations = project.sessions.map(s => s.duration_s || 0).sort((a, b) => a - b);
+            if (allDurations.length > 0) {
+                const medS = allDurations[Math.floor(allDurations.length / 2)];
+                if (medS < 60) {
+                    project.duration = { median_display: Math.round(medS) + "s" };
+                } else {
+                    const m = Math.floor(medS / 60);
+                    const s = Math.round(medS % 60);
+                    project.duration = { median_display: `${m}m ${s}s` };
+                }
             } else {
-                commitsContainer.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-muted); padding: 1rem 0; text-align: center;">No deployment events correlated yet.</p>';
+                project.duration = { median_display: "0s" };
             }
 
-            // Fill explorer with initial data
-            applyFilters();
+            return project;
         }
 
         // ── Session Explorer & Drill-down Helper Functions ────────────────────────
@@ -1053,7 +1146,7 @@
         }
 
         function drilldownToCommit(commitHash, commitMsg, rowElement) {
-            const project = analyticsData.projects.find(p => p.project_key === activeProjectKey);
+            const project = activeProjectKey === 'all' ? getCombinedProjectVirtual() : analyticsData.projects.find(p => p.project_key === activeProjectKey);
             if (!project) return;
 
             const windows = project.deployment_windows || [];
@@ -1068,10 +1161,9 @@
             if (rowElement) {
                 rowElement.classList.add('selected');
             } else {
-                // Try to find row by hash if rowElement is not provided
                 const rows = document.querySelectorAll('.commit-row');
                 rows.forEach(r => {
-                    if (r.querySelector('.commit-hash')?.textContent === commitHash.substring(0,8)) {
+                    if (r.querySelector('.commit-hash')?.textContent.includes(commitHash.substring(0,8))) {
                         r.classList.add('selected');
                     }
                 });
@@ -1082,22 +1174,7 @@
             document.getElementById('drilldownCommitMsg').textContent = commitMsg;
             document.getElementById('drilldownFilterInfo').classList.remove('hidden');
 
-            // Compute comparison stats
-            const beforeStats = getWindowStats(win.sessions_before || []);
-            const afterStats = getWindowStats(win.sessions_after || []);
-
-            document.getElementById('drilldownBeforeCount').textContent = beforeStats.count;
-            document.getElementById('drilldownBeforeDuration').textContent = beforeStats.medianDuration;
-            document.getElementById('drilldownBeforeBounce').textContent = beforeStats.bounceRate;
-
-            document.getElementById('drilldownAfterCount').textContent = afterStats.count;
-            document.getElementById('drilldownAfterDuration').textContent = afterStats.medianDuration;
-            document.getElementById('drilldownAfterBounce').textContent = afterStats.bounceRate;
-
-            // Update tab badge numbers
-            document.getElementById('drilldownBeforeTabCount').textContent = beforeStats.count;
-            document.getElementById('drilldownAfterTabCount').textContent = afterStats.count;
-
+            // Dynamic comparison stats calculation is handled inside applyFilters()
             // Show panels
             document.getElementById('drilldownStatsComparison').classList.remove('hidden');
             document.getElementById('drilldownTabWrapper').classList.remove('hidden');
@@ -1113,6 +1190,20 @@
             document.getElementById('tabCumulative').classList.toggle('active', mode === 'cumulative');
             document.getElementById('tabUnique').classList.toggle('active', mode === 'unique');
             
+            // Toggle visits sort option visibility
+            const visitsOpt = document.getElementById('sortOptionVisits');
+            if (visitsOpt) {
+                if (mode === 'unique') {
+                    visitsOpt.classList.remove('hidden');
+                } else {
+                    visitsOpt.classList.add('hidden');
+                    // Reset Sort By to start if it was on visits
+                    if (document.getElementById('explorerSortBy').value === 'visits') {
+                        document.getElementById('explorerSortBy').value = 'start';
+                    }
+                }
+            }
+
             // Styles for tabs
             if (mode === 'cumulative') {
                 document.getElementById('tabCumulative').style.background = 'var(--bg-card)';
@@ -1188,11 +1279,148 @@
             return { count, medianDuration: medianDisplay, bounceRate };
         }
 
+        function populateFilterDropdowns(project) {
+            // Save current selection values to preserve them across project changes
+            const prevDate = document.getElementById('explorerDateFilter').value;
+            const prevBrowser = document.getElementById('explorerBrowserFilter').value;
+            const prevSource = document.getElementById('explorerSourceFilter').value;
+
+            // Scan sessions to extract distinct dates, browsers, and sources
+            let sessionsToScan = [];
+            if (activeProjectKey === 'all') {
+                analyticsData.projects.forEach(p => {
+                    if (p.sessions) {
+                        p.sessions.forEach(s => {
+                            sessionsToScan.push({ ...s, project_key: p.project_key, project_name: p.project });
+                        });
+                    }
+                });
+            } else {
+                sessionsToScan = project.sessions || [];
+            }
+
+            // 1. Date Dropdown
+            const dateSelect = document.getElementById('explorerDateFilter');
+            dateSelect.innerHTML = '<option value="all">All Dates</option>';
+            
+            const datesSet = new Set();
+            sessionsToScan.forEach(s => {
+                if (s.start) {
+                    const dateStr = s.start.substring(0, 10);
+                    datesSet.add(dateStr);
+                }
+            });
+            const sortedDates = Array.from(datesSet).sort((a, b) => new Date(b) - new Date(a));
+            sortedDates.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                dateSelect.appendChild(opt);
+            });
+            if (datesSet.has(prevDate)) {
+                dateSelect.value = prevDate;
+            } else {
+                dateSelect.value = "all";
+            }
+
+            // 2. Browser Dropdown
+            const browserSelect = document.getElementById('explorerBrowserFilter');
+            browserSelect.innerHTML = '<option value="all">All Browsers</option>';
+            
+            const browserSet = new Set();
+            sessionsToScan.forEach(s => {
+                if (s.browser) browserSet.add(s.browser);
+            });
+            Array.from(browserSet).sort().forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b;
+                opt.textContent = b;
+                browserSelect.appendChild(opt);
+            });
+            if (browserSet.has(prevBrowser)) {
+                browserSelect.value = prevBrowser;
+            } else {
+                browserSelect.value = "all";
+            }
+
+            // 3. Traffic Source Dropdown
+            const sourceSelect = document.getElementById('explorerSourceFilter');
+            sourceSelect.innerHTML = '<option value="all">All Sources</option>';
+            
+            const sourceSet = new Set();
+            sessionsToScan.forEach(s => {
+                if (s.referrer) sourceSet.add(s.referrer);
+            });
+            Array.from(sourceSet).sort().forEach(src => {
+                const opt = document.createElement('option');
+                opt.value = src;
+                opt.textContent = src;
+                sourceSelect.appendChild(opt);
+            });
+            if (sourceSet.has(prevSource)) {
+                sourceSelect.value = prevSource;
+            } else {
+                sourceSelect.value = "all";
+            }
+        }
+
+        // Helper filter matcher to avoid redundant logic
+        function matchesFilters(s) {
+            if (!s.project_key && s.id) {
+                s.project_key = activeProjectKey !== 'all' ? activeProjectKey : 'unknown';
+            }
+
+            const query = document.getElementById('explorerSearch').value.toLowerCase().trim();
+            const projFilter = document.getElementById('explorerProjectFilter').value;
+            const dateFilter = document.getElementById('explorerDateFilter').value;
+            const durFilter = document.getElementById('explorerDurationFilter').value;
+            const deviceFilter = document.getElementById('explorerDeviceFilter').value;
+            const browserFilter = document.getElementById('explorerBrowserFilter').value;
+            const sourceFilter = document.getElementById('explorerSourceFilter').value;
+            const classFilter = document.getElementById('explorerClassFilter').value;
+
+            // Project filter
+            const projMatch = projFilter === 'all' || s.project_key === projFilter;
+
+            // Text search query
+            const visitorId = s.id.split('_')[1] || s.id;
+            const pathMatch = s.path && s.path.toLowerCase().includes(query);
+            const visitorMatch = visitorId.toLowerCase().includes(query);
+            const refMatch = s.referrer && s.referrer.toLowerCase().includes(query);
+            const queryMatch = !query || pathMatch || visitorMatch || refMatch;
+
+            // Date filter
+            const sDate = s.start ? s.start.substring(0, 10) : "";
+            const dateMatch = dateFilter === 'all' || sDate === dateFilter;
+
+            // Duration filter
+            let durMatch = true;
+            const dS = s.duration_s || 0;
+            if (durFilter === 'bounce') durMatch = dS < 10;
+            else if (durFilter === 'short') durMatch = dS >= 10 && dS < 60;
+            else if (durFilter === 'medium') durMatch = dS >= 60 && dS < 300;
+            else if (durFilter === 'long') durMatch = dS >= 300;
+
+            // Platform / Device filter
+            const deviceMatch = deviceFilter === 'all' || s.device === deviceFilter;
+
+            // Browser filter
+            const browserMatch = browserFilter === 'all' || s.browser === browserFilter;
+
+            // Referrer / Source filter
+            const sourceMatch = sourceFilter === 'all' || s.referrer === sourceFilter;
+
+            // User type / Classification filter
+            const classMatch = classFilter === 'all' || s.classification === classFilter;
+
+            return queryMatch && projMatch && dateMatch && durMatch && deviceMatch && browserMatch && sourceMatch && classMatch;
+        }
+
         function applyFilters() {
-            const project = analyticsData.projects.find(p => p.project_key === activeProjectKey);
+            const project = activeProjectKey === 'all' ? getCombinedProjectVirtual() : analyticsData.projects.find(p => p.project_key === activeProjectKey);
             if (!project) return;
 
-            // 1. Get raw base list of sessions
+            // 1. Get raw base list of sessions (filtered by commit window if drilldown is active)
             let baseSessions = [];
             if (drilldownCommitHash) {
                 const windows = project.deployment_windows || [];
@@ -1204,32 +1432,255 @@
                 baseSessions = project.sessions || [];
             }
 
-            // 2. Apply query, classification, and device filters
-            const query = document.getElementById('explorerSearch').value.toLowerCase().trim();
-            const classFilter = document.getElementById('explorerClassFilter').value;
-            const deviceFilter = document.getElementById('explorerDeviceFilter').value;
-
-            let filtered = baseSessions.filter(s => {
-                // Search query matching
-                const visitorId = s.id.split('_')[1] || s.id;
-                const pathMatch = s.path && s.path.toLowerCase().includes(query);
-                const visitorMatch = visitorId.toLowerCase().includes(query);
-                const refMatch = s.referrer && s.referrer.toLowerCase().includes(query);
-                const queryMatch = !query || pathMatch || visitorMatch || refMatch;
-
-                // Classification matching
-                const classMatch = classFilter === 'all' || s.classification === classFilter;
-
-                // Device matching
-                const deviceMatch = deviceFilter === 'all' || s.device === deviceFilter;
-
-                return queryMatch && classMatch && deviceMatch;
+            baseSessions.forEach(s => {
+                if (!s.project_key) {
+                    s.project_key = activeProjectKey === 'all' ? 'unknown' : activeProjectKey;
+                }
             });
 
-            // 3. Update summary metrics for the explorer panel
-            updateExplorerMetrics(baseSessions);
+            // 2. Filter base sessions for the explorer view
+            let filtered = baseSessions.filter(matchesFilters);
 
-            // 4. Render based on explorerMode
+            // 3. Sort sessions
+            const sortBy = document.getElementById('explorerSortBy').value;
+            const sortOrder = document.getElementById('explorerSortOrder').value;
+
+            filtered.sort((a, b) => {
+                let comp = 0;
+                if (sortBy === 'start') {
+                    comp = new Date(a.start) - new Date(b.start);
+                } else if (sortBy === 'duration') {
+                    comp = (a.duration_s || 0) - (b.duration_s || 0);
+                }
+                return sortOrder === 'asc' ? comp : -comp;
+            });
+
+            // 4. Update dynamic sidebar stats based on matching explorer sessions
+            const total = filtered.length;
+
+            // Vitals
+            const uniqueVisitors = new Set();
+            filtered.forEach(s => {
+                const vid = s.id.split('_')[1] || s.id;
+                uniqueVisitors.add(vid);
+            });
+            document.getElementById('metricRealUsers').textContent = uniqueVisitors.size;
+
+            const botSessions = filtered.filter(s => s.classification === 'bot');
+            const humanSessions = filtered.filter(s => s.classification !== 'bot');
+            const engagedSessions = humanSessions.filter(s => s.classification === 'engaged' || s.classification === 'deep');
+            const engRate = humanSessions.length > 0 ? (engagedSessions.length / humanSessions.length * 100) : 0.0;
+            document.getElementById('metricEngRate').textContent = engRate.toFixed(1) + '%';
+
+            const allDurations = filtered.map(s => s.duration_s || 0).sort((a, b) => a - b);
+            if (allDurations.length > 0) {
+                const medS = allDurations[Math.floor(allDurations.length / 2)];
+                if (medS < 60) {
+                    document.getElementById('metricMedianDuration').textContent = Math.round(medS) + "s";
+                } else {
+                    const m = Math.floor(medS / 60);
+                    const s = Math.round(medS % 60);
+                    document.getElementById('metricMedianDuration').textContent = `${m}m ${s}s`;
+                }
+            } else {
+                document.getElementById('metricMedianDuration').textContent = "0s";
+            }
+
+            // Raw Traffic Classification breakdown
+            const rawContainer = document.getElementById('classificationBreakdown');
+            rawContainer.innerHTML = "";
+            
+            const breakdown = {
+                deep: 0,
+                engaged: 0,
+                glancer: 0,
+                bounce: 0,
+                ghost: 0,
+                bot: 0
+            };
+            filtered.forEach(s => {
+                if (breakdown[s.classification] !== undefined) {
+                    breakdown[s.classification]++;
+                }
+            });
+
+            const classes = [
+                { key: "deep", label: "🔥 Deep Users", color: "var(--accent-purple)" },
+                { key: "engaged", label: "⚡ Engaged Users", color: "var(--accent-green)" },
+                { key: "glancer", label: "👀 Glancers", color: "var(--accent-blue)" },
+                { key: "bounce", label: "🚪 Bounces", color: "var(--text-muted)" },
+                { key: "ghost", label: "👻 Ghost Tabs", color: "var(--accent-amber)" },
+                { key: "bot", label: "🤖 Bots / Directs", color: "var(--accent-red)" }
+            ];
+
+            if (total === 0) {
+                rawContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">No session traffic logged yet.</p>`;
+            } else {
+                classes.forEach(c => {
+                    const val = breakdown[c.key] || 0;
+                    const pct = total > 0 ? (val / total * 100).toFixed(0) : 0;
+                    
+                    const row = document.createElement('div');
+                    row.style.marginBottom = "0.5rem";
+                    row.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.15rem; font-size: 0.8rem;">
+                            <span style="color:${c.color}">${c.label}</span>
+                            <span><strong>${val}</strong> (${pct}%)</span>
+                        </div>
+                        <div style="width:100%; height:4px; background:var(--border-color); border-radius:2px; overflow:hidden;">
+                            <div style="width:${pct}%; height:100%; background:${c.color}"></div>
+                        </div>
+                    `;
+                    rawContainer.appendChild(row);
+                });
+            }
+
+            // Devices & Referrers stats
+            const devRefContainer = document.getElementById('deviceReferrerStats');
+            devRefContainer.innerHTML = "";
+
+            if (total === 0) {
+                devRefContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">Awaiting connection data...</p>`;
+            } else {
+                // Devices
+                const deviceCounts = { mobile: 0, desktop: 0, tablet: 0 };
+                filtered.forEach(s => {
+                    const dev = s.device || 'desktop';
+                    if (deviceCounts[dev] !== undefined) {
+                        deviceCounts[dev]++;
+                    }
+                });
+
+                const devStrings = [];
+                if (deviceCounts.desktop > 0) devStrings.push(`💻 Desktop: ${deviceCounts.desktop}`);
+                if (deviceCounts.mobile > 0) devStrings.push(`📱 Mobile: ${deviceCounts.mobile}`);
+                if (deviceCounts.tablet > 0) devStrings.push(`📟 Tablet: ${deviceCounts.tablet}`);
+
+                const devDiv = document.createElement('div');
+                devDiv.innerHTML = `
+                    <div style="font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">Device Split</div>
+                    <div style="color:var(--text-muted); font-family:var(--font-mono);">${devStrings.join(' | ') || 'None'}</div>
+                `;
+                devRefContainer.appendChild(devDiv);
+
+                // Referrers
+                const referrerCounts = {};
+                filtered.forEach(s => {
+                    const ref = s.referrer || 'direct';
+                    referrerCounts[ref] = (referrerCounts[ref] || 0) + 1;
+                });
+                const topRefs = Object.entries(referrerCounts)
+                    .map(([referrer, count]) => ({ referrer, count }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 5);
+
+                const refItems = topRefs.map(r => `<li>${r.referrer}: <strong>${r.count}</strong></li>`).join('');
+
+                const refDiv = document.createElement('div');
+                refDiv.innerHTML = `
+                    <div style="font-weight:600; color:var(--text-main); margin-bottom:0.3rem; margin-top:0.5rem;">Top Referrers</div>
+                    <ul style="color:var(--text-muted); list-style:none; padding-left:0; font-family:var(--font-mono); font-size:0.8rem; display:flex; flex-direction:column; gap:0.25rem;">
+                        ${refItems || '<li>Direct / unknown</li>'}
+                    </ul>
+                `;
+                devRefContainer.appendChild(refDiv);
+            }
+
+            // 5. Recalculate Drilldown Stats Comparison (if active)
+            if (drilldownCommitHash) {
+                const windows = project.deployment_windows || [];
+                const win = windows.find(w => w.commit.hash === drilldownCommitHash);
+                if (win) {
+                    const filteredBefore = (win.sessions_before || []).filter(matchesFilters);
+                    const filteredAfter = (win.sessions_after || []).filter(matchesFilters);
+
+                    const beforeStats = getWindowStats(filteredBefore);
+                    const afterStats = getWindowStats(filteredAfter);
+
+                    document.getElementById('drilldownBeforeCount').textContent = beforeStats.count;
+                    document.getElementById('drilldownBeforeDuration').textContent = beforeStats.medianDuration;
+                    document.getElementById('drilldownBeforeBounce').textContent = beforeStats.bounceRate;
+
+                    document.getElementById('drilldownAfterCount').textContent = afterStats.count;
+                    document.getElementById('drilldownAfterDuration').textContent = afterStats.medianDuration;
+                    document.getElementById('drilldownAfterBounce').textContent = afterStats.bounceRate;
+
+                    document.getElementById('drilldownBeforeTabCount').textContent = beforeStats.count;
+                    document.getElementById('drilldownAfterTabCount').textContent = afterStats.count;
+                }
+            }
+
+            // 6. Render Commits Loop dynamically
+            const commitsContainer = document.getElementById('commitsContainer');
+            commitsContainer.innerHTML = "";
+
+            const windowsList = project.deployment_windows || [];
+            if (windowsList.length > 0) {
+                windowsList.forEach(w => {
+                    const commit = w.commit;
+                    const hashShort = commit.hash.substring(0, 8);
+                    
+                    const projFilter = document.getElementById('explorerProjectFilter').value;
+                    if (projFilter !== 'all' && w.project_key !== projFilter) {
+                        return; // Skip this commit if it doesn't match selected project
+                    }
+
+                    const filteredBefore = (w.sessions_before || []).filter(matchesFilters);
+                    const filteredAfter = (w.sessions_after || []).filter(matchesFilters);
+                    
+                    let diffClass = "none";
+                    let diffSymbol = "";
+                    let diffDisplay = "no diff";
+
+                    if (filteredBefore.length > 0 && filteredAfter.length > 0) {
+                        const delta = filteredAfter.length - filteredBefore.length;
+                        const pct = Math.abs(delta / filteredBefore.length * 100);
+                        if (pct >= 5) {
+                            diffClass = delta >= 0 ? "up" : "down";
+                            diffSymbol = delta >= 0 ? "+" : "-";
+                            diffDisplay = `${diffSymbol}${pct.toFixed(0)}%`;
+                        } else {
+                            diffDisplay = "stable";
+                        }
+                    }
+
+                    const row = document.createElement('div');
+                    row.className = "commit-row";
+                    if (commit.hash === drilldownCommitHash) {
+                        row.classList.add('selected');
+                    }
+                    row.onclick = () => {
+                        drilldownToCommit(commit.hash, commit.message_short, row);
+                    };
+
+                    const projectBadge = activeProjectKey === 'all' && w.project_name ? `
+                        <span style="font-size:0.65rem; color:var(--accent-purple); text-transform:uppercase; font-weight:700; display:block; margin-bottom:0.15rem;">${w.project_name}</span>
+                    ` : '';
+
+                    row.innerHTML = `
+                        <div class="commit-hash" style="display:flex; flex-direction:column; justify-content:center;">
+                            ${projectBadge}
+                            <span>${hashShort}</span>
+                        </div>
+                        <div class="commit-info">
+                            <h4>${commit.message_short}</h4>
+                            <p>${commit.date_display} • by ${commit.author_name}</p>
+                        </div>
+                        <div class="diff-metric-pill">
+                            <div class="diff-side before">${filteredBefore.length} sess</div>
+                            <div class="diff-side after ${diffClass}">${filteredAfter.length} sess (${diffDisplay})</div>
+                        </div>
+                    `;
+                    commitsContainer.appendChild(row);
+                });
+            } else {
+                commitsContainer.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-muted); padding: 1rem 0; text-align: center;">No deployment events correlated yet.</p>';
+            }
+
+            // 7. Update summary metrics
+            updateExplorerMetrics(filtered);
+
+            // 8. Render Session Cards
             renderSessionList(filtered);
         }
 
@@ -1279,14 +1730,12 @@
             }
 
             if (explorerMode === 'cumulative') {
-                // Render list of individual session cards
                 sessions.forEach(s => {
                     const card = createSessionCard(s);
                     container.appendChild(card);
                 });
             } else {
-                // Render list of visitors (Inferred Journeys)
-                // Group the sessions by visitor ID
+                // Group by visitor ID
                 const visitorsMap = {};
                 sessions.forEach(s => {
                     const vid = s.id.split('_')[1] || s.id;
@@ -1294,16 +1743,32 @@
                     visitorsMap[vid].push(s);
                 });
 
-                // Convert to array and sort visitors by their latest session startTime descending
+                // Convert to array and sort visitors list
                 const visitorsList = Object.entries(visitorsMap).map(([vid, sList]) => {
-                    // Sort sessions within this visitor by startTime descending
                     sList.sort((a, b) => new Date(b.start) - new Date(a.start));
                     return {
                         visitorId: vid,
                         sessions: sList,
                         latestStart: sList[0].start
                     };
-                }).sort((a, b) => new Date(b.latestStart) - new Date(a.latestStart));
+                });
+                
+                const sortBy = document.getElementById('explorerSortBy').value;
+                const sortOrder = document.getElementById('explorerSortOrder').value;
+                
+                visitorsList.sort((a, b) => {
+                    let comp = 0;
+                    if (sortBy === 'visits') {
+                        comp = a.sessions.length - b.sessions.length;
+                    } else if (sortBy === 'duration') {
+                        const maxDurA = Math.max(...a.sessions.map(s => s.duration_s || 0));
+                        const maxDurB = Math.max(...b.sessions.map(s => s.duration_s || 0));
+                        comp = maxDurA - maxDurB;
+                    } else {
+                        comp = new Date(a.latestStart) - new Date(b.latestStart);
+                    }
+                    return sortOrder === 'asc' ? comp : -comp;
+                });
 
                 visitorsList.forEach(v => {
                     const card = createVisitorCard(v);
@@ -1317,7 +1782,6 @@
             const card = document.createElement('div');
             card.className = "session-card";
             card.onclick = (e) => {
-                // Prevent toggle if clicking on interactive elements inside
                 if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.session-expanded-details')) return;
                 toggleSessionDetails(s.id);
             };
@@ -1337,7 +1801,12 @@
             const deviceIcon = s.device === 'mobile' ? '📱 Mobile' : '💻 Desktop';
             const referrerDisplay = s.referrer === 'direct' ? 'direct traffic' : `from ${s.referrer}`;
 
-            // Create views sub-markup
+            const projectBadge = activeProjectKey === 'all' && s.project_name ? `
+                <span style="background: rgba(188, 140, 255, 0.08); color: var(--accent-purple); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; margin-right: 0.5rem; border: 1px solid rgba(188, 140, 255, 0.2); text-transform: uppercase; font-family: var(--font-main);">
+                    📂 ${s.project_name}
+                </span>
+            ` : '';
+
             const viewsList = s.views || [];
             const viewsMarkup = viewsList.map(v => `
                 <span style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-main);">
@@ -1345,7 +1814,6 @@
                 </span>
             `).join('');
 
-            // Create events sub-markup
             const eventsList = s.events || [];
             let eventsMarkup = "";
             if (eventsList.length === 0) {
@@ -1376,7 +1844,10 @@
 
             card.innerHTML = `
                 <div class="session-card-header">
-                    <span class="session-visitor-id" title="${s.id}">👤 ${visitorId}</span>
+                    <div style="display:flex; align-items:center;">
+                        ${projectBadge}
+                        <span class="session-visitor-id" title="${s.id}">👤 ${visitorId}</span>
+                    </div>
                     <span style="background:${badge.bg}; color:${badge.color}; padding:0.15rem 0.4rem; border-radius:4px; font-size:0.7rem; font-weight:700; text-transform:uppercase; border: 1px solid ${badge.color}33;">${badge.label}</span>
                 </div>
                 <div class="session-card-meta">
@@ -1420,6 +1891,13 @@
             const latestSess = v.sessions[0];
             const deviceIcon = latestSess.device === 'mobile' ? '📱 Mobile' : '💻 Desktop';
             
+            const projectNames = Array.from(new Set(v.sessions.map(s => s.project_name).filter(Boolean)));
+            const projectBadges = activeProjectKey === 'all' && projectNames.length > 0 ? projectNames.map(name => `
+                <span style="background: rgba(188, 140, 255, 0.08); color: var(--accent-purple); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(188, 140, 255, 0.2); text-transform: uppercase; font-family: var(--font-main);">
+                    📂 ${name}
+                </span>
+            `).join(' ') : '';
+
             const sessionsTimelineMarkup = v.sessions.map(s => {
                 const sDate = new Date(s.start).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                 
@@ -1494,7 +1972,10 @@
 
             card.innerHTML = `
                 <div class="session-visitor-id" style="font-size: 0.9rem; border-bottom: 1px solid rgba(34, 42, 61, 0.4); padding-bottom: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-                    <span>👥 Visitor: ${v.visitorId}</span>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        ${projectBadges}
+                        <span>👥 Visitor: ${v.visitorId}</span>
+                    </div>
                     <span style="font-size: 0.75rem; background: rgba(56, 139, 253, 0.1); border: 1px solid rgba(56, 139, 253, 0.2); padding: 0.15rem 0.5rem; border-radius: 20px; color: var(--text-main); font-weight: 600;">
                         ${v.sessions.length} visit${v.sessions.length > 1 ? 's' : ''}
                     </span>
@@ -1516,6 +1997,28 @@
             const detailsDiv = document.getElementById(`details-${sessionId}`);
             if (!detailsDiv) return;
             detailsDiv.classList.toggle('hidden');
+        }
+
+        function resetAllFilters() {
+            document.getElementById('explorerSearch').value = "";
+            document.getElementById('projectSelect').value = "all";
+            document.getElementById('explorerProjectFilter').value = "all";
+            activeProjectKey = "all";
+            loadProjectDetails("all");
+
+            document.getElementById('explorerDateFilter').value = "all";
+            document.getElementById('explorerDurationFilter').value = "all";
+            document.getElementById('explorerDeviceFilter').value = "all";
+            document.getElementById('explorerBrowserFilter').value = "all";
+            document.getElementById('explorerSourceFilter').value = "all";
+            
+            const classFilters = document.querySelectorAll('#explorerClassFilter');
+            classFilters.forEach(f => f.value = "all");
+            
+            document.getElementById('explorerSortBy').value = "start";
+            document.getElementById('explorerSortOrder').value = "desc";
+            
+            applyFilters();
         }
 
         function acknowledgeSuggestion(id) {
