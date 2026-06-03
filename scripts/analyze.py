@@ -23,6 +23,7 @@ Output is read by the Ripple dashboard (src/dashboard/index.html).
 import json
 import sys
 import argparse
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Add src to path so we can import ripple modules
@@ -58,51 +59,96 @@ def main():
     output_dir = Path(config.get("output_dir", "./data"))
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Import the analytics module (extracted from Atlas2.0)
+    # Import modules
     from analytics import session_analytics
+    from git import git_reader
 
     # Build PROJECTS list from config format
     projects_cfg = []
     for p in config.get("projects", []):
         projects_cfg.append({
-            "key":               p["key"],
-            "name":              p["name"],
-            "url":               p.get("url", ""),
-            "sessions_dir":      p["sessions_dir"],
-            "git_repo":          p.get("git_repo", ""),
+            "key":                p["key"],
+            "name":               p["name"],
+            "url":                p.get("url", ""),
+            "sessions_dir":       p["sessions_dir"],
+            "git_repo":           p.get("git_repo", ""),
             "interaction_events": p.get("interaction_events", []),
-            "goals":             p.get("goals", []),
+            "goals":              p.get("goals", []),
         })
 
     thresholds = config.get("thresholds", {})
 
-    # Run analytics for each project
+    # ── Run analytics + git correlation for each project ──────────────────────
     results = []
     for proj in projects_cfg:
-        print(f"\n  Analysing: {proj['name']} ...")
-        result = session_analytics.parse_sessions(
+        print(f"\n  [{proj['name']}] Analysing sessions ...")
+
+        # 1. Session analytics
+        analytics = session_analytics.parse_sessions(
             project=proj,
             min_duration_bot=thresholds.get("bot_max_duration_s", 2.0),
             max_duration_ghost=thresholds.get("ghost_min_duration_s", 300.0),
             max_sessions_stored=config.get("max_sessions_stored", 300),
         )
-        results.append(result)
 
+        if "error" in analytics:
+            print(f"    ERR {analytics['error']}")
+            results.append(analytics)
+            continue
+
+        ru  = analytics["real_user_count"]
+        tot = analytics["total_raw"]
+        eng = analytics["engagement_rate_pct"]
+        med = analytics["duration"]["median_display"]
+        np_ = len(analytics["navigation_paths"])
+        print(f"    Sessions: {ru}/{tot} real users | {eng}% engaged | median {med} | {np_} paths")
+
+        # 2. Git log
+        print(f"  [{proj['name']}] Reading git log ...")
+        commits = git_reader.get_commits(
+            repo_path=proj["git_repo"],
+            n=config.get("max_commits", 50),
+        )
+
+        if commits:
+            print(f"    Commits:  {len(commits)} found — latest: '{commits[0]['message_short']}' ({commits[0]['date_display']})")
+        else:
+            print(f"    Commits:  none found (git_repo not set or empty repo)")
+
+        # 3. Build deployment windows (before/after behavioral diff per commit)
+        real_sessions = [s for s in analytics.get("sessions", [])]
+        windows = git_reader.build_deployment_windows(commits, real_sessions)
+
+        if windows:
+            print(f"    Windows:  {len(windows)} deployment windows computed")
+            for w in windows[:3]:   # preview first 3
+                print(f"      {w['commit']['hash']}  {w['commit']['date_display']}  "
+                      f"before={w['before_count']} sessions  after={w['after_count']} sessions  "
+                      f"'{w['commit']['message_short'][:50]}'")
+
+        # 4. Attach to result
+        analytics["commits"]             = commits
+        analytics["deployment_windows"]  = windows
+
+        results.append(analytics)
+
+    # ── Write project_analytics.json ──────────────────────────────────────────
     output = {
-        "generated_at": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "generated_at":   datetime.now(timezone.utc).isoformat(),
         "ripple_version": "0.1.0",
-        "projects": results,
+        "projects":       results,
     }
 
     out_path = output_dir / "project_analytics.json"
     out_path.write_text(json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"\n[Ripple] Written to {out_path}")
+    print(f"\n[Ripple] Analytics written to {out_path}")
 
-    # TODO: Run intelligence layer → data/ripple_suggestions.json
+    # ── Intelligence layer (next build step) ──────────────────────────────────
     # from intelligence import agent
-    # agent.run(results, projects_cfg, output_dir)
+    # suggestions = agent.run(results, projects_cfg, output_dir)
+    # print(f"[Ripple] {len(suggestions)} suggestions written to data/ripple_suggestions.json")
 
-    print("[Ripple] Done. Open src/dashboard/index.html to view results.")
+    print("[Ripple] Done. Next: run the intelligence layer -> `src/intelligence/agent.py`")
 
 
 if __name__ == "__main__":
