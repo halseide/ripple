@@ -33,7 +33,28 @@
     // ── Session state ─────────────────────────────────────────────────────────
     const _startMs   = Date.now();
     const _startTime = new Date().toISOString();
-    const _sessionId = _genId();
+
+    // Persistent visitor ID — stored in localStorage so multiple sessions
+    // from the same browser share the same prefix. This lets session_analytics.py
+    // group them into inferred journeys ("Unique Visitors" tab).
+    const _VISITOR_KEY = '_ripple_vid';
+    const _visitorId   = (function () {
+        try {
+            let vid = localStorage.getItem(_VISITOR_KEY);
+            if (!vid) {
+                vid = Math.random().toString(36).slice(2, 13);
+                localStorage.setItem(_VISITOR_KEY, vid);
+            }
+            return vid;
+        } catch (_) {
+            // localStorage blocked (private mode, iframe, etc.) — fall back to random
+            return Math.random().toString(36).slice(2, 13);
+        }
+    }());
+
+    // Session ID embeds the visitor ID as prefix: sess_{visitorId}_{timestamp}
+    // Matches the example.com schema so session_analytics.py can link sessions.
+    const _sessionId = `sess_${_visitorId}_${_startMs}`;
 
     let _currentView  = null;
     let _viewStartMs  = _startMs;
@@ -43,10 +64,8 @@
     let _overlayReady = false;
     let _flushed      = false;
 
-    function _genId() {
-        const rand = Math.random().toString(36).slice(2, 13);
-        return `sess_${rand}_${Date.now()}`;
-    }
+    // (Session ID is now built directly from _visitorId + timestamp above.)
+    // _genId() removed — no longer needed.
 
     // ── Public API ────────────────────────────────────────────────────────────
     const Ripple = {
