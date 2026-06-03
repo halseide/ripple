@@ -861,6 +861,11 @@
                 } else {
                     localStorage.removeItem('alias_' + visitorId);
                 }
+                // ── Ripple self-tracking ───────────────────────────────────────
+                if (window.Ripple) Ripple.track('visitor_named', {
+                    visitor: visitorId.slice(0, 16),
+                    named:   !!cleaned,
+                });
                 applyFilters();
             }
         }

@@ -283,7 +283,8 @@
         document.body.appendChild(panel);
         _overlayReady = true;
 
-        // Toggle collapse/expand
+        // Toggle collapse/expand — tracked as an event so session data captures
+        // whether the developer actively monitors the overlay or hides it away.
         let _collapsed = false;
         document.getElementById('_rpl_toggle').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -291,6 +292,7 @@
             document.getElementById('_rpl_body').style.display = _collapsed ? 'none' : 'block';
             document.getElementById('_rpl_toggle').textContent = _collapsed ? '+' : '−';
             panel.style.maxHeight = _collapsed ? '37px' : '440px';
+            Ripple.track('debug_panel_toggled', { state: _collapsed ? 'collapsed' : 'expanded' });
         });
 
         // Flush pending logs
