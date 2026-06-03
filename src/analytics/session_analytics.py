@@ -136,7 +136,7 @@ def get_deployments(git_repo: str, n: int = 20) -> list:
     try:
         result = subprocess.run(
             ["git", "-C", git_repo, "log", f"-{n}", "--format=%H\x1f%aI\x1f%s"],
-            capture_output=True, text=True, timeout=5
+            capture_output=True, text=True, encoding="utf-8", timeout=5
         )
         deployments = []
         for line in result.stdout.strip().splitlines():
