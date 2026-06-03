@@ -143,12 +143,12 @@ def main():
     out_path.write_text(json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\n[Ripple] Analytics written to {out_path}")
 
-    # ── Intelligence layer (next build step) ──────────────────────────────────
-    # from intelligence import agent
-    # suggestions = agent.run(results, projects_cfg, output_dir)
-    # print(f"[Ripple] {len(suggestions)} suggestions written to data/ripple_suggestions.json")
+    # ── Intelligence layer ───────────────────────────────────────────────────
+    from intelligence import agent
+    suggestions = agent.run(output, output_dir)
+    print(f"[Ripple] {len(suggestions)} suggestions written to {output_dir / 'ripple_suggestions.json'}")
 
-    print("[Ripple] Done. Next: run the intelligence layer -> `src/intelligence/agent.py`")
+    print("[Ripple] Done.")
 
 
 if __name__ == "__main__":
