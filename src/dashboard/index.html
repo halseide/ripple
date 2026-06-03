@@ -709,7 +709,7 @@
                         </div>
                         <!-- Search Query -->
                         <div style="display: flex; flex-grow: 1; max-width: 400px; position: relative;">
-                            <input type="text" id="explorerSearch" placeholder="Search path, visitor, referrer, details..." oninput="applyFilters()" style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                            <input type="text" id="explorerSearch" placeholder="Search path, visitor, referrer, details..." oninput="applyFilters(); if(this.value && window.Ripple) Ripple.track('explorer_searched', { query_length: this.value.length });" style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
                         </div>
                     </div>
 
@@ -720,21 +720,21 @@
                             <!-- Project Select -->
                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                                 <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Project</label>
-                                <select id="explorerProjectFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <select id="explorerProjectFilter" data-ripple-event="filter_changed" data-ripple-label="project" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                     <option value="all">All Projects</option>
                                 </select>
                             </div>
                             <!-- Date Select -->
                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                                 <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Date</label>
-                                <select id="explorerDateFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <select id="explorerDateFilter" data-ripple-event="filter_changed" data-ripple-label="date" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                     <option value="all">All Dates</option>
                                 </select>
                             </div>
                             <!-- Duration Filter -->
                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                                 <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Duration</label>
-                                <select id="explorerDurationFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <select id="explorerDurationFilter" data-ripple-event="filter_changed" data-ripple-label="duration" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                     <option value="all">All Durations</option>
                                     <option value="bounce">&lt; 10s</option>
                                     <option value="short">10s - 1m</option>
@@ -745,7 +745,7 @@
                             <!-- Platform/Device Filter -->
                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                                 <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Platform</label>
-                                <select id="explorerDeviceFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <select id="explorerDeviceFilter" data-ripple-event="filter_changed" data-ripple-label="platform" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                     <option value="all">All Platforms</option>
                                     <option value="desktop">💻 Desktop</option>
                                     <option value="mobile">📱 Mobile</option>
@@ -754,21 +754,21 @@
                             <!-- Browser Filter -->
                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                                 <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Browser</label>
-                                <select id="explorerBrowserFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <select id="explorerBrowserFilter" data-ripple-event="filter_changed" data-ripple-label="browser" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                     <option value="all">All Browsers</option>
                                 </select>
                             </div>
                             <!-- Traffic Source Filter -->
                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                                 <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Traffic Source</label>
-                                <select id="explorerSourceFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <select id="explorerSourceFilter" data-ripple-event="filter_changed" data-ripple-label="traffic_source" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                     <option value="all">All Sources</option>
                                 </select>
                             </div>
                             <!-- User Type Filter -->
                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                                 <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">User Type</label>
-                                <select id="explorerClassFilter" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <select id="explorerClassFilter" data-ripple-event="filter_changed" data-ripple-label="user_type" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                     <option value="all">All Types</option>
                                     <option value="deep">🔥 Deep User</option>
                                     <option value="engaged">⚡ Engaged User</option>
@@ -783,19 +783,19 @@
                         <!-- Sorting Bar -->
                         <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 0.8rem; margin-top: 0.2rem; gap: 0.8rem;">
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <button onclick="resetAllFilters()" style="background: transparent; border: 1px solid rgba(248, 81, 73, 0.3); color: var(--accent-red); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">🧹 Reset All Filters</button>
-                                <button onclick="exportVisitorNames()" style="background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">💾 Export Names JSON</button>
+                                <button data-ripple-event="filters_reset" data-ripple-label="Reset All Filters" onclick="resetAllFilters()" style="background: transparent; border: 1px solid rgba(248, 81, 73, 0.3); color: var(--accent-red); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">🧹 Reset All Filters</button>
+                                <button data-ripple-event="export_names_json" data-ripple-label="Export Names JSON" onclick="exportVisitorNames()" style="background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">💾 Export Names JSON</button>
                             </div>
                             
                             <!-- Sort Controls -->
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
                                 <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Sort By</span>
-                                <select id="explorerSortBy" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <select id="explorerSortBy" data-ripple-event="sort_changed" data-ripple-label="sort_by" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                     <option value="start">🕒 Start Time</option>
                                     <option value="duration">⏱️ Session Duration</option>
                                     <option value="visits" id="sortOptionVisits" class="hidden">👥 Visits Count</option>
                                 </select>
-                                <select id="explorerSortOrder" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <select id="explorerSortOrder" data-ripple-event="sort_changed" data-ripple-label="sort_order" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                     <option value="desc">Descending ▾</option>
                                     <option value="asc">Ascending ▴</option>
                                 </select>
@@ -988,6 +988,8 @@
                 activeProjectKey = val;
                 loadProjectDetails(val);
                 applyFilters();
+                // ── Ripple self-tracking ───────────────────────────────────────
+                if (window.Ripple) Ripple.track('project_switched', { project: val });
             });
 
             selectBottom.addEventListener('change', (e) => {
