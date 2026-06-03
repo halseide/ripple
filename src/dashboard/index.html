@@ -995,6 +995,11 @@
         }
 
         function loadProjectDetails(projectKey) {
+            // ── Ripple self-tracking: view = active project ────────────────
+            if (window.Ripple) {
+                Ripple.setView(projectKey);
+                Ripple.track('project_selected', { project: projectKey });
+            }
             let project = null;
             if (projectKey === "all") {
                 project = getCombinedProjectVirtual();
@@ -1217,6 +1222,15 @@
 
             drilldownCommitHash = commitHash;
             drilldownCommitMsgText = commitMsg;
+
+            // ── Ripple self-tracking ───────────────────────────────────────
+            if (window.Ripple) {
+                Ripple.track('commit_drilldown', {
+                    commit:  commitHash.slice(0, 8),
+                    message: commitMsg.slice(0, 60),
+                    project: activeProjectKey,
+                });
+            }
             
             // Highlight selected commit row
             document.querySelectorAll('.commit-row').forEach(r => r.classList.remove('selected'));
@@ -1247,7 +1261,10 @@
 
         function setExplorerMode(mode) {
             explorerMode = mode;
-            
+
+            // ── Ripple self-tracking ───────────────────────────────────────
+            if (window.Ripple) Ripple.track('explorer_tab_switched', { mode });
+
             // Toggle active tabs UI
             document.getElementById('tabCumulative').classList.toggle('active', mode === 'cumulative');
             document.getElementById('tabUnique').classList.toggle('active', mode === 'unique');
@@ -2097,6 +2114,8 @@
                 const btn = card.querySelector('.btn-status');
                 if (btn) btn.textContent = "Acknowledged";
             }
+            // ── Ripple self-tracking ───────────────────────────────────────
+            if (window.Ripple) Ripple.track('suggestion_acknowledged', { id });
         }
 
         function toggleConfigGuide() {
@@ -2113,6 +2132,16 @@
 
         // Boot
         window.addEventListener('DOMContentLoaded', init);
+    </script>
+
+    <!--
+        Ripple self-tracking — the dashboard monitors itself.
+        Debug overlay: add ?ripple_debug=1 to the URL, or run Ripple.debug.enable() in the console.
+    -->
+    <script
+        src="../../src/tracker/ripple-tracker.js"
+        data-ripple-key="ripple"
+        data-ripple-endpoint="/ripple/api/session.php">
     </script>
 </body>
 </html>
