@@ -486,6 +486,40 @@
                     </div>
                 </div>
 
+                <!-- Raw Session Stats -->
+                <div class="card" id="rawStatsCard">
+                    <div class="card-title">Raw Traffic Classification</div>
+                    <div id="classificationBreakdown" class="metric-row" style="font-size: 0.85rem; gap: 0.8rem;">
+                        <!-- Insertion -->
+                    </div>
+                </div>
+
+                <!-- Referrer & Device Stats -->
+                <div class="card" id="deviceStatsCard">
+                    <div class="card-title">Devices & Referrers</div>
+                    <div id="deviceReferrerStats" style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                        <!-- Insertion -->
+                    </div>
+                </div>
+
+                <!-- Project Configuration Help -->
+                <div class="card" style="background-color: rgba(34, 42, 61, 0.1); border-style: dashed; padding: 1.2rem;">
+                    <div class="card-title" style="cursor: pointer; margin-bottom: 0;" onclick="toggleConfigGuide()">
+                        <span>🛠️ Configuration Guide</span>
+                        <span id="configToggleSymbol" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-blue);">[+]</span>
+                    </div>
+                    <div id="configGuideContent" class="hidden" style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.45;">
+                        <p style="margin-bottom: 0.5rem;">Ripple is configured locally via a JSON flat-file. To manage projects:</p>
+                        <ol style="margin-left: 1rem; margin-bottom: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;">
+                            <li>Open <code>ripple.config.json</code> in the project root.</li>
+                            <li><strong>Add Project:</strong> Append a new project object to the <code>"projects"</code> array with its key, paths, goals, and events.</li>
+                            <li><strong>Edit Project:</strong> Modify goals or events to match your intent.</li>
+                            <li><strong>Run Analyzer:</strong> Run <code>python scripts/analyze.py</code> in the terminal to compile metrics.</li>
+                        </ol>
+                        <p>The dashboard dynamically reloads the generated analytics.</p>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Right Column (Workspace) -->
@@ -562,7 +596,6 @@
             }
 
             analyticsData.projects.forEach(p => {
-                if (p.error) return;
                 const opt = document.createElement('option');
                 opt.value = p.project_key;
                 opt.textContent = p.project;
@@ -606,6 +639,88 @@
                 });
             } else {
                 goalsContainer.innerHTML = '<p style="font-size: 0.8rem; color: var(--text-muted);">No goals defined for this project.</p>';
+            }
+
+            // 2b. Render Raw Traffic Classification
+            const rawContainer = document.getElementById('classificationBreakdown');
+            rawContainer.innerHTML = "";
+            
+            if (project.error && project.error !== "No session files found") {
+                rawContainer.innerHTML = `<p style="color: var(--accent-red); font-size: 0.8rem;">${project.error}</p>`;
+            } else {
+                const breakdown = project.classification_breakdown || {};
+                const total = project.total_raw || 0;
+                
+                const classes = [
+                    { key: "deep", label: "🔥 Deep Users", color: "var(--accent-purple)" },
+                    { key: "engaged", label: "⚡ Engaged Users", color: "var(--accent-green)" },
+                    { key: "glancer", label: "👀 Glancers", color: "var(--accent-blue)" },
+                    { key: "bounce", label: "🚪 Bounces", color: "var(--text-muted)" },
+                    { key: "ghost", label: "👻 Ghost Tabs", color: "var(--accent-amber)" },
+                    { key: "bot", label: "🤖 Bots / Directs", color: "var(--accent-red)" }
+                ];
+                
+                if (total === 0) {
+                    rawContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">No session traffic logged yet.</p>`;
+                } else {
+                    classes.forEach(c => {
+                        const val = breakdown[c.key] || 0;
+                        const pct = total > 0 ? (val / total * 100).toFixed(0) : 0;
+                        
+                        const row = document.createElement('div');
+                        row.style.marginBottom = "0.5rem";
+                        row.innerHTML = `
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.15rem; font-size: 0.8rem;">
+                                <span style="color:${c.color}">${c.label}</span>
+                                <span><strong>${val}</strong> (${pct}%)</span>
+                            </div>
+                            <div style="width:100%; height:4px; background:var(--border-color); border-radius:2px; overflow:hidden;">
+                                <div style="width:${pct}%; height:100%; background:${c.color}"></div>
+                            </div>
+                        `;
+                        rawContainer.appendChild(row);
+                    });
+                }
+            }
+
+            // 2c. Render Devices & Referrers
+            const devRefContainer = document.getElementById('deviceReferrerStats');
+            devRefContainer.innerHTML = "";
+            
+            if (project.error && project.error !== "No session files found") {
+                devRefContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem;">No device telemetry available.</p>`;
+            } else {
+                const total = project.total_raw || 0;
+                if (total === 0) {
+                    devRefContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">Awaiting connection data...</p>`;
+                } else {
+                    // Devices
+                    const dev = project.device || {};
+                    const devStrings = [];
+                    if (dev.desktop) devStrings.push(`💻 Desktop: ${dev.desktop}`);
+                    if (dev.mobile) devStrings.push(`📱 Mobile: ${dev.mobile}`);
+                    if (dev.tablet) devStrings.push(`📟 Tablet: ${dev.tablet}`);
+                    
+                    const devDiv = document.createElement('div');
+                    devDiv.innerHTML = `
+                        <div style="font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">Device Split</div>
+                        <div style="color:var(--text-muted); font-family:var(--font-mono);">${devStrings.join(' | ') || 'None'}</div>
+                    `;
+                    devRefContainer.appendChild(devDiv);
+                    
+                    // Referrers
+                    const refs = project.top_referrers || [];
+                    const refItems = refs.map(r => `<li>${r.referrer}: <strong>${r.count}</strong></li>`).join('');
+                    
+                    const refDiv = document.createElement('div');
+                    refDiv.innerHTML = `
+                        <div style="font-weight:600; color:var(--text-main); margin-bottom:0.3rem; margin-top:0.5rem;">Top Referrers</div>
+                        <ul style="color:var(--text-muted); list-style:none; padding-left:0; font-family:var(--font-mono); font-size:0.8rem; display:flex; flex-direction:column; gap:0.25rem;">
+                            ${refItems || '<li>Direct / unknown</li>'}
+                        </ul>
+                    `;
+                    devRefContainer.appendChild(refDiv);
+                }
             }
 
             // 3. Render Suggestions
@@ -705,6 +820,18 @@
                 card.style.pointerEvents = 'none';
                 const btn = card.querySelector('.btn-status');
                 if (btn) btn.textContent = "Acknowledged";
+            }
+        }
+
+        function toggleConfigGuide() {
+            const content = document.getElementById('configGuideContent');
+            const symbol = document.getElementById('configToggleSymbol');
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                symbol.textContent = '[-]';
+            } else {
+                content.classList.add('hidden');
+                symbol.textContent = '[+]';
             }
         }
 

@@ -93,15 +93,30 @@ def main():
 
         if "error" in analytics:
             print(f"    ERR {analytics['error']}")
-            results.append(analytics)
-            continue
-
-        ru  = analytics["real_user_count"]
-        tot = analytics["total_raw"]
-        eng = analytics["engagement_rate_pct"]
-        med = analytics["duration"]["median_display"]
-        np_ = len(analytics["navigation_paths"])
-        print(f"    Sessions: {ru}/{tot} real users | {eng}% engaged | median {med} | {np_} paths")
+            error_msg = analytics["error"]
+            analytics = {
+                "project_key": proj["key"],
+                "project": proj["name"],
+                "url": proj["url"],
+                "goals": proj["goals"],
+                "real_user_count": 0,
+                "total_raw": 0,
+                "engagement_rate_pct": 0.0,
+                "duration": {"median_seconds": 0, "median_display": "0s"},
+                "classification_breakdown": {},
+                "navigation_paths": [],
+                "view_funnel": [],
+                "top_events": [],
+                "sessions": [],
+                "error": error_msg
+            }
+        else:
+            ru  = analytics["real_user_count"]
+            tot = analytics["total_raw"]
+            eng = analytics["engagement_rate_pct"]
+            med = analytics["duration"]["median_display"]
+            np_ = len(analytics["navigation_paths"])
+            print(f"    Sessions: {ru}/{tot} real users | {eng}% engaged | median {med} | {np_} paths")
 
         # 2. Git log
         print(f"  [{proj['name']}] Reading git log ...")
