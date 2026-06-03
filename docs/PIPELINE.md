@@ -72,7 +72,10 @@ Problem statement: "What did this commit do to my users?" No tool answers this a
 Market research conducted. PostHog closest competitor, but not git-native or zero-config for the before/after diff use case. Full report in Atlas2.0 vault.
 
 ### 2026-06-03 — Develop Started
-Repo initialized at `[WEB_ROOT]\ripple`. Core analytics engine exists in Atlas2.0/scripts/session_analytics.py — will be extracted and ported to Ripple.
+Repo initialized at `[WEB_ROOT]\ripple`. Option B confirmed: standalone product, not Atlas2.0 internal.
+
+### 2026-06-03 — Analytics engine extracted
+`src/analytics/session_analytics.py` copied from Atlas2.0. `scripts/analyze.py` written as standalone entry point. `ripple.config.json` live with example.com as proving ground.
 
 ---
 
@@ -87,12 +90,13 @@ Answer these in order — the first one that fails means re-evaluate:
 
 ---
 
-## Next Actions
+## Next Actions (ordered — do in sequence)
 
-- [ ] Extract session_analytics.py from Atlas2.0 → ripple/src/analytics/
-- [ ] Port git_reader to ripple/src/git/
-- [ ] Write ripple.config.json format and example
-- [ ] Build intelligence/agent.py — reads config goals + session diff → writes suggestions
-- [ ] Build minimal dashboard — just deployments + suggestions view
-- [ ] Test against example.com live data
-- [ ] First suggestion review (is it actually useful?)
+- [x] Extract session_analytics.py → `src/analytics/session_analytics.py`
+- [x] Write `ripple.config.json` format, example, and live example config
+- [x] Write `scripts/analyze.py` standalone entry point
+- [ ] **NOW:** Build `src/git/git_reader.py` — reads git log → structured deployment events
+- [ ] Build `src/intelligence/agent.py` — diffs + deployments + goals → `data/ripple_suggestions.json`
+- [ ] Build minimal `src/dashboard/index.html` — deployments + suggestions view
+- [ ] Run `scripts/analyze.py` against example.com live data end-to-end
+- [ ] **GATE CHECK:** Are first 2 suggestions specific and grounded? Yes → advance to Test stage
