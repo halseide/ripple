@@ -1,5 +1,6 @@
 sessions/
-data/
+data/*
+!data/visitor_names.json
 __pycache__/
 *.pyc
 ripple.config.json

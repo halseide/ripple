@@ -147,11 +147,27 @@ def main():
 
         results.append(analytics)
 
+    # Load visitor names lookup table
+    visitor_names_path = output_dir / "visitor_names.json"
+    visitor_names = {}
+    if visitor_names_path.exists():
+        try:
+            with open(visitor_names_path, "r", encoding="utf-8") as f:
+                visitor_names = json.load(f)
+        except Exception as e:
+            print(f"[Ripple] Warning: Failed to load visitor_names.json: {e}")
+    else:
+        try:
+            visitor_names_path.write_text(json.dumps({}, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
     # ── Write project_analytics.json ──────────────────────────────────────────
     output = {
         "generated_at":   datetime.now(timezone.utc).isoformat(),
         "ripple_version": "0.1.0",
         "projects":       results,
+        "visitor_names":  visitor_names
     }
 
     out_path = output_dir / "project_analytics.json"
