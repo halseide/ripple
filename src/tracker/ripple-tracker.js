@@ -412,14 +412,20 @@
         modal.setAttribute('aria-modal', 'true');
         modal.setAttribute('aria-label', 'Ripple UI Capture');
 
-        // Ripple SVG logo (animated)
+        // Ripple SVG logo (animated outward waves)
         const svgIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
             <circle cx="12" cy="12" r="3" fill="#a78bfa"/>
-            <circle cx="12" cy="12" r="6" stroke="#7b5ea7" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.7">
-                <animateTransform attributeName="transform" type="rotate" values="0 12 12;360 12 12" dur="6s" repeatCount="indefinite"/>
+            <circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.2">
+                <animate attributeName="r" values="3; 11" dur="2.5s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8; 0" dur="2.5s" repeatCount="indefinite" />
             </circle>
-            <circle cx="12" cy="12" r="9.5" stroke="#4a2c8a" stroke-width="1" opacity="0.4">
-                <animateTransform attributeName="transform" type="rotate" values="360 12 12;0 12 12" dur="10s" repeatCount="indefinite"/>
+            <circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.2">
+                <animate attributeName="r" values="3; 11" dur="2.5s" begin="0.83s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8; 0" dur="2.5s" begin="0.83s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.2">
+                <animate attributeName="r" values="3; 11" dur="2.5s" begin="1.66s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8; 0" dur="2.5s" begin="1.66s" repeatCount="indefinite" />
             </circle>
         </svg>`;
 
@@ -544,11 +550,17 @@
     function _buildIndicator() {
         const svgMarkup = `<svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <circle cx="12" cy="12" r="3" fill="#a78bfa"/>
-            <circle cx="12" cy="12" r="6" stroke="#7b5ea7" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.8">
-                <animateTransform attributeName="transform" type="rotate" values="0 12 12;360 12 12" dur="6s" repeatCount="indefinite"/>
+            <circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.2">
+                <animate attributeName="r" values="3; 11" dur="2.5s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8; 0" dur="2.5s" repeatCount="indefinite" />
             </circle>
-            <circle cx="12" cy="12" r="9.5" stroke="#4a2c8a" stroke-width="1" opacity="0.5">
-                <animateTransform attributeName="transform" type="rotate" values="360 12 12;0 12 12" dur="10s" repeatCount="indefinite"/>
+            <circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.2">
+                <animate attributeName="r" values="3; 11" dur="2.5s" begin="0.83s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8; 0" dur="2.5s" begin="0.83s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.2">
+                <animate attributeName="r" values="3; 11" dur="2.5s" begin="1.66s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8; 0" dur="2.5s" begin="1.66s" repeatCount="indefinite" />
             </circle>
         </svg>`;
 
