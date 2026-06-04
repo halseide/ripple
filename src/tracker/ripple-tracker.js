@@ -562,7 +562,7 @@
             'width:88px', 'height:88px',
             'display:flex', 'align-items:center', 'justify-content:center',
             'cursor:pointer',
-            'opacity:0.25',
+            'opacity:0.70',
             'transition:opacity 0.25s ease, transform 0.25s ease',
             'z-index:2147483644',
             'border-radius:50%',
@@ -590,12 +590,12 @@
 
         // Hover effects
         indicator.addEventListener('mouseenter', () => {
-            indicator.style.opacity   = '0.85';
+            indicator.style.opacity   = '0.95';
             indicator.style.transform = 'scale(1.15)';
             tooltip.style.opacity     = '1';
         });
         indicator.addEventListener('mouseleave', () => {
-            indicator.style.opacity   = '0.25';
+            indicator.style.opacity   = '0.70';
             indicator.style.transform = 'scale(1)';
             tooltip.style.opacity     = '0';
         });
