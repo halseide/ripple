@@ -3,8 +3,10 @@
  * Ripple Prompt Capture Gateway  — api/capture_prompt.php
  * =========================================================
  * Accepts POST requests from ripple-tracker.js containing a
- * UI-targeted developer prompt, then writes a structured markdown
- * file to [VAULT_PATH]\raw\ for AI ingestion on the next boot.
+ * UI-targeted developer prompt, then:
+ *   1. Writes a structured markdown file to [VAULT_PATH]\raw\ for AI ingestion.
+ *   2. Dual-writes a lifecycle record to [WEB_ROOT]\ripple\data\prompt_log.json
+ *      for the Ripple dashboard to track status (pending → shipped) + commit links.
  *
  * Expected POST body (application/json):
  *   {
@@ -23,7 +25,8 @@
  *   { "ok": false, "error": "..." }
  *
  * Prompt ID format: prompt_{unix_timestamp}_{projectKey}
- * File written to: [VAULT_PATH]\raw\{promptId}.md
+ * Atlas file:       [VAULT_PATH]\raw\{promptId}.md
+ * Ripple log:       [WEB_ROOT]\ripple\data\prompt_log.json
  */
 
 header('Content-Type: application/json');
@@ -76,9 +79,9 @@ if (strlen($prompt) < 3) {
 
 // ── Sanitise inputs ───────────────────────────────────────────────────────────
 $projectKey      = preg_replace('/[^a-zA-Z0-9_\-]/', '', $data['projectKey']);
-$pageUrl         = htmlspecialchars($data['pageUrl'], ENT_QUOTES, 'UTF-8');
-$elementSelector = htmlspecialchars($data['elementSelector'], ENT_QUOTES, 'UTF-8');
-$elementContext  = htmlspecialchars($data['elementContext'], ENT_QUOTES, 'UTF-8');
+$pageUrl         = $data['pageUrl'];   // keep raw for JSON storage
+$elementSelector = $data['elementSelector'];
+$elementContext  = $data['elementContext'];
 $category        = preg_replace('/[^a-zA-Z0-9_]/', '', $data['category']);
 $sessionId       = preg_replace('/[^a-zA-Z0-9_\-]/', '', $data['sessionId'] ?? 'unknown');
 $timestamp       = $data['timestamp'] ?? date('c');
@@ -95,18 +98,20 @@ if (!is_dir($rawInbox)) {
     exit;
 }
 
-// ── Build markdown file ───────────────────────────────────────────────────────
+// ── Build markdown file (htmlspecialchars for display safety) ─────────────────
 $dateFormatted = date('Y-m-d H:i');
-$promptEscaped = str_replace(['`', '\\'], ['\\`', '\\\\'], $prompt);
+$pageUrlEsc    = htmlspecialchars($pageUrl,         ENT_QUOTES, 'UTF-8');
+$selectorEsc   = htmlspecialchars($elementSelector, ENT_QUOTES, 'UTF-8');
+$contextEsc    = htmlspecialchars($elementContext,  ENT_QUOTES, 'UTF-8');
 
 $markdown = <<<MD
 ---
 prompt_id: {$promptId}
 project_key: {$projectKey}
 category: {$category}
-page_url: {$pageUrl}
-element_selector: "{$elementSelector}"
-element_context: "{$elementContext}"
+page_url: {$pageUrlEsc}
+element_selector: "{$selectorEsc}"
+element_context: "{$contextEsc}"
 session_id: {$sessionId}
 captured_at: {$timestamp}
 status: pending
@@ -117,12 +122,12 @@ status: pending
 **Captured:** {$dateFormatted}
 **Project:** `{$projectKey}`
 **Category:** `{$category}`
-**Page:** `{$pageUrl}`
+**Page:** `{$pageUrlEsc}`
 
 ## Element Context
 
-**Target:** `{$elementContext}`
-**Selector Path:** `{$elementSelector}`
+**Target:** `{$contextEsc}`
+**Selector Path:** `{$selectorEsc}`
 
 ## Prompt
 
@@ -132,13 +137,13 @@ status: pending
 
 > [!NOTE] AI Processing Instructions
 > The element selector path above pinpoints the exact DOM node the user was inspecting when this prompt was captured.
-> Map `{$pageUrl}` to the physical file in the `{$projectKey}` repository (see `ripple.config.json` for the `git_repo` path),
+> Map `{$pageUrlEsc}` to the physical file in the `{$projectKey}` repository (see `ripple.config.json` for the `git_repo` path),
 > then search the file for the selector's tag/class/ID to locate the relevant lines of code.
 > Commit message format: `[Vibe] {$category}: <description>\n- Resolves Prompt: {$promptId}`
 
 MD;
 
-// ── Write file ────────────────────────────────────────────────────────────────
+// ── Write Atlas raw inbox markdown ────────────────────────────────────────────
 $filename = $rawInbox . DIRECTORY_SEPARATOR . $promptId . '.md';
 $written  = file_put_contents($filename, $markdown);
 
