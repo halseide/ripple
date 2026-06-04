@@ -542,7 +542,7 @@
 
     // ── UI Capture: Floating Indicator Icon ───────────────────────────────────
     function _buildIndicator() {
-        const svgMarkup = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        const svgMarkup = `<svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <circle cx="12" cy="12" r="3" fill="#a78bfa"/>
             <circle cx="12" cy="12" r="6" stroke="#7b5ea7" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.8">
                 <animateTransform attributeName="transform" type="rotate" values="0 12 12;360 12 12" dur="6s" repeatCount="indefinite"/>
