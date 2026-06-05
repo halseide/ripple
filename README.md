@@ -1,6 +1,6 @@
 # Ripple
 
-> **The Continuous Design Loop**
+> **The Continuous Design Loop** · v0.5.0
 
 Ripple turns your live website into an active canvas for AI-assisted design. Instead of copy-pasting code snippets to your LLM, Ripple's UI Capture drops a direct tether to the element you want to change. It’s the fastest way to iterate on front-end design, backed by a session analytics engine that proves whether your changes actually worked.
 
@@ -50,15 +50,34 @@ It does this by hooking into standard browser URL events:
 
 ## Zero-Config Interaction Auto-Capture
 
-Ripple now automatically tracks clicks on all interactive elements across your application! You no longer need to manually tag buttons.
-The tracker intelligently listens for clicks on:
-- `<button>`
-- `<a>`
-- `<input type="submit">` or `<input type="button">`
-- `[role="button"]`
+Ripple v0.4+ automatically captures **every user interaction** across your application with zero manual tagging:
 
-When a user clicks one of these elements, Ripple extracts the text label, class, or ID and logs a `button_clicked` or `link_clicked` event.
-*Note: If you still want to explicitly name an event, you can manually add `data-ripple-event="my_custom_name"` and Ripple will prioritize it.*
+- **All clicks** — buttons, links, inputs, checkboxes, any element (using capture phase)
+- **Input changes** — field values masked for privacy; captures type, label, and length only
+- **Field focus/blur** — with time-in-field measurement
+- **Scroll depth** — milestones at 25%, 50%, 75%, 100%
+- **Form submissions** — id, action, and method
+- **Tab visibility** — tab_hidden / tab_returned with away-seconds
+- **Widget state changes** — via MutationObserver watching `aria-expanded`, `aria-selected`, `data-active`, `open`, etc.
+- **Rage-click detection** — 3+ clicks on same element within 600ms triggers `rage_click` event
+- **Route changes** — auto-detects `pushState`, `replaceState`, `hashchange`, `popstate`
+
+Use `data-ripple-event="my_name"` on any element to override the auto-detected event name.
+
+## Indicator States
+
+The floating Ripple indicator changes color to reflect the active mode:
+
+| Color | State | When |
+|---|---|---|
+| ⚪ White | Idle | Reserved — tracker loaded, no mode active |
+| 🔵 Blue | Prompt Mode | Default — tracker active, Shift+Right-Click to capture |
+| 🔴 Red | Debug Mode | `?ripple_debug=1` or `localStorage.ripple_debug = true` |
+
+Click the indicator to open the capture modal. The modal includes:
+- A **Debug Mode toggle** link to enter/exit debug mode without editing the URL
+- A **color legend** showing all three states
+- A **View Dashboard** link to the session analytics dashboard
 
 ## Quick Start
 
