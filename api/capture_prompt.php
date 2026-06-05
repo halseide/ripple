@@ -153,6 +153,33 @@ if ($written === false) {
     exit;
 }
 
+// ── Dual-write to prompt_log.json ────────────────────────────────────────────
+$logFile = __DIR__ . '/../data/prompt_log.json';
+$logData = [];
+if (file_exists($logFile)) {
+    $existing = json_decode(file_get_contents($logFile), true);
+    if (is_array($existing)) $logData = $existing;
+}
+
+// Prepend the new prompt record
+array_unshift($logData, [
+    'promptId'        => $promptId,
+    'projectKey'      => $projectKey,
+    'pageUrl'         => $pageUrl,
+    'elementSelector' => $elementSelector,
+    'elementContext'  => $elementContext,
+    'category'        => $category,
+    'prompt'          => $prompt,
+    'sessionId'       => $sessionId,
+    'status'          => 'pending',
+    'capturedAt'      => $timestamp,
+    'resolvedAt'      => null,
+    'commitHash'      => null,
+    'commitMessage'   => null
+]);
+
+file_put_contents($logFile, json_encode($logData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
 // ── Success ───────────────────────────────────────────────────────────────────
 echo json_encode([
     'ok'       => true,
