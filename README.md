@@ -106,6 +106,55 @@ Use `data-ripple-path` whenever the project key doesn't match its folder name. T
 
 > **Note:** example.com injects the tracker dynamically via JS. `document.currentScript` is `null` in that context, so the tracker falls back to scanning `document.scripts[src*="ripple-tracker"]` to recover the `data-ripple-*` attributes.
 
+## AI Agent Integration
+
+Ripple is designed to be processed by an AI coding agent. Captured prompts land
+in `[VAULT_PATH]\raw\` as structured markdown files. The agent reads each file,
+determines its category, and executes the correct workflow.
+
+### Prompt Inbox
+
+| Path | Purpose |
+|---|---|
+| `[VAULT_PATH]\raw\prompt_*.md` | Active inbox — unprocessed captures |
+| `[VAULT_PATH]\raw\Archive\` | Processed captures |
+| `[WEB_ROOT]\ripple\data\prompt_log.json` | Central audit log of all prompts |
+
+### Prompt Categories & Agent Behavior
+
+> [!CAUTION]
+> The `category` field governs everything. The agent must read it before taking
+> any action. **`question` prompts are answer-only — no code changes, ever.**
+
+| Category | What it means | Agent action |
+|---|---|---|
+| `question` | user is asking for analysis or a recommendation | **Answer only.** No code, no API calls, no commits. |
+| `fix` | Bug or broken behavior | Minimal targeted code change → commit → log → archive |
+| `feature` | New capability | Plan first, get approval, then implement |
+| `design` | Visual / layout change | Edit CSS or inline styles → commit → log → archive |
+| `copy` | Text / wording change | Edit string in place → commit → log → archive |
+| `data` | Wrong value or missing data | Fix at source (data file or API) → commit → log → archive |
+
+### Commit Message Format
+
+```
+[Vibe] <category>: <short description>
+- Resolves Prompt: <prompt_id>
+```
+
+### Agent Skill
+
+The full processing rules — including the critical `question` guardrail,
+step-by-step workflows for each category, common mistakes, and the archive
+procedure — are documented in:
+
+- **Project copy:** [`docs/SKILL_process_prompt.md`](docs/SKILL_process_prompt.md)
+- **Agent skill copy:** `[USER_HOME]\.gemini\config\plugins\science\skills\ripple_process_prompt\SKILL.md`
+
+Both copies must be kept in sync when the workflow changes.
+
+---
+
 ## Status
 
 🔵 **Stage: Develop** — actively building. First working version targets example.com as the proving ground.
