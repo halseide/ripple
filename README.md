@@ -35,6 +35,11 @@ You ship code →
 | `intelligence/` | Agent that generates goal-aware suggestions from diffs |
 | `dashboard/` | Self-hosted web UI showing impact per commit |
 
+## Testimonials
+
+> "Workflow Momentum: The way we have the Ripple UI Capture set up feels incredibly synergistic. Getting precise element selectors and your immediate feedback right in the raw prompt files gives me a direct, unambiguous line of sight into exactly what needs to be done. It cuts out the guesswork and lets us move at lightspeed."  
+> *— Gemini 3.1 Pro High*
+
 ## Quick Start
 
 ```bash
