@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.7.0
+ * Ripple Tracker  v0.7.1
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -28,7 +28,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.7.0';
+    const RIPPLE_VERSION = 'v0.7.1';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -47,7 +47,7 @@
     const CAPTURE_EP   = '/ripple/api/capture_prompt.php';
     const DEBUG_MODE   = new URLSearchParams(location.search).has('ripple_debug') ||
                          localStorage.getItem('ripple_debug') === 'true';
-    const HOME_MODE    = localStorage.getItem('ripple_home') === 'true';
+    let   _homeMode    = localStorage.getItem('ripple_home') === 'true';
 
 
     // ── Session state ─────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@
         home: {
             enable()  { localStorage.setItem('ripple_home', 'true');   location.reload(); },
             disable() { localStorage.removeItem('ripple_home');         location.reload(); },
-            toggle()  { HOME_MODE ? Ripple.home.disable() : Ripple.home.enable(); },
+            toggle()  { _homeMode ? Ripple.home.disable() : Ripple.home.enable(); },
         },
     };
 
@@ -522,6 +522,12 @@
     document.addEventListener('contextmenu', function (e) {
         if (!e.shiftKey) return; // normal right-click — pass through
         e.preventDefault();
+        // If in home/idle mode, instantly exit it and open prompt capture
+        if (_homeMode) {
+            _homeMode = false;
+            localStorage.removeItem('ripple_home');
+            _setIndicatorColor('prompt');
+        }
         _openModal(e.target);
     }, true);
 
@@ -704,7 +710,7 @@
         ).join('');
 
         // ── Home mode: replace capture form with info card ───────────────────
-        const modalBody = HOME_MODE ? `
+        const modalBody = _homeMode ? `
             <div style="padding:16px 4px 4px; text-align:center;">
                 <div style="font-size:28px; margin-bottom:8px;">⚪</div>
                 <div style="color:#e8e8f5; font-weight:700; font-size:15px; margin-bottom:4px;">Home</div>
@@ -731,6 +737,14 @@
                 <div id="_rpl_status" class="_rpl_status"></div>
             </div>`;
 
+        // Nav acts as legend — active state is highlighted, others show their mode color
+        const navHome  = _homeMode  ? `<span style="font-size:11px; color:#e8e8f5; font-weight:600;">⚪ Home</span>`
+                                    : `<a id="_rpl_home_toggle"  href="#" style="font-size:11px; color:rgba(200,195,220,0.5); text-decoration:none;">⚪ Home</a>`;
+        const navPrompt = (!_homeMode && !DEBUG_MODE) ? `<span style="font-size:11px; color:#58a6ff; font-weight:600;">🔵 Prompt</span>`
+                                    : `<a id="_rpl_prompt_toggle" href="#" style="font-size:11px; color:#388bfd; text-decoration:none; opacity:0.6;">🔵 Prompt</a>`;
+        const navDebug  = DEBUG_MODE ? `<span style="font-size:11px; color:#ff6b6b; font-weight:600;">🔴 Debug</span>`
+                                    : `<a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:rgba(248,81,73,0.45); text-decoration:none;">🔴 Debug</a>`;
+
         modal.innerHTML = `
             <div class="_rpl_modal_header">
                 <a href="${PROJECT_PATH}/ripple/" target="_blank" style="display:flex;align-items:center;text-decoration:none;" title="Dashboard">
@@ -743,18 +757,14 @@
                 <button id="_rpl_close_x" style="margin-left:auto;background:transparent;border:none;color:rgba(180,170,220,0.5);font-size:20px;cursor:pointer;line-height:1;padding:0 4px;transition:color 0.2s;" aria-label="Close">&times;</button>
             </div>
             ${modalBody}
-            <div style="margin-top:12px; text-align:center; display:flex; justify-content:center; gap:16px; align-items:center;">
-                <a href="${PROJECT_PATH}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View Dashboard</a>
-                <span style="color:rgba(80,70,120,0.5); font-size:10px;">·</span>
-                <a id="_rpl_home_toggle" href="#" style="font-size:11px; color:${HOME_MODE ? '#e8e8f5' : 'rgba(140,130,220,0.8)'}; text-decoration:underline;">${HOME_MODE ? '⚪ Exit Home' : '⚪ Go Home'}</a>
-                <span style="color:rgba(80,70,120,0.5); font-size:10px;">·</span>
-                <a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:${DEBUG_MODE ? '#ff6b6b' : 'rgba(140,130,220,0.8)'}; text-decoration:underline;">${DEBUG_MODE ? '🔴 Exit Debug' : '🔵 Debug'}</a>
-            </div>
-            <div style="margin-top:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(100,80,200,0.12); border-radius:8px; padding:8px 12px; display:flex; gap:16px; justify-content:center; align-items:center;">
-                <span style="font-size:10px; color:rgba(160,150,200,0.7); font-family:'JetBrains Mono',monospace; font-weight:700; letter-spacing:0.05em;">LEGEND</span>
-                <span style="font-size:11px; color:#e8e8f5;">⚪ Idle</span>
-                <span style="font-size:11px; color:#58a6ff;">🔵 Prompt</span>
-                <span style="font-size:11px; color:#f85149;">🔴 Debug</span>
+            <div style="margin-top:12px; padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(100,80,200,0.12); border-radius:8px; display:flex; justify-content:center; align-items:center; gap:20px;">
+                <a href="${PROJECT_PATH}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.6); text-decoration:underline;">Dashboard</a>
+                <span style="color:rgba(80,70,120,0.3); font-size:10px;">|</span>
+                ${navHome}
+                <span style="color:rgba(80,70,120,0.3); font-size:10px;">·</span>
+                ${navPrompt}
+                <span style="color:rgba(80,70,120,0.3); font-size:10px;">·</span>
+                ${navDebug}
             </div>
             <div style="margin-top:8px;font-size:10px;color:rgba(120,110,170,0.5);text-align:center;font-family:'JetBrains Mono',monospace;">Shift+Enter to submit · Esc to close</div>
         `;
@@ -768,17 +778,29 @@
 
         // ── Wire close actions ───────────────────────────────────────────────
         document.getElementById('_rpl_close_x').addEventListener('click', _closeModal);
-        if (!HOME_MODE) document.getElementById('_rpl_btn_cancel').addEventListener('click', _closeModal);
+        const _cancelBtn = document.getElementById('_rpl_btn_cancel');
+        if (_cancelBtn) _cancelBtn.addEventListener('click', _closeModal);
 
-        // Home mode toggle
-        document.getElementById('_rpl_home_toggle').addEventListener('click', (e) => {
+        // Home toggle (go idle / exit idle)
+        const _homeBtn = document.getElementById('_rpl_home_toggle');
+        if (_homeBtn) _homeBtn.addEventListener('click', (e) => {
             e.preventDefault();
             _closeModal();
             Ripple.home.toggle();
         });
 
-        // Debug mode toggle
-        document.getElementById('_rpl_debug_toggle').addEventListener('click', (e) => {
+        // Prompt toggle (exit home or debug → back to prompt)
+        const _promptBtn = document.getElementById('_rpl_prompt_toggle');
+        if (_promptBtn) _promptBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            _closeModal();
+            if (_homeMode)  Ripple.home.disable();
+            if (DEBUG_MODE) Ripple.debug.disable();
+        });
+
+        // Debug toggle
+        const _debugBtn = document.getElementById('_rpl_debug_toggle');
+        if (_debugBtn) _debugBtn.addEventListener('click', (e) => {
             e.preventDefault();
             _closeModal();
             Ripple.debug.toggle();
@@ -789,7 +811,7 @@
         document.addEventListener('keydown', _escHandler, { once: true });
 
         // Shift+Enter submit (prompt mode only)
-        if (!HOME_MODE && textarea) {
+        if (!_homeMode && textarea) {
             textarea.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && e.shiftKey) {
                     e.preventDefault();
@@ -880,9 +902,9 @@
     };
 
     function _indicatorState() {
-        if (HOME_MODE)  return 'idle';
+        if (_homeMode)  return 'idle';
         if (DEBUG_MODE) return 'debug';
-        return 'prompt'; // tracker active = prompt mode by default
+        return 'prompt';
     }
 
     function _setIndicatorColor(state) {
