@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.7.5
+ * Ripple Tracker  v0.7.6
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -28,7 +28,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.7.5';
+    const RIPPLE_VERSION = 'v0.7.6';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -133,14 +133,14 @@
         capture(element) { _openModal(element || document.body); },
 
         debug: {
-            enable()  { localStorage.setItem('ripple_debug', 'true');  location.reload(); },
-            disable() { localStorage.removeItem('ripple_debug');        location.reload(); },
+            enable()  { localStorage.removeItem('ripple_home');  localStorage.setItem('ripple_debug', 'true'); location.reload(); },
+            disable() { localStorage.removeItem('ripple_debug'); location.reload(); },
             toggle()  { DEBUG_MODE ? Ripple.debug.disable() : Ripple.debug.enable(); },
         },
 
         home: {
-            enable()  { localStorage.setItem('ripple_home', 'true');   location.reload(); },
-            disable() { localStorage.removeItem('ripple_home');         location.reload(); },
+            enable()  { localStorage.removeItem('ripple_debug'); localStorage.setItem('ripple_home', 'true'); location.reload(); },
+            disable() { localStorage.removeItem('ripple_home');  location.reload(); },
             toggle()  { _homeMode ? Ripple.home.disable() : Ripple.home.enable(); },
         },
     };
@@ -802,13 +802,16 @@
             if (DEBUG_MODE) Ripple.debug.disable();
         });
 
-        // Debug toggle — exits home mode first if active
+        // Debug toggle — always enable when coming from home (never toggle, stale flag may be set)
         const _debugBtn = document.getElementById('_rpl_debug_toggle');
         if (_debugBtn) _debugBtn.addEventListener('click', (e) => {
             e.preventDefault();
             _closeModal();
-            if (_homeMode) localStorage.removeItem('ripple_home'); // exit home before entering debug
-            Ripple.debug.toggle();
+            if (_homeMode) {
+                Ripple.debug.enable(); // enable() clears ripple_home + sets ripple_debug
+            } else {
+                Ripple.debug.toggle();
+            }
         });
 
         // Esc key
