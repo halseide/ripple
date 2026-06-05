@@ -852,6 +852,135 @@
             line-height: 1;
             margin-bottom: 0.15rem;
         }
+
+        /* ── Prompt Thread Panel ─────────────────────────────── */
+        .prompt-expand-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 0;
+            font-family: var(--font-main);
+            transition: color 0.15s;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .prompt-expand-btn:hover { color: var(--accent-blue); }
+        .prompt-thread {
+            display: none;
+            flex-direction: column;
+            gap: 0;
+            margin-top: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.12);
+        }
+        .prompt-thread.open { display: flex; }
+        .prompt-thread-answer {
+            padding: 0.9rem 1rem;
+            font-size: 0.85rem;
+            line-height: 1.55;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border-color);
+            white-space: pre-wrap;
+        }
+        .prompt-thread-answer-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--accent-blue);
+            margin-bottom: 0.4rem;
+        }
+        .prompt-thread-reply {
+            padding: 0.9rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+        .prompt-thread-reply label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        .prompt-thread-textarea {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-family: var(--font-main);
+            font-size: 0.85rem;
+            resize: vertical;
+            min-height: 60px;
+            line-height: 1.45;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .prompt-thread-textarea:focus { border-color: var(--accent-blue); }
+        .prompt-thread-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .prompt-thread-actions select {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 6px;
+            padding: 0.35rem 0.6rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            outline: none;
+            font-family: var(--font-main);
+        }
+        .btn-thread-submit {
+            background: var(--accent-blue);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.35rem 0.9rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: var(--font-main);
+            transition: opacity 0.2s;
+        }
+        .btn-thread-submit:hover { opacity: 0.85; }
+        .btn-thread-dismiss {
+            background: transparent;
+            border: 1px solid rgba(248,81,73,0.3);
+            color: var(--accent-red);
+            border-radius: 6px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font-main);
+            margin-left: auto;
+            transition: all 0.2s;
+        }
+        .btn-thread-dismiss:hover { background: rgba(248,81,73,0.08); }
+        .prompt-thread-toast {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .prompt-thread-toast.show { opacity: 1; }
+        .prompt-thread-toast.ok  { color: var(--accent-green); }
+        .prompt-thread-toast.err { color: var(--accent-red); }
+        .prompt-item.dismissed { opacity: 0.4; }
+        .prompt-item.dismissed .prompt-thread { display: none !important; }
     </style>
 </head>
 <body>
@@ -2758,8 +2887,10 @@
             }
 
             container.innerHTML = filtered.map(p => {
-                const cat    = catMeta(p.category);
+                const cat       = catMeta(p.category);
                 const isPending = p.status === 'pending';
+                const isAnswered = p.status === 'answered';
+                const isDismissed = p.status === 'dismissed';
                 const hasCommit = p.commitHash && p.commitHash !== 'pending';
                 const remote = getGithubRemote(p.projectKey);
                 const commitLink = hasCommit && remote
@@ -2774,7 +2905,7 @@
                     ? new Date(p.capturedAt).toLocaleString(undefined, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})
                     : '—';
 
-                const resolvedRow = !isPending && p.commitMessage
+                const resolvedRow = !isPending && !isAnswered && p.commitMessage
                     ? `<div class="prompt-resolved-by">→ ${p.commitMessage}</div>`
                     : '';
 
@@ -2784,16 +2915,67 @@
 
                 const projectTag = `<span style="font-size:0.65rem;color:var(--accent-purple);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;font-family:var(--font-mono)">${p.projectKey}</span>`;
 
-                return `<div class="prompt-item ${isPending ? '' : 'shipped'}">
+                // Thread expand button — shown for answered prompts and any question
+                const showThread = isAnswered || p.category === 'question' || p.reply;
+                const expandBtn = showThread && !isDismissed
+                    ? `<button class="prompt-expand-btn" onclick="togglePromptThread('${p.promptId}')" id="expand-btn-${p.promptId}">▶ Thread</button>`
+                    : '';
+
+                // Answer block
+                const answerBlock = p.answer
+                    ? `<div class="prompt-thread-answer">
+                           <div class="prompt-thread-answer-label">🤖 Agent · ${p.answeredAt ? new Date(p.answeredAt).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</div>
+                           ${escHtml(p.answer)}
+                       </div>`
+                    : `<div class="prompt-thread-answer" style="color:var(--text-muted);font-style:italic;">
+                           <div class="prompt-thread-answer-label">🤖 Agent</div>
+                           No answer written yet.
+                       </div>`;
+
+                // Existing reply display
+                const replyBlock = p.reply
+                    ? `<div class="prompt-thread-answer" style="background:rgba(188,140,255,0.06);border-top:1px solid var(--border-color);">
+                           <div class="prompt-thread-answer-label" style="color:var(--accent-purple);">👤 You · ${p.repliedAt ? new Date(p.repliedAt).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</div>
+                           ${escHtml(p.reply)}
+                       </div>`
+                    : '';
+
+                const threadPanel = showThread && !isDismissed ? `
+                    <div class="prompt-thread" id="thread-${p.promptId}">
+                        ${answerBlock}
+                        ${replyBlock}
+                        <div class="prompt-thread-reply">
+                            <label>Your reply (optional)</label>
+                            <textarea class="prompt-thread-textarea" id="reply-${p.promptId}" placeholder="Follow-up, clarification, or new direction…">${escHtml(p.reply || '')}</textarea>
+                            <div class="prompt-thread-actions">
+                                <select id="recat-${p.promptId}">
+                                    <option value="">Re-submit as…</option>
+                                    <option value="fix">🔧 fix</option>
+                                    <option value="feature">✨ feature</option>
+                                    <option value="design">🎨 design</option>
+                                    <option value="copy">✏️ copy</option>
+                                    <option value="data">📊 data</option>
+                                    <option value="question">❓ question</option>
+                                </select>
+                                <button class="btn-thread-submit" onclick="resubmitPrompt('${p.promptId}')">↺ Re-submit</button>
+                                <span class="prompt-thread-toast" id="toast-${p.promptId}"></span>
+                                <button class="btn-thread-dismiss" onclick="dismissPrompt('${p.promptId}')">✕ Dismiss</button>
+                            </div>
+                        </div>
+                    </div>` : '';
+
+                return `<div class="prompt-item ${isDismissed ? 'dismissed' : (p.status === 'shipped' ? 'shipped' : '')}" id="pitem-${p.promptId}">
                     <div class="prompt-item-header">
                         <div class="prompt-text">${p.prompt}</div>
                         <div class="prompt-badges">
                             <span class="prompt-cat ${cat.cls}">${cat.label}</span>
                             <span class="prompt-status ${p.status}">${statusLabel(p.status)}</span>
+                            ${expandBtn}
                         </div>
                     </div>
                     ${selectorRow}
                     ${resolvedRow}
+                    ${threadPanel}
                     <div class="prompt-meta">
                         ${projectTag}
                         <span>📅 ${capturedDate}</span>
@@ -2802,6 +2984,84 @@
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // ── Prompt Thread Actions ──────────────────────────────────────────────
+
+        function togglePromptThread(promptId) {
+            const thread = document.getElementById(`thread-${promptId}`);
+            const btn    = document.getElementById(`expand-btn-${promptId}`);
+            if (!thread) return;
+            const isOpen = thread.classList.toggle('open');
+            if (btn) btn.textContent = (isOpen ? '▼' : '▶') + ' Thread';
+        }
+
+        async function resubmitPrompt(promptId) {
+            const replyEl = document.getElementById(`reply-${promptId}`);
+            const recatEl = document.getElementById(`recat-${promptId}`);
+            const toast   = document.getElementById(`toast-${promptId}`);
+            const reply    = replyEl?.value.trim() || '';
+            const category = recatEl?.value || '';
+
+            const payload = { promptId, repliedAt: new Date().toISOString() };
+            if (reply)    payload.reply    = reply;
+            if (category) payload.category = category;
+            // Re-opening: set status back to pending so agent picks it up
+            if (category && category !== 'question') payload.status = 'pending';
+
+            try {
+                const res = await fetch('../../api/update_prompt.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const result = await res.json();
+                if (result.ok) {
+                    showThreadToast(promptId, '✅ Saved', 'ok');
+                    // Update local data so re-render reflects change
+                    const p = allPrompts.find(x => x.promptId === promptId);
+                    if (p) {
+                        if (reply)    p.reply    = reply;
+                        if (category) p.category = category;
+                        if (category && category !== 'question') p.status = 'pending';
+                        p.repliedAt = payload.repliedAt;
+                    }
+                    if (window.Ripple) Ripple.track('prompt_resubmitted', { promptId, category });
+                } else {
+                    showThreadToast(promptId, '❌ ' + (result.error || 'Failed'), 'err');
+                }
+            } catch(e) {
+                showThreadToast(promptId, '❌ Network error', 'err');
+            }
+        }
+
+        async function dismissPrompt(promptId) {
+            if (!confirm('Dismiss this prompt? It will be greyed out and eligible for archiving.')) return;
+            try {
+                const res = await fetch('../../api/update_prompt.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ promptId, status: 'dismissed', resolvedAt: new Date().toISOString() }),
+                });
+                const result = await res.json();
+                if (result.ok) {
+                    const p = allPrompts.find(x => x.promptId === promptId);
+                    if (p) p.status = 'dismissed';
+                    const item = document.getElementById(`pitem-${promptId}`);
+                    if (item) item.classList.add('dismissed');
+                    const thread = document.getElementById(`thread-${promptId}`);
+                    if (thread) thread.classList.remove('open');
+                    if (window.Ripple) Ripple.track('prompt_dismissed', { promptId });
+                }
+            } catch(e) { /* silent */ }
+        }
+
+        function showThreadToast(promptId, msg, type) {
+            const toast = document.getElementById(`toast-${promptId}`);
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.className = `prompt-thread-toast ${type} show`;
+            setTimeout(() => toast.className = 'prompt-thread-toast', 3000);
         }
 
         // Auto-refresh prompt log when a new prompt is captured by the Ripple tracker

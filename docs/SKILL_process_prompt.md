@@ -88,14 +88,25 @@ the matching `project_key`). Use `element_selector` to locate the relevant lines
 > - Ask a clarifying question back
 >
 > You must NOT:
-> - Write or edit any file
-> - Call any API or run any command that modifies state
+> - Write or edit any file (other than prompt_log.json as described below)
+> - Call any API or run any command that modifies state in the project
 > - Make a commit
-> - Update prompt_log.json (leave status as `pending` until the user
->   explicitly approves a follow-up action)
->
-> After answering, say: *"This was a question prompt — no changes were made.
-> Tell me how you'd like to proceed and I'll implement it."*
+
+**After answering in chat, you MUST:**
+
+1. Call `POST api/update_prompt.php` with:
+   ```json
+   {
+     "promptId": "<id>",
+     "status": "answered",
+     "answer": "<your full plain-text answer>",
+     "answeredAt": "<ISO timestamp>"
+   }
+   ```
+2. Leave the `.md` file in `/raw/` — **do NOT archive it**.
+3. Say: *"Answer written to the dashboard thread. The prompt stays open — you can reply, re-categorize, or dismiss it from the Prompt Log."*
+
+**The thread stays live until the user dismisses it or re-submits it as a different category.**
 
 ---
 
@@ -168,7 +179,7 @@ Wrong value, missing field, stale content, or data display problem.
 
 File: `[WEB_ROOT]\ripple\data\prompt_log.json`
 
-For completed prompts (`fix`, `feature`, `design`, `copy`, `data`):
+For completed actionable prompts (`fix`, `feature`, `design`, `copy`, `data`):
 ```json
 {
   "status": "shipped",
@@ -178,8 +189,10 @@ For completed prompts (`fix`, `feature`, `design`, `copy`, `data`):
 }
 ```
 
-For `question` prompts: **leave `status: pending`** until the user approves
-a follow-up action.
+For `question` prompts: call `POST api/update_prompt.php` with
+`status: "answered"`, `answer: "<text>"`, `answeredAt: "<now>"`.
+Do NOT leave status as `pending` after answering — the dashboard
+thread will not show the answer unless you write it.
 
 ---
 
@@ -191,8 +204,16 @@ Move the processed file to `[VAULT_PATH]\raw\Archive\`:
 Move-Item "[VAULT_PATH]\raw\<prompt_file>.md" "[VAULT_PATH]\raw\Archive\"
 ```
 
-Only archive after the commit is confirmed (for actionable categories) or after
-the user explicitly says to close the question.
+**Archive rules:**
+
+| Status | Archive? |
+|---|---|
+| `shipped` | ✅ Yes — archive immediately after commit is confirmed |
+| `dismissed` | ✅ Yes — archive when user dismisses via dashboard |
+| `answered` | ❌ No — thread is still open, leave in `/raw/` |
+| `pending` | ❌ No |
+
+**Never archive on `answered`.** The user may still reply or re-categorize.
 
 ---
 
@@ -216,6 +237,8 @@ Example:
 | Mistake | Correct Behavior |
 |---|---|
 | Acting on a `question` prompt | **Answer only.** No code, no API calls, no commits. |
+| Answering a question but NOT writing to prompt_log.json | Always call `api/update_prompt.php` with the answer — the dashboard thread will be blank otherwise |
+| Archiving an `answered` prompt | Only archive on `shipped` or `dismissed`. `answered` means the thread is still open. |
 | Fixing the wrong element because the selector was ambiguous | Re-read the `element_context` field and `page_url` to confirm the exact node before editing |
 | Forgetting to run `git log --oneline` before editing | Always run it first — it is required by the user's rules |
 | Archiving before confirming the commit succeeded | Verify the commit hash exists before moving the file |
