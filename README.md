@@ -37,6 +37,17 @@ You see something to fix →
 > "Workflow Momentum: The way we have the Ripple UI Capture set up feels incredibly synergistic. Getting precise element selectors and your immediate feedback right in the raw prompt files gives me a direct, unambiguous line of sight into exactly what needs to be done. It cuts out the guesswork and lets us move at lightspeed."  
 > *— Gemini 3.1 Pro High*
 
+## Zero-Config View Tracking
+
+Ripple's tracker is designed to automatically record navigation views to build your `view_funnel` without requiring custom tags. 
+It does this by hooking into standard browser URL events:
+- **`DOMContentLoaded`** (Initial page load)
+- **`hashchange`** (Anchor navigation)
+- **`popstate`** (Browser back/forward)
+- **`history.pushState` / `replaceState`** (Monkey-patched for modern SPA frameworks)
+
+**Important:** For auto-tracking to work seamlessly, your application *must* update the URL when navigating (like any standard React/Vue router, Next.js, or simple hash anchor links). If your app relies on raw JavaScript to hide/show `div` elements without touching the browser history, the generic tracker will not detect a view change. In that case, you must either update the URL via `history.pushState(null, null, '#section')`, use explicit `data-ripple-view="section"` HTML attributes, or manually call `Ripple.setView('section')`.
+
 ## Quick Start
 
 ```bash
