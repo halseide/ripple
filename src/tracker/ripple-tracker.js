@@ -27,6 +27,8 @@
  */
 (function (global) {
     'use strict';
+    
+    const RIPPLE_VERSION = 'v0.2.0';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     const _script      = document.currentScript;
@@ -436,9 +438,11 @@
 
         modal.innerHTML = `
             <div class="_rpl_modal_header">
-                ${svgIcon}
+                <a href="/${PROJECT_KEY}/ripple/" target="_blank" style="display:flex;align-items:center;text-decoration:none;" title="Dashboard">
+                    ${svgIcon}
+                </a>
                 <div>
-                    <div style="color:#e8e8f5;font-weight:700;font-size:14px;line-height:1.2;">Ripple UI Capture</div>
+                    <div style="color:#e8e8f5;font-weight:700;font-size:14px;line-height:1.2;">Ripple UI Capture <span style="font-size:10px; color:rgba(140,130,200,0.8); font-weight:normal;">${RIPPLE_VERSION}</span></div>
                     <div style="color:rgba(140,130,200,0.7);font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:2px;">${PROJECT_KEY} · ${pageUrl.replace(/^https?:\/\/[^/]+/, '').slice(0, 48) || '/'}</div>
                 </div>
                 <button id="_rpl_close_x" style="margin-left:auto;background:transparent;border:none;color:rgba(180,170,220,0.5);font-size:20px;cursor:pointer;line-height:1;padding:0 4px;transition:color 0.2s;" aria-label="Close">&times;</button>
@@ -452,6 +456,9 @@
                     <button id="_rpl_btn_send" class="_rpl_btn_send">⚡ Send to AI Inbox</button>
                 </div>
                 <div id="_rpl_status" class="_rpl_status"></div>
+                <div style="margin-top:12px; text-align:center;">
+                    <a href="/${PROJECT_KEY}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View AI Inbox (Dashboard)</a>
+                </div>
                 <div style="margin-top:8px;font-size:10px;color:rgba(120,110,170,0.5);text-align:center;font-family:'JetBrains Mono',monospace;">Shift+Enter to submit · Esc to close</div>
             </div>
         `;
