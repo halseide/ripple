@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.6.1
+ * Ripple Tracker  v0.7.0
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -28,7 +28,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.6.1';
+    const RIPPLE_VERSION = 'v0.7.0';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -47,6 +47,7 @@
     const CAPTURE_EP   = '/ripple/api/capture_prompt.php';
     const DEBUG_MODE   = new URLSearchParams(location.search).has('ripple_debug') ||
                          localStorage.getItem('ripple_debug') === 'true';
+    const HOME_MODE    = localStorage.getItem('ripple_home') === 'true';
 
 
     // ── Session state ─────────────────────────────────────────────────────────
@@ -135,6 +136,12 @@
             enable()  { localStorage.setItem('ripple_debug', 'true');  location.reload(); },
             disable() { localStorage.removeItem('ripple_debug');        location.reload(); },
             toggle()  { DEBUG_MODE ? Ripple.debug.disable() : Ripple.debug.enable(); },
+        },
+
+        home: {
+            enable()  { localStorage.setItem('ripple_home', 'true');   location.reload(); },
+            disable() { localStorage.removeItem('ripple_home');         location.reload(); },
+            toggle()  { HOME_MODE ? Ripple.home.disable() : Ripple.home.enable(); },
         },
     };
 
@@ -696,6 +703,34 @@
             `<option value="${c}">${c.charAt(0).toUpperCase() + c.slice(1)}</option>`
         ).join('');
 
+        // ── Home mode: replace capture form with info card ───────────────────
+        const modalBody = HOME_MODE ? `
+            <div style="padding:16px 4px 4px; text-align:center;">
+                <div style="font-size:28px; margin-bottom:8px;">⚪</div>
+                <div style="color:#e8e8f5; font-weight:700; font-size:15px; margin-bottom:4px;">Home</div>
+                <div style="color:rgba(140,130,200,0.7); font-size:11px; font-family:'JetBrains Mono',monospace; margin-bottom:16px;">
+                    ${PROJECT_KEY} · ${RIPPLE_VERSION}
+                </div>
+                <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(100,80,200,0.15); border-radius:8px; padding:12px; text-align:left; font-size:11px; font-family:'JetBrains Mono',monospace; color:rgba(180,170,220,0.8); line-height:2;">
+                    <div>📍 <strong>Page:</strong> ${pageUrl.replace(/^https?:\/\/[^/]+/, '').slice(0, 52) || '/'}</div>
+                    <div>🎯 <strong>Session:</strong> ${_sessionId}</div>
+                    <div>📦 <strong>Events logged:</strong> ${_events.length}</div>
+                    <div>🔵 <strong>Prompt mode:</strong> off (idle)</div>
+                    <div>🔴 <strong>Debug mode:</strong> ${DEBUG_MODE ? 'on' : 'off'}</div>
+                </div>
+                <div style="margin-top:14px; font-size:11px; color:rgba(120,110,160,0.6);">Shift+Right-Click any element to return to Prompt mode</div>
+            </div>` : `
+            <div class="_rpl_modal_body">
+                <div class="_rpl_ctx_pill" title="${selectorPath}">${elementCtx}<br><span style="opacity:0.6">${selectorPath.slice(0, 72)}${selectorPath.length > 72 ? '…' : ''}</span></div>
+                <textarea id="_rpl_prompt_text" class="_rpl_textarea" placeholder="Describe what you want to change or add here…" autofocus></textarea>
+                <div class="_rpl_controls">
+                    <select id="_rpl_cat_select" class="_rpl_cat_select" aria-label="Category">${catOpts}</select>
+                    <button id="_rpl_btn_cancel" class="_rpl_btn_cancel">Cancel</button>
+                    <button id="_rpl_btn_send" class="_rpl_btn_send">⚡ Send to AI Inbox</button>
+                </div>
+                <div id="_rpl_status" class="_rpl_status"></div>
+            </div>`;
+
         modal.innerHTML = `
             <div class="_rpl_modal_header">
                 <a href="${PROJECT_PATH}/ripple/" target="_blank" style="display:flex;align-items:center;text-decoration:none;" title="Dashboard">
@@ -707,28 +742,21 @@
                 </div>
                 <button id="_rpl_close_x" style="margin-left:auto;background:transparent;border:none;color:rgba(180,170,220,0.5);font-size:20px;cursor:pointer;line-height:1;padding:0 4px;transition:color 0.2s;" aria-label="Close">&times;</button>
             </div>
-            <div class="_rpl_modal_body">
-                <div class="_rpl_ctx_pill" title="${selectorPath}">${elementCtx}<br><span style="opacity:0.6">${selectorPath.slice(0, 72)}${selectorPath.length > 72 ? '…' : ''}</span></div>
-                <textarea id="_rpl_prompt_text" class="_rpl_textarea" placeholder="Describe what you want to change or add here…" autofocus></textarea>
-                <div class="_rpl_controls">
-                    <select id="_rpl_cat_select" class="_rpl_cat_select" aria-label="Category">${catOpts}</select>
-                    <button id="_rpl_btn_cancel" class="_rpl_btn_cancel">Cancel</button>
-                    <button id="_rpl_btn_send" class="_rpl_btn_send">⚡ Send to AI Inbox</button>
-                </div>
-                <div id="_rpl_status" class="_rpl_status"></div>
-                <div style="margin-top:12px; text-align:center; display:flex; justify-content:center; gap:16px; align-items:center;">
-                    <a href="${PROJECT_PATH}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View Dashboard</a>
-                    <span style="color:rgba(80,70,120,0.5); font-size:10px;">·</span>
-                    <a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:${DEBUG_MODE ? '#ff6b6b' : 'rgba(140,130,220,0.8)'}; text-decoration:underline;">${DEBUG_MODE ? '🔴 Exit Debug Mode' : '🔵 Enter Debug Mode'}</a>
-                </div>
-                <div style="margin-top:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(100,80,200,0.12); border-radius:8px; padding:8px 12px; display:flex; gap:16px; justify-content:center; align-items:center;">
-                    <span style="font-size:10px; color:rgba(160,150,200,0.7); font-family:'JetBrains Mono',monospace; font-weight:700; letter-spacing:0.05em;">LEGEND</span>
-                    <span style="font-size:11px; color:#e8e8f5;">⚪ Idle</span>
-                    <span style="font-size:11px; color:#58a6ff;">🔵 Prompt</span>
-                    <span style="font-size:11px; color:#f85149;">🔴 Debug</span>
-                </div>
-                <div style="margin-top:8px;font-size:10px;color:rgba(120,110,170,0.5);text-align:center;font-family:'JetBrains Mono',monospace;">Shift+Enter to submit · Esc to close</div>
+            ${modalBody}
+            <div style="margin-top:12px; text-align:center; display:flex; justify-content:center; gap:16px; align-items:center;">
+                <a href="${PROJECT_PATH}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View Dashboard</a>
+                <span style="color:rgba(80,70,120,0.5); font-size:10px;">·</span>
+                <a id="_rpl_home_toggle" href="#" style="font-size:11px; color:${HOME_MODE ? '#e8e8f5' : 'rgba(140,130,220,0.8)'}; text-decoration:underline;">${HOME_MODE ? '⚪ Exit Home' : '⚪ Go Home'}</a>
+                <span style="color:rgba(80,70,120,0.5); font-size:10px;">·</span>
+                <a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:${DEBUG_MODE ? '#ff6b6b' : 'rgba(140,130,220,0.8)'}; text-decoration:underline;">${DEBUG_MODE ? '🔴 Exit Debug' : '🔵 Debug'}</a>
             </div>
+            <div style="margin-top:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(100,80,200,0.12); border-radius:8px; padding:8px 12px; display:flex; gap:16px; justify-content:center; align-items:center;">
+                <span style="font-size:10px; color:rgba(160,150,200,0.7); font-family:'JetBrains Mono',monospace; font-weight:700; letter-spacing:0.05em;">LEGEND</span>
+                <span style="font-size:11px; color:#e8e8f5;">⚪ Idle</span>
+                <span style="font-size:11px; color:#58a6ff;">🔵 Prompt</span>
+                <span style="font-size:11px; color:#f85149;">🔴 Debug</span>
+            </div>
+            <div style="margin-top:8px;font-size:10px;color:rgba(120,110,170,0.5);text-align:center;font-family:'JetBrains Mono',monospace;">Shift+Enter to submit · Esc to close</div>
         `;
 
         document.body.appendChild(backdrop);
@@ -740,26 +768,35 @@
 
         // ── Wire close actions ───────────────────────────────────────────────
         document.getElementById('_rpl_close_x').addEventListener('click', _closeModal);
-        document.getElementById('_rpl_btn_cancel').addEventListener('click', _closeModal);
+        if (!HOME_MODE) document.getElementById('_rpl_btn_cancel').addEventListener('click', _closeModal);
+
+        // Home mode toggle
+        document.getElementById('_rpl_home_toggle').addEventListener('click', (e) => {
+            e.preventDefault();
+            _closeModal();
+            Ripple.home.toggle();
+        });
 
         // Debug mode toggle
         document.getElementById('_rpl_debug_toggle').addEventListener('click', (e) => {
             e.preventDefault();
             _closeModal();
-            Ripple.debug.toggle(); // sets localStorage + reloads — indicator updates on next load
+            Ripple.debug.toggle();
         });
 
         // Esc key
         const _escHandler = (e) => { if (e.key === 'Escape') _closeModal(); };
         document.addEventListener('keydown', _escHandler, { once: true });
 
-        // Shift+Enter submit
-        textarea.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && e.shiftKey) {
-                e.preventDefault();
-                document.getElementById('_rpl_btn_send').click();
-            }
-        });
+        // Shift+Enter submit (prompt mode only)
+        if (!HOME_MODE && textarea) {
+            textarea.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && e.shiftKey) {
+                    e.preventDefault();
+                    document.getElementById('_rpl_btn_send').click();
+                }
+            });
+        }
 
         // ── Wire send ────────────────────────────────────────────────────────
         document.getElementById('_rpl_btn_send').addEventListener('click', function () {
@@ -843,6 +880,7 @@
     };
 
     function _indicatorState() {
+        if (HOME_MODE)  return 'idle';
         if (DEBUG_MODE) return 'debug';
         return 'prompt'; // tracker active = prompt mode by default
     }
