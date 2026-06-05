@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.7.4
+ * Ripple Tracker  v0.7.5
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -28,7 +28,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.7.4';
+    const RIPPLE_VERSION = 'v0.7.5';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -737,14 +737,15 @@
                 <div id="_rpl_status" class="_rpl_status"></div>
             </div>`;
 
-        // Nav acts as legend — active state is highlighted, others show their mode color
-        const navHome  = _homeMode
+        // Nav acts as legend — active = current _indicatorState() only, others always clickable
+        const _curState = _indicatorState(); // 'idle' | 'prompt' | 'debug'
+        const navHome  = _curState === 'idle'
             ? `<span style="font-size:11px; color:#e8e8f5; font-weight:600; cursor:default;">⚪ Home</span>`
             : `<a id="_rpl_home_toggle" href="#" style="font-size:11px; color:rgba(220,215,235,0.55); text-decoration:none; cursor:pointer;">⚪ Home</a>`;
-        const navPrompt = (!_homeMode && !DEBUG_MODE)
+        const navPrompt = _curState === 'prompt'
             ? `<span style="font-size:11px; color:#58a6ff; font-weight:600; cursor:default;">🔵 Prompt</span>`
             : `<a id="_rpl_prompt_toggle" href="#" style="font-size:11px; color:#58a6ff; text-decoration:none; opacity:0.55; cursor:pointer;">🔵 Prompt</a>`;
-        const navDebug  = DEBUG_MODE
+        const navDebug  = _curState === 'debug'
             ? `<span style="font-size:11px; color:#ff6b6b; font-weight:600; cursor:default;">🔴 Debug</span>`
             : `<a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:#ff6b6b; text-decoration:none; opacity:0.55; cursor:pointer;">🔴 Debug</a>`;
 
