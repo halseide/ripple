@@ -28,7 +28,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.3.0';
+    const RIPPLE_VERSION = 'v0.5.0';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     const _script      = document.currentScript;
@@ -131,46 +131,235 @@
     // ── Auto-tracking: page load ──────────────────────────────────────────────
     Ripple.track('page_loaded', { href: location.href });
 
-    // ── Auto-tracking: [data-ripple-event] clicks ─────────────────────────────
+    // ── Auto-Instrumentation Layer ────────────────────────────────────────────
+    // Everything below fires automatically on injection — zero changes needed
+    // in the host page. All events flow into Ripple.track() and appear in the
+    // debug overlay and session payload.
+
+    /**
+     * Build a short, stable "fingerprint" for an element so we can
+     * deduplicate rapid duplicate events and detect rage-clicks.
+     * Format: "tag#id.class1.class2"
+     */
+    function _elKey(el) {
+        if (!el || el === document.body || el === document.documentElement) return 'body';
+        let k = (el.tagName || 'div').toLowerCase();
+        if (el.id)        k += '#' + el.id;
+        if (el.className && typeof el.className === 'string') {
+            k += '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.');
+        }
+        return k;
+    }
+
+    /**
+     * Build a readable label for any element: tries text, aria-label,
+     * title, placeholder, value, id in that order.
+     */
+    function _elLabel(el) {
+        if (!el) return '';
+        let lbl =
+            el.getAttribute('aria-label') ||
+            el.title ||
+            el.placeholder ||
+            el.textContent?.trim().slice(0, 80) ||
+            el.id ||
+            el.getAttribute('name') ||
+            '';
+        return lbl.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 80);
+    }
+
+    // ── 1. Universal click capture ────────────────────────────────────────────
+    // Captures EVERY click, not just buttons/links. Uses capturing phase so it
+    // fires before any handler on the page can stopPropagation.
+    const _recentClicks = []; // for rage-click detection
+
     document.addEventListener('click', function (e) {
-        // 1. Check for explicit manual tags (highest priority)
-        const explicitEl = e.target.closest('[data-ripple-event]');
-        if (explicitEl) {
-            const name = explicitEl.getAttribute('data-ripple-event');
-            const label = explicitEl.getAttribute('data-ripple-label') || explicitEl.textContent.trim().slice(0, 80);
-            Ripple.track(name, { label, element: explicitEl.tagName.toLowerCase() });
-            return;
+        // Skip our own modal/indicator clicks
+        const skip = e.target.closest('#_rpl_panel, #_rpl_indicator, #_rpl_capture_modal, #_rpl_backdrop, [id^="_rpl_"]');
+        if (skip) return;
+
+        // Skip shift+right-click (that's for the modal)
+        if (e.button !== 0) return;
+
+        const el    = e.target;
+        const key   = _elKey(el);
+        const label = _elLabel(el);
+        const tag   = (el.tagName || '').toLowerCase();
+        const path  = _getCssPath(el).slice(0, 120);
+
+        // Determine a sensible event name
+        let evtName = 'element_clicked';
+        if (tag === 'a')       evtName = 'link_clicked';
+        else if (tag === 'button')  evtName = 'button_clicked';
+        else if (tag === 'select')  evtName = 'select_clicked';
+        else if (tag === 'input') {
+            const t = (el.type || '').toLowerCase();
+            if      (t === 'checkbox') evtName = 'checkbox_toggled';
+            else if (t === 'radio')    evtName = 'radio_selected';
+            else if (t === 'submit')   evtName = 'form_submitted';
+            else if (t === 'range')    evtName = 'slider_moved';
+            else                       evtName = 'input_clicked';
+        }
+        // Check for [data-ripple-event] manual override (highest priority)
+        const manualEl = el.closest('[data-ripple-event]');
+        if (manualEl) {
+            evtName = manualEl.getAttribute('data-ripple-event');
         }
 
-        // 2. Auto-capture generic clicks on interactive elements
-        const interactiveEl = e.target.closest('button, a, input[type="submit"], input[type="button"], [role="button"], .panel-action, .gran-btn, .nav-item, .rt-arrow');
-        if (interactiveEl) {
-            let label = interactiveEl.textContent.trim().slice(0, 80);
-            if (!label && interactiveEl.id) label = '#' + interactiveEl.id;
-            if (!label && interactiveEl.className) label = '.' + interactiveEl.className.split(' ')[0];
-            if (!label && interactiveEl.title) label = interactiveEl.title;
-            
-            // Format label nicely
-            if (label && typeof label === 'string') {
-                label = label.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-            }
+        const details = {
+            element: tag,
+            label:   label || '(no label)',
+            path:    path,
+        };
+        if (el.href)             details.href    = el.href.slice(0, 100);
+        if (el.id)               details.id      = el.id;
+        if (el.getAttribute('data-ripple-label')) details.label = el.getAttribute('data-ripple-label');
 
-            const tagName = interactiveEl.tagName.toLowerCase();
-            let eventName = 'interaction';
-            if (tagName === 'a') eventName = 'link_clicked';
-            else if (tagName === 'button') eventName = 'button_clicked';
+        Ripple.track(evtName, details);
 
-            Ripple.track(eventName, { 
-                label: label || 'unnamed', 
-                element: tagName,
-                id: interactiveEl.id || undefined,
-                class: interactiveEl.className || undefined,
-                href: interactiveEl.getAttribute('href') || undefined
-            });
+        // ── Rage-click detection ─────────────────────────────────────────────
+        const now = Date.now();
+        _recentClicks.push({ key, t: now });
+        // Keep only last 600ms window
+        while (_recentClicks.length && now - _recentClicks[0].t > 600) _recentClicks.shift();
+        const sameTarget = _recentClicks.filter(c => c.key === key);
+        if (sameTarget.length >= 3) {
+            Ripple.track('rage_click', { element: tag, label, path, count: sameTarget.length });
+            _recentClicks.length = 0; // reset after reporting
         }
+
+    }, true); // capture phase
+
+    // ── 2. Input / Select / Textarea changes ──────────────────────────────────
+    document.addEventListener('change', function (e) {
+        const el  = e.target;
+        const tag = (el.tagName || '').toLowerCase();
+        if (!['input', 'select', 'textarea'].includes(tag)) return;
+
+        const skip = el.closest('[id^="_rpl_"]');
+        if (skip) return;
+
+        const t       = (el.type || '').toLowerCase();
+        const label   = _elLabel(el);
+        const path    = _getCssPath(el).slice(0, 120);
+
+        // Privacy: never capture actual text values; just metadata
+        let valueInfo = {};
+        if (t === 'checkbox')       valueInfo = { checked: el.checked };
+        else if (t === 'radio')     valueInfo = { value: el.value?.slice(0, 40) };
+        else if (t === 'range')     valueInfo = { value: el.value };
+        else if (tag === 'select')  valueInfo = { selected: el.value?.slice(0, 40), optionCount: el.options.length };
+        else                        valueInfo = { length: el.value?.length || 0 }; // text: just length
+
+        Ripple.track('input_changed', {
+            element: tag,
+            type:    t || tag,
+            label:   label || el.name || el.id || '(unnamed)',
+            path,
+            ...valueInfo,
+        });
     }, true);
 
-    // ── Auto-tracking: [data-ripple-view] visibility ──────────────────────────
+    // ── 3. Keyboard: focus engagement on inputs ───────────────────────────────
+    let _focusedEl = null;
+    document.addEventListener('focusin', function (e) {
+        const el  = e.target;
+        const tag = (el.tagName || '').toLowerCase();
+        if (!['input', 'textarea', 'select'].includes(tag)) return;
+        if (el.closest('[id^="_rpl_"]')) return;
+        _focusedEl = { el, t: Date.now() };
+        Ripple.track('field_focused', {
+            element: tag,
+            label:   _elLabel(el) || el.name || el.id || '(unnamed)',
+            path:    _getCssPath(el).slice(0, 80),
+        });
+    }, true);
+
+    document.addEventListener('focusout', function (e) {
+        if (!_focusedEl) return;
+        const secs = ((Date.now() - _focusedEl.t) / 1000).toFixed(1);
+        _focusedEl = null;
+        if (parseFloat(secs) < 0.3) return; // skip accidental focus flashes
+        Ripple.track('field_blurred', { timeInField: secs + 's' });
+    }, true);
+
+    // ── 4. Scroll depth milestones ────────────────────────────────────────────
+    const _scrollMilestones = new Set();
+    function _onScroll() {
+        const el     = document.scrollingElement || document.documentElement;
+        const pct    = el.scrollHeight <= el.clientHeight
+            ? 100
+            : Math.round((el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100);
+        [25, 50, 75, 100].forEach(m => {
+            if (pct >= m && !_scrollMilestones.has(m)) {
+                _scrollMilestones.add(m);
+                Ripple.track('scroll_depth', { percent: m });
+            }
+        });
+    }
+    window.addEventListener('scroll', _onScroll, { passive: true });
+
+    // ── 5. Form submissions ───────────────────────────────────────────────────
+    document.addEventListener('submit', function (e) {
+        const form = e.target;
+        Ripple.track('form_submitted', {
+            id:     form.id || '(no-id)',
+            action: (form.action || '').slice(0, 80),
+            method: form.method || 'get',
+        });
+    }, true);
+
+    // ── 6. Visibility / tab focus (idle + return) ─────────────────────────────
+    let _hiddenAt = null;
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            _hiddenAt = Date.now();
+            Ripple.track('tab_hidden', {});
+        } else {
+            const away = _hiddenAt ? ((Date.now() - _hiddenAt) / 1000).toFixed(1) : '?';
+            _hiddenAt = null;
+            Ripple.track('tab_returned', { awaySeconds: away });
+        }
+    });
+
+    // ── 7. DOM mutation observer — widget state changes ───────────────────────
+    // Watches for attribute changes that indicate state transitions in
+    // custom widgets: aria-expanded (accordions, dropdowns), aria-selected
+    // (tabs, listboxes), data-active (custom toggle systems), open (details).
+    const WATCH_ATTRS = new Set(['aria-expanded', 'aria-selected', 'aria-checked', 'aria-current', 'data-active', 'open', 'data-tab', 'data-state']);
+
+    const _mutObs = new MutationObserver(function (mutations) {
+        mutations.forEach(m => {
+            if (m.type !== 'attributes') return;
+            const attr = m.attributeName;
+            if (!WATCH_ATTRS.has(attr)) return;
+            const el  = m.target;
+            if (el.closest('[id^="_rpl_"]')) return;
+            const val = el.getAttribute(attr);
+            Ripple.track('widget_state_changed', {
+                attribute: attr,
+                value:     val,
+                element:   (el.tagName || '').toLowerCase(),
+                label:     _elLabel(el) || el.id || '(unnamed)',
+                path:      _getCssPath(el).slice(0, 80),
+            });
+        });
+    });
+
+    const _startMutObs = () => {
+        _mutObs.observe(document.body, {
+            attributes:     true,
+            attributeFilter: [...WATCH_ATTRS],
+            subtree:        true,
+        });
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _startMutObs);
+    } else {
+        _startMutObs();
+    }
+
+    // ── 8. Auto-detect views from [data-ripple-view] ─────────────────────────
     if ('IntersectionObserver' in window) {
         const io = new IntersectionObserver((entries) => {
             entries.forEach(e => {
@@ -180,7 +369,6 @@
                 }
             });
         }, { threshold: 0.6 });
-        // Observe after DOM is ready
         const _observeViews = () => document.querySelectorAll('[data-ripple-view]').forEach(el => io.observe(el));
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', _observeViews);
@@ -188,6 +376,7 @@
             _observeViews();
         }
     }
+
 
     // ── Auto-tracking: URL routing (History & Hash) ───────────────────────────
     function _autoViewFromUrl() {
@@ -517,8 +706,16 @@
                     <button id="_rpl_btn_send" class="_rpl_btn_send">⚡ Send to AI Inbox</button>
                 </div>
                 <div id="_rpl_status" class="_rpl_status"></div>
-                <div style="margin-top:12px; text-align:center;">
-                    <a href="${PROJECT_PATH}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View AI Inbox (Dashboard)</a>
+                <div style="margin-top:12px; text-align:center; display:flex; justify-content:center; gap:16px; align-items:center;">
+                    <a href="${PROJECT_PATH}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View Dashboard</a>
+                    <span style="color:rgba(80,70,120,0.5); font-size:10px;">·</span>
+                    <a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:${DEBUG_MODE ? '#ff6b6b' : 'rgba(140,130,220,0.8)'}; text-decoration:underline;">${DEBUG_MODE ? '🔴 Exit Debug Mode' : '🔵 Enter Debug Mode'}</a>
+                </div>
+                <div style="margin-top:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(100,80,200,0.12); border-radius:8px; padding:8px 12px; display:flex; gap:16px; justify-content:center; align-items:center;">
+                    <span style="font-size:10px; color:rgba(160,150,200,0.7); font-family:'JetBrains Mono',monospace; font-weight:700; letter-spacing:0.05em;">LEGEND</span>
+                    <span style="font-size:11px; color:#e8e8f5;">⚪ Idle</span>
+                    <span style="font-size:11px; color:#58a6ff;">🔵 Prompt</span>
+                    <span style="font-size:11px; color:#f85149;">🔴 Debug</span>
                 </div>
                 <div style="margin-top:8px;font-size:10px;color:rgba(120,110,170,0.5);text-align:center;font-family:'JetBrains Mono',monospace;">Shift+Enter to submit · Esc to close</div>
             </div>
@@ -534,6 +731,13 @@
         // ── Wire close actions ───────────────────────────────────────────────
         document.getElementById('_rpl_close_x').addEventListener('click', _closeModal);
         document.getElementById('_rpl_btn_cancel').addEventListener('click', _closeModal);
+
+        // Debug mode toggle
+        document.getElementById('_rpl_debug_toggle').addEventListener('click', (e) => {
+            e.preventDefault();
+            _closeModal();
+            Ripple.debug.toggle(); // sets localStorage + reloads — indicator updates on next load
+        });
 
         // Esc key
         const _escHandler = (e) => { if (e.key === 'Escape') _closeModal(); };
@@ -616,18 +820,55 @@
     }
 
     // ── UI Capture: Floating Indicator Icon ───────────────────────────────────
+    //
+    // Three states:
+    //   idle   — white  — tracker loaded, no active mode
+    //   prompt — blue   — prompt capture mode (default when tracker is active)
+    //   debug  — red    — ?ripple_debug=1 or localStorage ripple_debug=true
+
+    const INDICATOR_COLORS = {
+        idle:   { fill: '#e8e8f5', stroke: '#c0b8d8', label: '⚪ Idle — click to open' },
+        prompt: { fill: '#388bfd', stroke: '#58a6ff', label: '🔵 Prompt Mode — Shift+Right-Click any element' },
+        debug:  { fill: '#ff6b6b', stroke: '#f85149', label: '🔴 Debug Mode — live event stream active' },
+    };
+
+    function _indicatorState() {
+        if (DEBUG_MODE) return 'debug';
+        return 'prompt'; // tracker active = prompt mode by default
+    }
+
+    function _setIndicatorColor(state) {
+        const ind = document.getElementById('_rpl_indicator');
+        if (!ind) return;
+        const cfg = INDICATOR_COLORS[state] || INDICATOR_COLORS.prompt;
+        // Update all circle fill/stroke colours inside the SVG
+        ind.querySelectorAll('circle').forEach((c, i) => {
+            if (i === 0) {
+                c.setAttribute('fill', cfg.fill);
+            } else {
+                c.setAttribute('stroke', cfg.stroke);
+            }
+        });
+        // Update tooltip
+        const tip = ind.querySelector('[data-rpl-tooltip]');
+        if (tip) tip.textContent = `Ripple ${RIPPLE_VERSION} · ${cfg.label}`;
+    }
+
     function _buildIndicator() {
+        const state = _indicatorState();
+        const cfg   = INDICATOR_COLORS[state];
+
         const svgMarkup = `<svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <circle cx="12" cy="12" r="3" fill="#a78bfa"/>
-            <circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.2">
+            <circle cx="12" cy="12" r="3" fill="${cfg.fill}"/>
+            <circle cx="12" cy="12" r="3" stroke="${cfg.stroke}" stroke-width="1.2">
                 <animate attributeName="r" values="3; 11" dur="2.5s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.8; 0" dur="2.5s" repeatCount="indefinite" />
             </circle>
-            <circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.2">
+            <circle cx="12" cy="12" r="3" stroke="${cfg.stroke}" stroke-width="1.2">
                 <animate attributeName="r" values="3; 11" dur="2.5s" begin="0.83s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.8; 0" dur="2.5s" begin="0.83s" repeatCount="indefinite" />
             </circle>
-            <circle cx="12" cy="12" r="3" stroke="#a78bfa" stroke-width="1.2">
+            <circle cx="12" cy="12" r="3" stroke="${cfg.stroke}" stroke-width="1.2">
                 <animate attributeName="r" values="3; 11" dur="2.5s" begin="1.66s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.8; 0" dur="2.5s" begin="1.66s" repeatCount="indefinite" />
             </circle>
@@ -636,7 +877,7 @@
         const indicator = document.createElement('div');
         indicator.id = '_rpl_indicator';
         indicator.setAttribute('role', 'button');
-        indicator.setAttribute('aria-label', 'Ripple Active — click to open prompt');
+        indicator.setAttribute('aria-label', 'Ripple — click to open prompt');
         indicator.setAttribute('tabindex', '0');
         indicator.style.cssText = [
             'position:fixed', 'bottom:20px', 'right:20px',
@@ -652,6 +893,7 @@
 
         // Tooltip
         const tooltip = document.createElement('div');
+        tooltip.setAttribute('data-rpl-tooltip', '1');
         tooltip.style.cssText = [
             'position:absolute', 'bottom:calc(100% + 8px)', 'right:0',
             'background:rgba(10,10,26,0.97)',
@@ -663,7 +905,7 @@
             'opacity:0', 'transition:opacity 0.2s',
             'box-shadow:0 4px 16px rgba(0,0,0,0.6)',
         ].join(';');
-        tooltip.textContent = 'Ripple Active — Shift+Right-Click any element to modify';
+        tooltip.textContent = `Ripple ${RIPPLE_VERSION} · ${cfg.label}`;
 
         indicator.appendChild(tooltip);
         indicator.innerHTML += svgMarkup;
