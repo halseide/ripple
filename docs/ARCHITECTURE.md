@@ -46,11 +46,15 @@ You run: python scripts/analyze.py
 - Suggestion lifecycle: open → accepted → shipped → measured → dismissed
 - Design principle: suggestions are grounded in data + stated intent, not generic advice
 
+### api/ — PHP Endpoints
+- `session.php` — receives tracker POST data, writes session JSON files
+- `capture_prompt.php` — receives UI Capture prompts, writes to raw inbox + prompt_log.json
+- `config.php` — **[NEW v0.6.0]** GET/POST endpoint for reading and writing `ripple.config.json`. Localhost-only. Used by the dashboard Settings panel.
+
 ### dashboard/ — Web UI
 - `index.html` — the main analytics dashboard
-- `projects.html` — project overview (for multi-project installs)
-- `analytics.js` — fetches JSON, renders all panels
-- Reads: `data/project_analytics.json`, `data/ripple_suggestions.json`
+- Reads: `data/project_analytics.json`, `data/ripple_suggestions.json`, `api/config.php`
+- Settings panel (`⚙️ Settings` gear button in header) — slide-in editor for all per-project config fields including `github_url`
 
 ## Config Format
 
@@ -61,6 +65,7 @@ You run: python scripts/analyze.py
       "key": "example",
       "name": "example.com",
       "url": "https://example.com",
+      "github_url": "https://github.com/user/repo",
       "sessions_dir": "./sessions",
       "git_repo": ".",
       "goals": [
@@ -73,6 +78,8 @@ You run: python scripts/analyze.py
   ]
 }
 ```
+
+`github_url` is optional. When present, commit hashes in the Prompt Log render as clickable links to that GitHub repo. When absent or empty, hashes render as plain monospace text with a tooltip directing you to Settings.
 
 ## Key Design Decisions
 
@@ -87,3 +94,6 @@ Zero cloud dependency for v1. Forces clean local design. Managed tier added when
 
 ### ADR-004: Goals are stated in config, not inferred
 The intelligence layer reads your stated goals from ripple.config.json. It does not guess your intent. This prevents hallucinated suggestions and keeps accountability grounded.
+
+### ADR-005: Settings panel writes config via localhost-only PHP API
+Rather than require developers to hand-edit JSON, the dashboard includes a Settings panel that reads and writes `ripple.config.json` through `api/config.php`. The endpoint is restricted to `127.0.0.1` / `::1` to prevent remote config modification. A `.bak` file is written before every save. The config file remains the single source of truth — the API is just a safe wrapper.

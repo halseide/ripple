@@ -1,6 +1,6 @@
 # Ripple
 
-> **The Continuous Design Loop** · v0.5.0
+> **The Continuous Design Loop** · v0.6.0
 
 Ripple turns your live website into an active canvas for AI-assisted design. Instead of copy-pasting code snippets to your LLM, Ripple's UI Capture drops a direct tether to the element you want to change. It’s the fastest way to iterate on front-end design, backed by a session analytics engine that proves whether your changes actually worked.
 
@@ -85,13 +85,42 @@ Click the indicator to open the capture modal. The modal includes:
 # 1. Drop the tracker on your site
 <script src="ripple.js" data-project="my-project"></script>
 
-# 2. Point Ripple at your sessions folder and git repo
+# 2. Copy and configure
 cp ripple.config.example.json ripple.config.json
-# edit ripple.config.json
 
-# 3. Run analysis
+# 3. Open the dashboard and use the Settings panel (⚙️ top-right)
+#    to set your project name, goals, GitHub URL, and paths.
+#    No JSON editing required.
+
+# 4. Run analysis
 python scripts/analyze.py
 ```
+
+## Configuration
+
+Ripple is configured via `ripple.config.json` in the project root. The **Settings panel** in the dashboard (`⚙️ Settings` button, top-right) provides a full UI editor — no JSON hand-editing required.
+
+### Key config fields per project
+
+| Field | Required | Description |
+|---|---|---|
+| `key` | ✅ | Short identifier. Alphanumeric + dash/underscore only. |
+| `name` | ✅ | Display name shown in the dashboard. |
+| `url` | ✅ | Live URL of the project (for reference). |
+| `github_url` | — | Full GitHub repo URL (e.g. `https://github.com/user/repo`). When set, commit hashes in the Prompt Log become clickable links. Leave empty for local-only repos. |
+| `git_repo` | ✅ | Absolute path to the local git repo directory. |
+| `sessions_dir` | ✅ | Absolute path to the sessions folder where tracker writes JSON files. |
+| `goals` | — | Array of plain-language goals. Used by the intelligence layer to generate targeted suggestions. |
+| `interaction_events` | — | Named events the tracker should flag as meaningful interactions. |
+
+### Config API
+
+The Settings panel talks to a PHP endpoint at `api/config.php`:
+
+- **GET** `api/config.php` — returns the full config as JSON
+- **POST** `api/config.php` — writes an updated config to disk (localhost only)
+
+A `.bak` backup of the previous config is written automatically on every save.
 
 ## Multi-Project Setup
 
