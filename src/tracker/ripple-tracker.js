@@ -31,13 +31,23 @@
     const RIPPLE_VERSION = 'v0.5.0';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
-    const _script      = document.currentScript;
+    // document.currentScript is null for dynamically injected scripts (e.g.
+    // when the host page creates a <script> element via JS and appends it).
+    // Fallback: scan document.scripts for the ripple-tracker src to recover
+    // data-ripple-* attributes set on the element before appendChild().
+    const _script = (function () {
+        if (document.currentScript) return document.currentScript;
+        const scripts = document.querySelectorAll('script[src*="ripple-tracker"]');
+        return scripts[scripts.length - 1] || null;
+    }());
+
     const PROJECT_KEY  = (_script && _script.getAttribute('data-ripple-key'))      || 'unknown';
     const PROJECT_PATH = (_script && _script.getAttribute('data-ripple-path'))     || `/${PROJECT_KEY}`;
     const ENDPOINT     = (_script && _script.getAttribute('data-ripple-endpoint')) || '/api/session.php';
     const CAPTURE_EP   = '/ripple/api/capture_prompt.php';
     const DEBUG_MODE   = new URLSearchParams(location.search).has('ripple_debug') ||
                          localStorage.getItem('ripple_debug') === 'true';
+
 
     // ── Session state ─────────────────────────────────────────────────────────
     const _startMs   = Date.now();
