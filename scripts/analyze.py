@@ -165,7 +165,7 @@ def main():
     # ── Write project_analytics.json ──────────────────────────────────────────
     output = {
         "generated_at":   datetime.now(timezone.utc).isoformat(),
-        "ripple_version": "0.1.0",
+        "ripple_version": config.get("version", "v0.3.0"),
         "projects":       results,
         "visitor_names":  visitor_names
     }
