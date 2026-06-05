@@ -1,28 +1,25 @@
 # Ripple
 
-> **What did this commit do to your users?**
+> **The Continuous Design Loop**
 
-Ripple is a self-hosted, git-native analytics tool that automatically correlates every code deployment with real user behavior — and tells you what to do next.
+Ripple turns your live website into an active canvas for AI-assisted design. Instead of copy-pasting code snippets to your LLM, Ripple's UI Capture drops a direct tether to the element you want to change. It’s the fastest way to iterate on front-end design, backed by a session analytics engine that proves whether your changes actually worked.
 
 ## What It Does
 
-Every time you push code, Ripple:
-1. Reads your git log to mark the deployment event
-2. Computes before/after behavioral diffs from your session data
-3. Surfaces the impact in plain language: "Median session dropped 18% — here's why and what to try"
-4. Generates specific, goal-aware suggestions tied to your project intent
-5. Tracks whether those suggestions were acted on and whether they worked
+1. **Omnipresent UI Capture**: `Shift+Right-Click` any element on your live site to instantly send its precise DOM context and your prompt to your AI assistant.
+2. **Instant Iteration**: Your AI assistant edits the exact files, commits them, and your live site updates.
+3. **Silent Validation**: In the background, Ripple tracks session data to compute before/after behavioral diffs of every deployment.
+4. **Goal-Aware Insights**: Surfaces the impact in plain language: "Median session dropped 18% — here's why and what to try."
 
 ## The Core Loop
 
 ```
-You ship code →
-  Ripple reads the commit →
-    Compares user behavior before/after →
-      Generates suggestions (from data + your goals) →
-        Tracks accountability →
-          Measures outcome of suggestions →
-            Informs the next commit
+You see something to fix →
+  Shift+Click to capture context →
+    AI executes the exact change →
+      Ripple logs the deployment →
+        Tracks user behavior before/after →
+          Proves if the UI change succeeded
 ```
 
 ## Modules
