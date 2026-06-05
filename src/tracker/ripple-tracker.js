@@ -528,14 +528,105 @@
             localStorage.removeItem('ripple_home');
             _setIndicatorColor('prompt');
         }
-        _openModal(e.target);
+        _openModal(e.target, e.pageX, e.pageY);
     }, true);
+
+    // ── UI Capture: Breadcrumb Sticky Notes ───────────────────────────────────
+    // After a prompt is saved, a throbbing ripple dot is pinned to the exact
+    // x,y coordinates where the user Shift+Right-Clicked. Hover to see a
+    // summary tooltip; click to open the dashboard in a new tab.
+    const _breadcrumbs = []; // { id, x, y, el }
+
+    function _spawnBreadcrumb(x, y, promptId, summary, dashUrl) {
+        const DOT_ID = '_rpl_bc_' + promptId;
+        if (document.getElementById(DOT_ID)) return; // already placed
+
+        // Inject keyframe + styles once
+        if (!document.getElementById('_rpl_bc_styles')) {
+            const s = document.createElement('style');
+            s.id = '_rpl_bc_styles';
+            s.textContent = `
+                @keyframes _rpl_bc_pulse {
+                    0%, 100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.7), 0 0 0 0 rgba(167,139,250,0.35); }
+                    60%       { box-shadow: 0 0 0 8px rgba(167,139,250,0), 0 0 0 16px rgba(167,139,250,0); }
+                }
+                .rpl-breadcrumb {
+                    position: absolute;
+                    width: 12px; height: 12px;
+                    border-radius: 50%;
+                    background: #a78bfa;
+                    border: 2px solid rgba(255,255,255,0.9);
+                    cursor: pointer;
+                    z-index: 2147483640;
+                    animation: _rpl_bc_pulse 2s ease-in-out infinite;
+                    transition: transform 0.15s ease;
+                    box-sizing: border-box;
+                }
+                .rpl-breadcrumb:hover { transform: scale(1.6); }
+                .rpl-breadcrumb-tip {
+                    position: fixed;
+                    background: rgba(10,10,26,0.97);
+                    border: 1px solid rgba(167,139,250,0.4);
+                    border-radius: 10px;
+                    padding: 8px 12px;
+                    font-family: 'Inter', system-ui, sans-serif;
+                    font-size: 11px;
+                    color: #e8e8f5;
+                    max-width: 220px;
+                    line-height: 1.5;
+                    z-index: 2147483641;
+                    pointer-events: none;
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+                }
+                .rpl-breadcrumb-tip .rpl-bc-id {
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 9px;
+                    color: rgba(167,139,250,0.7);
+                    display: block;
+                    margin-top: 4px;
+                }
+            `;
+            document.head.appendChild(s);
+        }
+
+        const dot = document.createElement('div');
+        dot.id = DOT_ID;
+        dot.className = 'rpl-breadcrumb';
+        dot.style.left = (x - 6) + 'px';
+        dot.style.top  = (y - 6) + 'px';
+        dot.title = summary;
+
+        let tip = null;
+        dot.addEventListener('mouseenter', function () {
+            tip = document.createElement('div');
+            tip.className = 'rpl-breadcrumb-tip';
+            const label = summary.length > 80 ? summary.slice(0, 77) + '…' : summary;
+            tip.innerHTML = `💬 <strong>${label}</strong><span class="rpl-bc-id">${promptId}</span>`;
+            // Position tip above and to the right of the dot
+            const r = dot.getBoundingClientRect();
+            tip.style.left = Math.min(r.right + 8, window.innerWidth - 240) + 'px';
+            tip.style.top  = Math.max(r.top - 48, 8) + 'px';
+            document.body.appendChild(tip);
+        });
+        dot.addEventListener('mouseleave', function () {
+            if (tip) { tip.remove(); tip = null; }
+        });
+        dot.addEventListener('click', function () {
+            window.open(dashUrl, '_blank');
+        });
+
+        document.body.appendChild(dot);
+        _breadcrumbs.push({ id: promptId, x, y, el: dot });
+    }
 
     // ── UI Capture: Modal ─────────────────────────────────────────────────────
     const CATEGORIES = ['fix', 'feature', 'design', 'copy', 'data', 'question'];
     const MODAL_ID   = '_rpl_capture_modal';
 
-    function _openModal(targetEl) {
+    function _openModal(targetEl, captureX, captureY) {
+        // Store click coordinates so breadcrumb can be placed after save
+        const _clickX = (captureX !== undefined) ? captureX : (window.scrollX + window.innerWidth / 2);
+        const _clickY = (captureY !== undefined) ? captureY : (window.scrollY + window.innerHeight / 2);
         if (_modalOpen) return;
         _modalOpen = true;
 
@@ -855,6 +946,8 @@
                 prompt:          text,
                 sessionId:       _sessionId,
                 timestamp:       new Date().toISOString(),
+                captureX:        _clickX,
+                captureY:        _clickY,
             };
 
             fetch(CAPTURE_EP, {
@@ -873,6 +966,9 @@
                         element:   elementCtx.slice(0, 60),
                         promptLen: text.length,
                     });
+                    // Spawn a throbbing breadcrumb at the exact click coordinates
+                    const dashUrl = (PROJECT_PATH || '') + '/ripple/';
+                    _spawnBreadcrumb(_clickX, _clickY, data.promptId, text, dashUrl);
                     window.dispatchEvent(new CustomEvent('ripplePromptSaved'));
                     setTimeout(_closeModal, 1400);
                 } else {
