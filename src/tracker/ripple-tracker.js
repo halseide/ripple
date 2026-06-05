@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.6.0
+ * Ripple Tracker  v0.6.1
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -28,7 +28,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.6.0';
+    const RIPPLE_VERSION = 'v0.6.1';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -698,7 +698,7 @@
 
         modal.innerHTML = `
             <div class="_rpl_modal_header">
-                <a href="/${PROJECT_KEY}/ripple/" target="_blank" style="display:flex;align-items:center;text-decoration:none;" title="Dashboard">
+                <a href="${PROJECT_PATH}/ripple/" target="_blank" style="display:flex;align-items:center;text-decoration:none;" title="Dashboard">
                     ${svgIcon}
                 </a>
                 <div>
@@ -717,7 +717,7 @@
                 </div>
                 <div id="_rpl_status" class="_rpl_status"></div>
                 <div style="margin-top:12px; text-align:center; display:flex; justify-content:center; gap:16px; align-items:center;">
-                    <a href="/${PROJECT_KEY}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View Dashboard</a>
+                    <a href="${PROJECT_PATH}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View Dashboard</a>
                     <span style="color:rgba(80,70,120,0.5); font-size:10px;">·</span>
                     <a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:${DEBUG_MODE ? '#ff6b6b' : 'rgba(140,130,220,0.8)'}; text-decoration:underline;">${DEBUG_MODE ? '🔴 Exit Debug Mode' : '🔵 Enter Debug Mode'}</a>
                 </div>
