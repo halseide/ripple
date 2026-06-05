@@ -93,6 +93,17 @@ cp ripple.config.example.json ripple.config.json
 python scripts/analyze.py
 ```
 
+## Multi-Project Setup
+
+Each project gets its own scoped dashboard by convention. The tracker derives the dashboard URL automatically from `data-ripple-key`:
+
+| Project | Script tag | Dashboard URL |
+|---|---|---|
+| Numen | `data-ripple-key="project-alpha"` | `http://localhost/project-alpha/ripple/` |
+| example.com | `data-ripple-key="example.com"` | `http://localhost/example.com/ripple/` |
+
+The "View Dashboard" link in the capture modal follows the pattern `/{PROJECT_KEY}/ripple/` — no extra configuration needed. The global cross-project dashboard lives at `/ripple/src/dashboard/`.
+
 ## Status
 
 🔵 **Stage: Develop** — actively building. First working version targets example.com as the proving ground.
