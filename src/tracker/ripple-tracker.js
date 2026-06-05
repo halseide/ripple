@@ -524,6 +524,7 @@
                         element:   elementCtx.slice(0, 60),
                         promptLen: text.length,
                     });
+                    window.dispatchEvent(new CustomEvent('ripplePromptSaved'));
                     setTimeout(_closeModal, 1400);
                 } else {
                     throw new Error(data.error || 'Unknown error');
