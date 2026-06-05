@@ -1289,24 +1289,36 @@
                             <span id="promptBadgePending" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; background: rgba(210, 153, 34, 0.15); color: var(--accent-amber); border: 1px solid rgba(210, 153, 34, 0.25); border-radius: 12px; font-weight: 700;">0 pending</span>
                             <span id="promptBadgeShipped" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; background: rgba(63, 185, 80, 0.12); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.2); border-radius: 12px; font-weight: 700;">0 shipped</span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <!-- Project filter -->
+                            <select id="promptProjectFilter" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <option value="all">All Projects</option>
+                            </select>
                             <!-- Status filter -->
                             <select id="promptStatusFilter" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                 <option value="all">All Statuses</option>
                                 <option value="pending">⏳ Pending</option>
-                                <option value="shipped">✅ Shipped</option>
                                 <option value="answered">💬 Answered</option>
+                                <option value="shipped">✅ Shipped</option>
+                                <option value="dismissed">🚫 Dismissed</option>
                             </select>
                             <!-- Category filter -->
                             <select id="promptCategoryFilter" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                 <option value="all">All Categories</option>
                                 <option value="fix">🔧 Fix</option>
                                 <option value="feature">✨ Feature</option>
-                                <option value="question">❓ Question</option>
                                 <option value="design">🎨 Design</option>
+                                <option value="copy">✏️ Copy</option>
+                                <option value="data">📊 Data</option>
+                                <option value="question">❓ Question</option>
+                            </select>
+                            <!-- Sort -->
+                            <select id="promptSort" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                <option value="newest">⬇ Newest</option>
+                                <option value="oldest">⬆ Oldest</option>
                             </select>
                             <!-- Search -->
-                            <input type="text" id="promptSearch" placeholder="Search prompts…" oninput="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.8rem; font-size: 0.8rem; outline: none; font-family: var(--font-main); width: 200px;">
+                            <input type="text" id="promptSearch" placeholder="Search…" oninput="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.8rem; font-size: 0.8rem; outline: none; font-family: var(--font-main); width: 160px;">
                         </div>
                     </div>
 
@@ -2826,33 +2838,47 @@
         }
 
         function renderPrompts() {
-            const statusF   = document.getElementById('promptStatusFilter')?.value || 'all';
-            const categoryF = document.getElementById('promptCategoryFilter')?.value || 'all';
-            const query     = (document.getElementById('promptSearch')?.value || '').toLowerCase().trim();
-            const container = document.getElementById('prompts-list');
-            const statsBar  = document.getElementById('promptStatsBar');
+            const statusFilter   = document.getElementById('promptStatusFilter')?.value   || 'all';
+            const categoryFilter = document.getElementById('promptCategoryFilter')?.value || 'all';
+            const projectFilter  = document.getElementById('promptProjectFilter')?.value  || 'all';
+            const sortOrder      = document.getElementById('promptSort')?.value           || 'newest';
+            const searchTerm     = (document.getElementById('promptSearch')?.value || '').toLowerCase().trim();
+            const container      = document.getElementById('prompts-list');
+            const statsBar       = document.getElementById('promptStatsBar');
             if (!container) return;
 
-            // Determine active project filter from the main project selector
-            const projFilter = activeProjectKey;
-
-            // Sort: pending first, then by capture time desc
+            // Sort
             const sorted = [...allPrompts].sort((a, b) => {
-                const statusOrder = { pending: 0, answered: 1, shipped: 2 };
+                const tA = new Date(a.capturedAt || 0).getTime();
+                const tB = new Date(b.capturedAt || 0).getTime();
+                if (sortOrder === 'oldest') return tA - tB;
+                // newest-first but always float pending to top
+                const statusOrder = { pending: 0, answered: 1, shipped: 2, dismissed: 3 };
                 const ao = statusOrder[a.status] ?? 1;
                 const bo = statusOrder[b.status] ?? 1;
-                if (ao !== bo) return ao - bo;
-                return new Date(b.capturedAt) - new Date(a.capturedAt);
+                if (statusFilter === 'all' && ao !== bo) return ao - bo;
+                return tB - tA;
             });
+
+            // Populate project dropdown once
+            const projSelect = document.getElementById('promptProjectFilter');
+            if (projSelect && projSelect.options.length === 1 && allPrompts.length > 0) {
+                const keys = [...new Set(allPrompts.map(p => p.projectKey).filter(Boolean))].sort();
+                keys.forEach(k => {
+                    const opt = document.createElement('option');
+                    opt.value = k; opt.textContent = k;
+                    projSelect.appendChild(opt);
+                });
+            }
 
             // Filter
             const filtered = sorted.filter(p => {
-                if (projFilter !== 'all' && p.projectKey !== projFilter) return false;
-                if (statusF   !== 'all' && p.status    !== statusF)    return false;
-                if (categoryF !== 'all' && p.category  !== categoryF)  return false;
-                if (query) {
-                    const haystack = [p.prompt, p.elementContext, p.elementSelector, p.pageUrl, p.commitMessage].join(' ').toLowerCase();
-                    if (!haystack.includes(query)) return false;
+                if (projectFilter  !== 'all' && p.projectKey !== projectFilter) return false;
+                if (statusFilter   !== 'all' && p.status    !== statusFilter)   return false;
+                if (categoryFilter !== 'all' && p.category  !== categoryFilter) return false;
+                if (searchTerm) {
+                    const haystack = [p.prompt, p.elementContext, p.elementSelector, p.pageUrl, p.commitMessage, p.answer].join(' ').toLowerCase();
+                    if (!haystack.includes(searchTerm)) return false;
                 }
                 return true;
             });
@@ -2868,7 +2894,7 @@
             // Stats bar by category
             const cats = {};
             filtered.forEach(p => { cats[p.category] = (cats[p.category] || 0) + 1; });
-            const catOrder = ['fix', 'feature', 'question', 'design'];
+            const catOrder = ['fix', 'feature', 'design', 'copy', 'data', 'question'];
             statsBar.innerHTML = catOrder.map(c => {
                 const n = cats[c] || 0;
                 const m = catMeta(c);
