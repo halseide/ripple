@@ -68,6 +68,19 @@ $data['serverLastActive'] = date('Y-m-d H:i:s');
 $projectRoot = dirname(__DIR__);
 $sessionsDir = $projectRoot . DIRECTORY_SEPARATOR . 'sessions';
 
+$configPath = $projectRoot . DIRECTORY_SEPARATOR . 'ripple.config.json';
+if (file_exists($configPath)) {
+    $config = json_decode(file_get_contents($configPath), true);
+    if (isset($data['projectKey']) && isset($config['projects'])) {
+        foreach ($config['projects'] as $p) {
+            if ($p['key'] === $data['projectKey'] && !empty($p['sessions_dir'])) {
+                $sessionsDir = $p['sessions_dir'];
+                break;
+            }
+        }
+    }
+}
+
 if (!is_dir($sessionsDir)) {
     if (!mkdir($sessionsDir, 0755, true)) {
         http_response_code(500);
