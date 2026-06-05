@@ -133,11 +133,41 @@
 
     // ── Auto-tracking: [data-ripple-event] clicks ─────────────────────────────
     document.addEventListener('click', function (e) {
-        const el = e.target.closest('[data-ripple-event]');
-        if (!el) return;
-        const name    = el.getAttribute('data-ripple-event');
-        const label   = el.getAttribute('data-ripple-label') || el.textContent.trim().slice(0, 80);
-        Ripple.track(name, { label, element: el.tagName.toLowerCase() });
+        // 1. Check for explicit manual tags (highest priority)
+        const explicitEl = e.target.closest('[data-ripple-event]');
+        if (explicitEl) {
+            const name = explicitEl.getAttribute('data-ripple-event');
+            const label = explicitEl.getAttribute('data-ripple-label') || explicitEl.textContent.trim().slice(0, 80);
+            Ripple.track(name, { label, element: explicitEl.tagName.toLowerCase() });
+            return;
+        }
+
+        // 2. Auto-capture generic clicks on interactive elements
+        const interactiveEl = e.target.closest('button, a, input[type="submit"], input[type="button"], [role="button"], .panel-action, .gran-btn, .nav-item, .rt-arrow');
+        if (interactiveEl) {
+            let label = interactiveEl.textContent.trim().slice(0, 80);
+            if (!label && interactiveEl.id) label = '#' + interactiveEl.id;
+            if (!label && interactiveEl.className) label = '.' + interactiveEl.className.split(' ')[0];
+            if (!label && interactiveEl.title) label = interactiveEl.title;
+            
+            // Format label nicely
+            if (label && typeof label === 'string') {
+                label = label.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+            }
+
+            const tagName = interactiveEl.tagName.toLowerCase();
+            let eventName = 'interaction';
+            if (tagName === 'a') eventName = 'link_clicked';
+            else if (tagName === 'button') eventName = 'button_clicked';
+
+            Ripple.track(eventName, { 
+                label: label || 'unnamed', 
+                element: tagName,
+                id: interactiveEl.id || undefined,
+                class: interactiveEl.className || undefined,
+                href: interactiveEl.getAttribute('href') || undefined
+            });
+        }
     }, true);
 
     // ── Auto-tracking: [data-ripple-view] visibility ──────────────────────────

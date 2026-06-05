@@ -46,7 +46,19 @@ It does this by hooking into standard browser URL events:
 - **`popstate`** (Browser back/forward)
 - **`history.pushState` / `replaceState`** (Monkey-patched for modern SPA frameworks)
 
-**Important:** For auto-tracking to work seamlessly, your application *must* update the URL when navigating (like any standard React/Vue router, Next.js, or simple hash anchor links). If your app relies on raw JavaScript to hide/show `div` elements without touching the browser history, the generic tracker will not detect a view change. In that case, you must either update the URL via `history.pushState(null, null, '#section')`, use explicit `data-ripple-view="section"` HTML attributes, or manually call `Ripple.setView('section')`.
+**Important:** For auto-tracking to work seamlessly, your application *must* update the URL when navigating.
+
+## Zero-Config Interaction Auto-Capture
+
+Ripple now automatically tracks clicks on all interactive elements across your application! You no longer need to manually tag buttons.
+The tracker intelligently listens for clicks on:
+- `<button>`
+- `<a>`
+- `<input type="submit">` or `<input type="button">`
+- `[role="button"]`
+
+When a user clicks one of these elements, Ripple extracts the text label, class, or ID and logs a `button_clicked` or `link_clicked` event.
+*Note: If you still want to explicitly name an event, you can manually add `data-ripple-event="my_custom_name"` and Ripple will prioritize it.*
 
 ## Quick Start
 
