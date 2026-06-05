@@ -159,6 +159,36 @@
         }
     }
 
+    // ── Auto-tracking: URL routing (History & Hash) ───────────────────────────
+    function _autoViewFromUrl() {
+        // e.g. /project-alpha/ripple/ or /dashboard?tab=active
+        const path = location.pathname + location.search + location.hash;
+        Ripple.setView(path);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _autoViewFromUrl);
+    } else {
+        _autoViewFromUrl();
+    }
+
+    window.addEventListener('hashchange', _autoViewFromUrl);
+    window.addEventListener('popstate', _autoViewFromUrl);
+
+    const _originalPushState = history.pushState;
+    history.pushState = function() {
+        const res = _originalPushState.apply(this, arguments);
+        _autoViewFromUrl();
+        return res;
+    };
+
+    const _originalReplaceState = history.replaceState;
+    history.replaceState = function() {
+        const res = _originalReplaceState.apply(this, arguments);
+        _autoViewFromUrl();
+        return res;
+    };
+
     // ── Flush logic ───────────────────────────────────────────────────────────
     function _buildPayload() {
         const nowMs     = Date.now();
