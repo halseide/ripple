@@ -33,6 +33,7 @@
     // ── Config from <script> tag ──────────────────────────────────────────────
     const _script      = document.currentScript;
     const PROJECT_KEY  = (_script && _script.getAttribute('data-ripple-key'))      || 'unknown';
+    const PROJECT_PATH = (_script && _script.getAttribute('data-ripple-path'))     || `/${PROJECT_KEY}`;
     const ENDPOINT     = (_script && _script.getAttribute('data-ripple-endpoint')) || '/api/session.php';
     const CAPTURE_EP   = '/ripple/api/capture_prompt.php';
     const DEBUG_MODE   = new URLSearchParams(location.search).has('ripple_debug') ||
@@ -438,7 +439,7 @@
 
         modal.innerHTML = `
             <div class="_rpl_modal_header">
-                <a href="/${PROJECT_KEY}/ripple/" target="_blank" style="display:flex;align-items:center;text-decoration:none;" title="Dashboard">
+                <a href="${PROJECT_PATH}/ripple/" target="_blank" style="display:flex;align-items:center;text-decoration:none;" title="Dashboard">
                     ${svgIcon}
                 </a>
                 <div>
@@ -457,7 +458,7 @@
                 </div>
                 <div id="_rpl_status" class="_rpl_status"></div>
                 <div style="margin-top:12px; text-align:center;">
-                    <a href="/${PROJECT_KEY}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View AI Inbox (Dashboard)</a>
+                    <a href="${PROJECT_PATH}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.8); text-decoration:underline;">View AI Inbox (Dashboard)</a>
                 </div>
                 <div style="margin-top:8px;font-size:10px;color:rgba(120,110,170,0.5);text-align:center;font-family:'JetBrains Mono',monospace;">Shift+Enter to submit · Esc to close</div>
             </div>
