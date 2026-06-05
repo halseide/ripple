@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.7.3
+ * Ripple Tracker  v0.7.4
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -28,7 +28,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.7.3';
+    const RIPPLE_VERSION = 'v0.7.4';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -738,12 +738,15 @@
             </div>`;
 
         // Nav acts as legend — active state is highlighted, others show their mode color
-        const navHome  = _homeMode  ? `<span style="font-size:11px; color:#e8e8f5; font-weight:600;">⚪ Home</span>`
-                                    : `<a id="_rpl_home_toggle"  href="#" style="font-size:11px; color:rgba(200,195,220,0.5); text-decoration:none;">⚪ Home</a>`;
-        const navPrompt = (!_homeMode && !DEBUG_MODE) ? `<span style="font-size:11px; color:#58a6ff; font-weight:600;">🔵 Prompt</span>`
-                                    : `<a id="_rpl_prompt_toggle" href="#" style="font-size:11px; color:#388bfd; text-decoration:none; opacity:0.6;">🔵 Prompt</a>`;
-        const navDebug  = DEBUG_MODE ? `<span style="font-size:11px; color:#ff6b6b; font-weight:600;">🔴 Debug</span>`
-                                    : `<a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:rgba(248,81,73,0.45); text-decoration:none;">🔴 Debug</a>`;
+        const navHome  = _homeMode
+            ? `<span style="font-size:11px; color:#e8e8f5; font-weight:600; cursor:default;">⚪ Home</span>`
+            : `<a id="_rpl_home_toggle" href="#" style="font-size:11px; color:rgba(220,215,235,0.55); text-decoration:none; cursor:pointer;">⚪ Home</a>`;
+        const navPrompt = (!_homeMode && !DEBUG_MODE)
+            ? `<span style="font-size:11px; color:#58a6ff; font-weight:600; cursor:default;">🔵 Prompt</span>`
+            : `<a id="_rpl_prompt_toggle" href="#" style="font-size:11px; color:#58a6ff; text-decoration:none; opacity:0.55; cursor:pointer;">🔵 Prompt</a>`;
+        const navDebug  = DEBUG_MODE
+            ? `<span style="font-size:11px; color:#ff6b6b; font-weight:600; cursor:default;">🔴 Debug</span>`
+            : `<a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:#ff6b6b; text-decoration:none; opacity:0.55; cursor:pointer;">🔴 Debug</a>`;
 
         modal.innerHTML = `
             <div class="_rpl_modal_header">
