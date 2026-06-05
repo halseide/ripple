@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.7.2
+ * Ripple Tracker  v0.7.3
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -28,7 +28,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.7.2';
+    const RIPPLE_VERSION = 'v0.7.3';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -798,11 +798,12 @@
             if (DEBUG_MODE) Ripple.debug.disable();
         });
 
-        // Debug toggle
+        // Debug toggle — exits home mode first if active
         const _debugBtn = document.getElementById('_rpl_debug_toggle');
         if (_debugBtn) _debugBtn.addEventListener('click', (e) => {
             e.preventDefault();
             _closeModal();
+            if (_homeMode) localStorage.removeItem('ripple_home'); // exit home before entering debug
             Ripple.debug.toggle();
         });
 
