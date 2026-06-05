@@ -95,14 +95,16 @@ python scripts/analyze.py
 
 ## Multi-Project Setup
 
-Each project gets its own scoped dashboard by convention. The tracker derives the dashboard URL automatically from `data-ripple-key`:
+Each project gets its own scoped dashboard by convention. The tracker derives the dashboard URL from `data-ripple-path` if set, falling back to `/{PROJECT_KEY}` if not:
 
-| Project | Script tag | Dashboard URL |
-|---|---|---|
-| Numen | `data-ripple-key="project-alpha"` | `http://localhost/project-alpha/ripple/` |
-| example.com | `data-ripple-key="example.com"` | `http://localhost/example.com/ripple/` |
+| Project | `data-ripple-key` | `data-ripple-path` | Dashboard URL |
+|---|---|---|---|
+| Numen | `project-alpha` | *(not set — key matches folder)* | `/project-alpha/ripple/` |
+| example.com | `example` | `/example.com` | `/example.com/ripple/` |
 
-The "View Dashboard" link in the capture modal follows the pattern `/{PROJECT_KEY}/ripple/` — no extra configuration needed. The global cross-project dashboard lives at `/ripple/src/dashboard/`.
+Use `data-ripple-path` whenever the project key doesn't match its folder name. The global cross-project dashboard lives at `/ripple/src/dashboard/`.
+
+> **Note:** example.com injects the tracker dynamically via JS. `document.currentScript` is `null` in that context, so the tracker falls back to scanning `document.scripts[src*="ripple-tracker"]` to recover the `data-ripple-*` attributes.
 
 ## Status
 
