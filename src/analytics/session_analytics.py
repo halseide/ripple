@@ -305,13 +305,28 @@ def parse_sessions(
 
     # ── Daily trend (last 30 days) ────────────────────────────────────────────
     daily = defaultdict(int)
-    for s in real_sessions:
+    daily_bounces = defaultdict(int)
+    daily_engaged = defaultdict(int)
+    daily_glancers = defaultdict(int)
+    
+    for c, s in classified:
+        if c == "bot": continue
         try:
             dt = datetime.fromisoformat(s["startTime"].replace("Z", "+00:00"))
-            daily[dt.strftime("%Y-%m-%d")] += 1
+            d_str = dt.strftime("%Y-%m-%d %H:%M")
+            if c != "bounce": # Keep daily_trend matching real_sessions + ghost (wait, is_real_user is glancer, engaged, deep)
+                if is_real_user(c):
+                    daily[d_str] += 1
+            if c == "bounce": daily_bounces[d_str] += 1
+            elif c in ("engaged", "deep"): daily_engaged[d_str] += 1
+            elif c == "glancer": daily_glancers[d_str] += 1
         except Exception:
             pass
-    daily_trend = dict(sorted(daily.items())[-30:])
+            
+    daily_trend = dict(sorted(daily.items())[-1000:])
+    daily_bounces_dict = dict(sorted(daily_bounces.items())[-1000:])
+    daily_engaged_dict = dict(sorted(daily_engaged.items())[-1000:])
+    daily_glancers_dict = dict(sorted(daily_glancers.items())[-1000:])
 
     # ── Event frequency ───────────────────────────────────────────────────────
     event_counts = defaultdict(int)
@@ -439,6 +454,9 @@ def parse_sessions(
         "top_events":       top_events,
         "hourly_chart":     hourly_chart,
         "daily_trend":      daily_trend,
+        "daily_bounces":    daily_bounces_dict,
+        "daily_engaged":    daily_engaged_dict,
+        "daily_glancers":   daily_glancers_dict,
         "navigation_paths": navigation_paths,
         "view_funnel":      view_funnel,
         "sessions":         session_records,
