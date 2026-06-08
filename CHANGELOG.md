@@ -4,6 +4,22 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.9.0] 2026-06-08 🔮 Global Filters & Persistent Tracker Blobs
+
+### Changes
+- `7fb56e7` 🧑‍💻 [Vibe] feature: Global filters, live polling, and persistent tracker blobs
+- `4c0bf3e` 🧑‍💻 [Vibe] fix: Convert workspace to tabbed interface - Resolves Prompt: prompt_1780943202_ripple
+- `39da78f` 🧑‍💻 [Vibe] design: Add Quick Navigation sidebar card and smooth anchor scrolling - Resolves Prompt: prompt_1780939447_ripple
+- `08c34fa` — chore: automate changelog stub generation during version bump
+- `d3f8fd8` — docs: backfill CHANGELOG.md for v0.8.0 and v0.8.1
+- `efb5f87` — [Vibe] fix: Ripple v0.8.1 - Fix prompt search, add cache-busters, and sync resubmits to Vault raw inbox
+- `7b2044a` — [Vibe] feature: Ripple v0.8.0 - Vault Path decoupling and A/B metrics
+- `42a4ef0` — chore: scrub internal alias from documentation
+- `6d18b79` — docs: clarify Zero-Config URL routing mechanics
+- `cf61e43` — chore: add bump_version script to automate version sync
+
+---
+
 ## [v0.8.1] 2026-06-08 — Prompt Search, Cache-Busters & Inbox Sync
 
 ### Fixed
