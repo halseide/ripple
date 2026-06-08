@@ -64,6 +64,18 @@ After a prompt is saved, a **small pulsing purple dot** appears at the x,y coord
 
 ---
 
+## Zero-Config View Tracking
+
+Ripple's tracker automatically records navigation views to build your `view_funnel` without requiring custom tags. It does this by hooking into standard browser URL events:
+- **`DOMContentLoaded`** (Initial page load)
+- **`hashchange`** (Anchor navigation, e.g., appending `#section2` triggers a new view)
+- **`popstate`** (Browser back/forward)
+- **`history.pushState` / `replaceState`** (Monkey-patched for modern SPA frameworks like React/Vue/Next.js)
+
+**Important:** For auto-tracking to work seamlessly, your application *must* update the URL when navigating. Changing the hash (`#`) or query string (`?`) is sufficient to trigger a new distinct view in the session log.
+
+---
+
 ## The Dashboard
 
 Each project has a dashboard at `http://localhost/{project}/ripple/`.

@@ -46,7 +46,7 @@ It does this by hooking into standard browser URL events:
 - **`popstate`** (Browser back/forward)
 - **`history.pushState` / `replaceState`** (Monkey-patched for modern SPA frameworks)
 
-**Important:** For auto-tracking to work seamlessly, your application *must* update the URL when navigating.
+**Important:** For auto-tracking to work seamlessly, your application *must* update the URL when navigating. Changing the hash (`#`) or query string (`?`) is sufficient to trigger a new distinct view in the session log.
 
 ## Zero-Config Interaction Auto-Capture
 
