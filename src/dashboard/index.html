@@ -1006,12 +1006,6 @@
             </div>
             
             <div style="display:flex; align-items:center; gap:1rem;">
-                <div class="project-selector-wrapper">
-                    <span class="project-selector-label">Project</span>
-                    <select id="projectSelect" class="project-selector">
-                        <option value="">Loading projects...</option>
-                    </select>
-                </div>
                 <button class="btn-gear" id="gearBtn" onclick="openSettings()" title="Project Settings">
                     ⚙️ Settings
                 </button>
@@ -1041,6 +1035,21 @@
             
             <!-- Left Column (Sidebar) -->
             <div class="sidebar">
+
+                <!-- Global Filters -->
+                <div class="card" style="padding: 1.1rem; border-color: rgba(188, 140, 255, 0.2); margin-bottom: 1rem;">
+                    <div class="card-title" style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem; color: var(--accent-purple);">
+                        🌍 Global Filters
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Project</label>
+                            <select id="projectSelect" class="project-selector" style="width:100%; border:1px solid var(--border-color); background:rgba(0,0,0,0.2); color:var(--text-main); font-size:0.85rem;">
+                                <option value="">Loading projects...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Quick Navigation -->
                 <div class="card" style="padding: 1.1rem; border-color: rgba(188, 140, 255, 0.2);">
@@ -1203,13 +1212,6 @@
                     <div style="background: rgba(34, 42, 61, 0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
                         <!-- Filters Grid -->
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.8rem;">
-                            <!-- Project Select -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Project</label>
-                                <select id="explorerProjectFilter" data-ripple-event="filter_changed" data-ripple-label="project" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Projects</option>
-                                </select>
-                            </div>
                             <!-- Date Select -->
                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                                 <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Date</label>
@@ -1327,10 +1329,6 @@
                             <span id="promptBadgeShipped" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; background: rgba(63, 185, 80, 0.12); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.2); border-radius: 12px; font-weight: 700;">0 shipped</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <!-- Project filter -->
-                            <select id="promptProjectFilter" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                <option value="all">All Projects</option>
-                            </select>
                             <!-- Status filter -->
                             <select id="promptStatusFilter" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                 <option value="all">All Statuses</option>
@@ -1426,6 +1424,20 @@
             } else {
                 switchPanel('section-suggestions'); // default
             }
+
+            // Live Reload for Prompt Log
+            setInterval(() => {
+                fetch('api/stats_data.php?t=' + Date.now())
+                    .then(res => res.json())
+                    .then(data => {
+                        // Check if prompt count changed to avoid unnecessary re-renders of the whole page
+                        if (allPrompts && data.prompts && allPrompts.length !== data.prompts.length) {
+                            allPrompts = data.prompts;
+                            renderPrompts();
+                        }
+                    })
+                    .catch(e => console.error("Live reload fetch failed", e));
+            }, 3000);
         });
 
         function buildStatsChart(project) {
@@ -1654,15 +1666,12 @@
 
         function populateProjectSelector() {
             const selectTop = document.getElementById('projectSelect');
-            const selectBottom = document.getElementById('explorerProjectFilter');
             
             selectTop.innerHTML = "";
-            selectBottom.innerHTML = "";
 
             if (!analyticsData.projects || analyticsData.projects.length === 0) {
                 const opt = '<option value="">No projects found</option>';
                 selectTop.innerHTML = opt;
-                selectBottom.innerHTML = opt;
                 return;
             }
 
@@ -1678,37 +1687,23 @@
                 opt1.value = optData.value;
                 opt1.textContent = optData.text;
                 selectTop.appendChild(opt1);
-
-                const opt2 = document.createElement('option');
-                opt2.value = optData.value;
-                opt2.textContent = optData.text;
-                selectBottom.appendChild(opt2);
             });
 
             // Set default active project
             activeProjectKey = "all";
             selectTop.value = "all";
-            selectBottom.value = "all";
             loadProjectDetails("all");
             applyFilters();
 
             // Event Listeners for Selector Synchronization
             selectTop.addEventListener('change', (e) => {
                 const val = e.target.value;
-                selectBottom.value = val;
                 activeProjectKey = val;
                 loadProjectDetails(val);
                 applyFilters();
+                renderPrompts();
                 // ── Ripple self-tracking ───────────────────────────────────────
                 if (window.Ripple) Ripple.track('project_switched', { project: val });
-            });
-
-            selectBottom.addEventListener('change', (e) => {
-                const val = e.target.value;
-                selectTop.value = val;
-                activeProjectKey = val;
-                loadProjectDetails(val);
-                applyFilters();
             });
         }
 
@@ -2176,7 +2171,7 @@
             }
 
             const query = document.getElementById('explorerSearch').value.toLowerCase().trim();
-            const projFilter = document.getElementById('explorerProjectFilter').value;
+            const projFilter = activeProjectKey;
             const dateFilter = document.getElementById('explorerDateFilter').value;
             const durFilter = document.getElementById('explorerDurationFilter').value;
             const deviceFilter = document.getElementById('explorerDeviceFilter').value;
@@ -2425,7 +2420,7 @@
                     const commit = w.commit;
                     const hashShort = commit.hash.substring(0, 8);
                     
-                    const projFilter = document.getElementById('explorerProjectFilter').value;
+                    const projFilter = activeProjectKey;
                     if (projFilter !== 'all' && w.project_key !== projFilter) {
                         return; // Skip this commit if it doesn't match selected project
                     }
@@ -2859,7 +2854,7 @@
         function resetAllFilters() {
             document.getElementById('explorerSearch').value = "";
             document.getElementById('projectSelect').value = "all";
-            document.getElementById('explorerProjectFilter').value = "all";
+
             activeProjectKey = "all";
             loadProjectDetails("all");
 
@@ -3093,7 +3088,7 @@
         function renderPrompts() {
             const statusFilter   = document.getElementById('promptStatusFilter')?.value   || 'all';
             const categoryFilter = document.getElementById('promptCategoryFilter')?.value || 'all';
-            const projectFilter  = document.getElementById('promptProjectFilter')?.value  || 'all';
+            const projectFilter  = activeProjectKey || 'all';
             const sortOrder      = document.getElementById('promptSort')?.value           || 'newest';
             const searchTerm     = (document.getElementById('promptSearch')?.value || '').toLowerCase().trim();
             const container      = document.getElementById('prompts-list');

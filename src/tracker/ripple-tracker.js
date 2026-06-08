@@ -492,65 +492,26 @@
             } else {
                 const classes = Array.from(node.classList)
                     .filter(c => /^[a-zA-Z_-][a-zA-Z0-9_-]*$/.test(c))
-                    .slice(0, 2)
-                    .join('.');
-                if (classes) selector += '.' + classes;
-                parts.unshift(selector);
-            }
-            node = node.parentElement;
-        }
-        return 'body > ' + parts.join(' > ');
-    }
-
-    /**
-     * Returns a short human-readable context string for the element.
-     * e.g. "span#clock-days • classes: clock-label"
-     * @param {Element} el
-     * @returns {string}
-     */
-    function _getElementContext(el) {
-        if (!el || el === document.body) return 'body (page-level)';
-        const tag     = el.tagName.toLowerCase();
-        const id      = el.id ? `#${el.id}` : '';
-        const classes = el.className && typeof el.className === 'string'
-            ? el.className.trim().split(/\s+/).slice(0, 3).join(' ')
-            : '';
-        return `${tag}${id}${classes ? ' • ' + classes : ''}`;
-    }
-
-    // ── UI Capture: Shift + Right-Click interceptor ───────────────────────────
-    document.addEventListener('contextmenu', function (e) {
-        if (!e.shiftKey) return; // normal right-click — pass through
-        e.preventDefault();
-        // If in home/idle mode, instantly exit it and open prompt capture
-        if (_homeMode) {
-            _homeMode = false;
-            localStorage.removeItem('ripple_home');
-            _setIndicatorColor('prompt');
-        }
-        _openModal(e.target, e.pageX, e.pageY);
-    }, true);
-
-    // ── UI Capture: Breadcrumb Sticky Notes ───────────────────────────────────
+     // ── UI Capture: Blob Sticky Notes ──────────────────────────────────────────
     // After a prompt is saved, a throbbing ripple dot is pinned to the exact
     // x,y coordinates where the user Shift+Right-Clicked. Hover to see a
     // summary tooltip; click to open the dashboard in a new tab.
-    const _breadcrumbs = []; // { id, x, y, el }
+    const _blobs = []; // { id, x, y, el }
 
-    function _spawnBreadcrumb(x, y, promptId, summary, dashUrl) {
-        const DOT_ID = '_rpl_bc_' + promptId;
+    function _spawnBlob(x, y, promptId, summary, dashUrl) {
+        const DOT_ID = '_rpl_blob_' + promptId;
         if (document.getElementById(DOT_ID)) return; // already placed
 
         // Inject keyframe + styles once
-        if (!document.getElementById('_rpl_bc_styles')) {
+        if (!document.getElementById('_rpl_blob_styles')) {
             const s = document.createElement('style');
-            s.id = '_rpl_bc_styles';
+            s.id = '_rpl_blob_styles';
             s.textContent = `
-                @keyframes _rpl_bc_pulse {
+                @keyframes _rpl_blob_pulse {
                     0%, 100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.7), 0 0 0 0 rgba(167,139,250,0.35); }
                     60%       { box-shadow: 0 0 0 8px rgba(167,139,250,0), 0 0 0 16px rgba(167,139,250,0); }
                 }
-                .rpl-breadcrumb {
+                .rpl-blob {
                     position: absolute;
                     width: 12px; height: 12px;
                     border-radius: 50%;
@@ -558,12 +519,12 @@
                     border: 2px solid rgba(255,255,255,0.9);
                     cursor: pointer;
                     z-index: 2147483640;
-                    animation: _rpl_bc_pulse 2s ease-in-out infinite;
+                    animation: _rpl_blob_pulse 2s ease-in-out infinite;
                     transition: transform 0.15s ease;
                     box-sizing: border-box;
                 }
-                .rpl-breadcrumb:hover { transform: scale(1.6); }
-                .rpl-breadcrumb-tip {
+                .rpl-blob:hover { transform: scale(1.6); }
+                .rpl-blob-tip {
                     position: fixed;
                     background: rgba(10,10,26,0.97);
                     border: 1px solid rgba(167,139,250,0.4);
@@ -575,10 +536,69 @@
                     max-width: 220px;
                     line-height: 1.5;
                     z-index: 2147483641;
-                    pointer-events: none;
+                    pointer-events: auto; /* changed from none to allow button clicks */
                     box-shadow: 0 8px 24px rgba(0,0,0,0.7);
                 }
-                .rpl-breadcrumb-tip .rpl-bc-id {
+                .rpl-blob-tip .rpl-blob-id {
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 9px;
+                    color: rgba(167,139,250,0.7);
+                    display: block;
+                    margin-top: 4px;
+                }
+            `;
+            document.head.appendChild(s);
+        }
+
+        const dot = document.createElement('div');
+        dot.id = DOT_ID;
+        dot.className = 'rpl-blob';
+        dot.style.left = (x - 6) + 'px';
+        dot.style.top  = (y - 6) + 'px';
+        dot.title = summary;
+
+        let tip = null;
+        dot.addEventListener('mouseenter', function () {
+            // Remove existing tip if somehow stuck
+            if (tip) { tip.remove(); tip = null; }
+            tip = document.createElement('div');
+            tip.className = 'rpl-blob-tip';
+            const label = summary.length > 80 ? summary.slice(0, 77) + '...' : summary;
+            
+            // Add tooltip content and dismiss button
+            tip.innerHTML = `<div>💡 <strong>${label}</strong><span class="rpl-blob-id">${promptId}</span></div>
+            <button onclick="localStorage.setItem('_rpl_dismissed_${promptId}', '1'); document.getElementById('${DOT_ID}').remove(); this.parentNode.remove();" style="margin-top:8px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:9px; width:100%;">Dismiss Blob</button>`;
+            
+            // Position tip above and to the right of the dot
+            const r = dot.getBoundingClientRect();
+            tip.style.left = Math.min(r.right + 8, window.innerWidth - 240) + 'px';
+            tip.style.top  = Math.max(r.top - 48, 8) + 'px';
+            
+            // Handle mouse leaving the dot and the tip
+            // We need a timeout so moving mouse from dot to tip doesn't instantly close it
+            let hideTimeout;
+            dot.addEventListener('mouseleave', () => {
+                hideTimeout = setTimeout(() => { if (tip) { tip.remove(); tip = null; } }, 200);
+            }, { once: true });
+            
+            tip.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+            tip.addEventListener('mouseleave', () => {
+                if (tip) { tip.remove(); tip = null; }
+            });
+
+            document.body.appendChild(tip);
+        });
+
+        dot.addEventListener('click', function (e) {
+            // Prevent tip button click from triggering window.open
+            if (e.target.tagName !== 'BUTTON') {
+                window.open(dashUrl, '_blank');
+            }
+        });
+
+        document.body.appendChild(dot);
+        _blobs.push({ id: promptId, x, y, el: dot, tip: null });
+    }-breadcrumb-tip .rpl-bc-id {
                     font-family: 'JetBrains Mono', monospace;
                     font-size: 9px;
                     color: rgba(167,139,250,0.7);
@@ -968,7 +988,7 @@
                     });
                     // Spawn a throbbing breadcrumb at the exact click coordinates
                     const dashUrl = (PROJECT_PATH || '') + '/ripple/';
-                    _spawnBreadcrumb(_clickX, _clickY, data.promptId, text, dashUrl);
+                    _spawnBlob(_clickX, _clickY, data.promptId, text, dashUrl);
                     window.dispatchEvent(new CustomEvent('ripplePromptSaved'));
                     setTimeout(_closeModal, 1400);
                 } else {
