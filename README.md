@@ -157,7 +157,7 @@ determines its category, and executes the correct workflow.
 
 | Category | What it means | Agent action |
 |---|---|---|
-| `question` | user is asking for analysis or a recommendation | **Answer only.** No code, no API calls, no commits. |
+| `question` | User is asking for analysis or a recommendation — no code changes | Answer only. No code, no API calls, no commits. |
 | `fix` | Bug or broken behavior | Minimal targeted code change → commit → log → archive |
 | `feature` | New capability | Plan first, get approval, then implement |
 | `design` | Visual / layout change | Edit CSS or inline styles → commit → log → archive |

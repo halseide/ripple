@@ -20,7 +20,7 @@ frontmatter block. This skill governs how the agent processes those files.
 
 On 2026-06-05 the agent read a `category: question` prompt, diagnosed a UX gap,
 and immediately called the Handshake API to change a live record — without being
-asked to. The user had to stop it and demand a revert. This skill exists to
+asked to. The user had to stop it and demand a re-eval. This skill exists to
 prevent that failure mode and all similar ones.
 
 ---
@@ -42,8 +42,7 @@ Get-ChildItem "[VAULT_PATH]\raw\" -File | Where-Object { $_.Name -like "prompt_*
 ```
 
 If there are multiple prompts, process them **one at a time**, oldest first
-(`capturedAt` ascending). Ask the user before processing a second prompt
-if the first required significant decisions.
+(`capturedAt` ascending). Ask the user before proceeding to the next prompt
 
 ---
 
@@ -78,8 +77,7 @@ the matching `project_key`). Use `element_selector` to locate the relevant lines
 > [!WARNING]
 > **STOP. DO NOT WRITE CODE. DO NOT CALL APIS. DO NOT MAKE ANY CHANGES.**
 >
-> A `question` prompt means the user is asking for your opinion, analysis,
-> or recommendation. Your only job is to **answer the question in plain text**.
+> A `question` prompt means the user is asking for an analysis or recommendation. Your only job is to **answer the question in plain text**.
 >
 > You may:
 > - Explain how the current code works
@@ -213,7 +211,7 @@ Move-Item "[VAULT_PATH]\raw\<prompt_file>.md" "[VAULT_PATH]\raw\Archive\"
 | `answered` | ❌ No — thread is still open, leave in `/raw/` |
 | `pending` | ❌ No |
 
-**Never archive on `answered`.** The user may still reply or re-categorize.
+**Never archive on `answered`.** The user may still want to execute the suggestion. Wait for `dismissed`.
 
 ---
 

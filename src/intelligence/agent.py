@@ -18,7 +18,7 @@ Public API:
 
 Suggestion shape:
     {
-        "id":           str   # unique slug, e.g. "example-2026-06-03-001"
+        "id":           str   # unique slug, e.g. "example-project-2026-06-03-001"
         "project_key":  str
         "project_name": str
         "goal":         str   # the goal this suggestion addresses

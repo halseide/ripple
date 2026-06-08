@@ -136,7 +136,7 @@ status: pending
 ---
 
 > [!NOTE] AI Processing Instructions
-> The element selector path above pinpoints the exact DOM node the user was inspecting when this prompt was captured.
+> The element selector path above pinpoints the exact DOM node the user Shift+Right-Clicked.
 > Map `{$pageUrlEsc}` to the physical file in the `{$projectKey}` repository (see `ripple.config.json` for the `git_repo` path),
 > then search the file for the selector's tag/class/ID to locate the relevant lines of code.
 > Commit message format: `[Vibe] {$category}: <description>\n- Resolves Prompt: {$promptId}`
