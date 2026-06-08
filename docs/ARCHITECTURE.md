@@ -62,7 +62,7 @@ You run: python scripts/analyze.py
 {
   "projects": [
     {
-      "key": "example",
+      "key": "project-alpha",
       "name": "example.com",
       "url": "https://example.com",
       "github_url": "https://github.com/user/repo",

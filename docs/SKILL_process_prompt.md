@@ -54,7 +54,7 @@ Read the frontmatter and body of the prompt file. Extract:
 | Field | Description |
 |---|---|
 | `prompt_id` | Unique ID — used for commit messages and log updates |
-| `project_key` | Which project this came from (e.g. `project-beta`, `example`) |
+| `project_key` | Which project this came from (e.g. `project-beta`, `project-alpha`) |
 | `category` | **The most important field. Governs everything below.** |
 | `page_url` | The live URL where the element was captured |
 | `element_selector` | The DOM path to the exact element |

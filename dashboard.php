@@ -16,7 +16,7 @@ header('X-Frame-Options: SAMEORIGIN');
 header('X-Content-Type-Options: nosniff');
 
 // ── Resolve config ─────────────────────────────────────────────────────────
-$configPath = __DIR__ . '/../ripple.config.json';
+$configPath = __DIR__ . '/ripple.config.json';
 if (!file_exists($configPath)) {
     http_response_code(503);
     die('Ripple config not found.');
@@ -26,6 +26,11 @@ $projects = $config['projects'] ?? [];
 
 // ── Validate project key ────────────────────────────────────────────────────
 $requestedKey = trim($_GET['project'] ?? '');
+if ($requestedKey === '') {
+    header("Location: /ripple/src/dashboard/");
+    exit;
+}
+
 $project = null;
 foreach ($projects as $p) {
     if ($p['key'] === $requestedKey) {

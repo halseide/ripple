@@ -128,7 +128,7 @@ Each project gets its own scoped dashboard by convention. The tracker derives th
 
 | Project | `data-ripple-key` | `data-ripple-path` | Dashboard URL |
 |---|---|---|---|
-| Numen | `project-alpha` | *(not set — key matches folder)* | `/project-alpha/ripple/` |
+| Project Alpha | `project-alpha` | *(not set — key matches folder)* | `/project-alpha/ripple/` |
 | example.com | `example` | `/example.com` | `/example.com/ripple/` |
 
 Use `data-ripple-path` whenever the project key doesn't match its folder name. The global cross-project dashboard lives at `/ripple/src/dashboard/`.
