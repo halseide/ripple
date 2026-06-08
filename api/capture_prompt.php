@@ -190,6 +190,8 @@ array_unshift($logData, [
     'sessionId'       => $sessionId,
     'status'          => 'pending',
     'capturedAt'      => $timestamp,
+    'x'               => $data['captureX'] ?? 100,
+    'y'               => $data['captureY'] ?? 100,
     'resolvedAt'      => null,
     'commitHash'      => null,
     'commitMessage'   => null

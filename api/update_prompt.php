@@ -117,30 +117,41 @@ foreach ($logData as &$record) {
 }
 unset($record);
 
-if ($found && ($targetRecord['status'] ?? '') === 'pending') {
-    $configPath = realpath(__DIR__ . '/../ripple.config.json');
-    if ($configPath && file_exists($configPath)) {
-        $config = json_decode(file_get_contents($configPath), true) ?: [];
-        if (!empty($config['vault_path']) && $config['vault_path'] !== '[VAULT_PATH]') {
-            $rawInbox = rtrim($config['vault_path'], '\\/') . DIRECTORY_SEPARATOR . 'raw';
-            if (is_dir($rawInbox)) {
-                $pId       = $targetRecord['promptId'];
-                $pKey      = $targetRecord['projectKey'] ?? 'unknown';
-                $pCat      = $targetRecord['category'] ?? 'question';
-                $pUrl      = htmlspecialchars($targetRecord['pageUrl'] ?? '', ENT_QUOTES, 'UTF-8');
-                $pSel      = htmlspecialchars($targetRecord['elementSelector'] ?? '', ENT_QUOTES, 'UTF-8');
-                $pCtx      = htmlspecialchars($targetRecord['elementContext'] ?? '', ENT_QUOTES, 'UTF-8');
-                $pSess     = $targetRecord['sessionId'] ?? 'unknown';
-                $pTime     = $targetRecord['capturedAt'] ?? date('c');
-                $pPrompt   = $targetRecord['prompt'] ?? '';
-                $pDateFmt  = date('Y-m-d H:i', strtotime($pTime));
-                
-                $replySec  = '';
-                if (!empty($targetRecord['reply'])) {
-                    $replySec = "\n## User Reply / Follow-up\n\n" . $targetRecord['reply'] . "\n";
-                }
+if ($found) {
+    $status = $targetRecord['status'] ?? '';
+    if ($status === 'pending' || $status === 'canceled') {
+        $configPath = realpath(__DIR__ . '/../ripple.config.json');
+        if ($configPath && file_exists($configPath)) {
+            $config = json_decode(file_get_contents($configPath), true) ?: [];
+            if (!empty($config['vault_path']) && $config['vault_path'] !== '[VAULT_PATH]') {
+                $rawInbox = rtrim($config['vault_path'], '\\/') . DIRECTORY_SEPARATOR . 'raw';
+                if (is_dir($rawInbox)) {
+                    $pId = $targetRecord['promptId'];
+                    $mdFile = $rawInbox . DIRECTORY_SEPARATOR . $pId . '.md';
 
-                $markdown = <<<MD
+                    if ($status === 'canceled') {
+                        if (file_exists($mdFile)) {
+                            $content = file_get_contents($mdFile);
+                            $content = preg_replace('/^status:\s*pending\s*$/m', 'status: canceled', $content);
+                            file_put_contents($mdFile, $content);
+                        }
+                    } else {
+                        $pKey      = $targetRecord['projectKey'] ?? 'unknown';
+                        $pCat      = $targetRecord['category'] ?? 'question';
+                        $pUrl      = htmlspecialchars($targetRecord['pageUrl'] ?? '', ENT_QUOTES, 'UTF-8');
+                        $pSel      = htmlspecialchars($targetRecord['elementSelector'] ?? '', ENT_QUOTES, 'UTF-8');
+                        $pCtx      = htmlspecialchars($targetRecord['elementContext'] ?? '', ENT_QUOTES, 'UTF-8');
+                        $pSess     = $targetRecord['sessionId'] ?? 'unknown';
+                        $pTime     = $targetRecord['capturedAt'] ?? date('c');
+                        $pPrompt   = $targetRecord['prompt'] ?? '';
+                        $pDateFmt  = date('Y-m-d H:i', strtotime($pTime));
+                        
+                        $replySec  = '';
+                        if (!empty($targetRecord['reply'])) {
+                            $replySec = "\n## User Reply / Follow-up\n\n" . $targetRecord['reply'] . "\n";
+                        }
+
+                        $markdown = <<<MD
 ---
 prompt_id: {$pId}
 project_key: {$pKey}
@@ -172,13 +183,15 @@ status: pending
 ---
 
 > [!NOTE] AI Processing Instructions
-> The element selector path above pinpoints the exact DOM node the user Shift+Right-Clicked.
+> The element selector path above pinpoints the exact DOM node the user Shift+Left-Clicked.
 > Map `{$pUrl}` to the physical file in the `{$pKey}` repository (see `ripple.config.json` for the `git_repo` path),
 > then search the file for the selector's tag/class/ID to locate the relevant lines of code.
 > Commit message format: `[Vibe] {$pCat}: <description>\\n- Resolves Prompt: {$pId}`
 
 MD;
-                file_put_contents($rawInbox . DIRECTORY_SEPARATOR . $pId . '.md', $markdown);
+                        file_put_contents($mdFile, $markdown);
+                    }
+                }
             }
         }
     }

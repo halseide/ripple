@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.9.0
+ * Ripple Tracker  v0.8.1
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -28,7 +28,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.9.0';
+    const RIPPLE_VERSION = 'v0.8.1';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -492,39 +492,172 @@
             } else {
                 const classes = Array.from(node.classList)
                     .filter(c => /^[a-zA-Z_-][a-zA-Z0-9_-]*$/.test(c))
-     // ── UI Capture: Blob Sticky Notes ──────────────────────────────────────────
+                    .slice(0, 2)
+                    .join('.');
+                if (classes) selector += '.' + classes;
+                parts.unshift(selector);
+            }
+            node = node.parentNode;
+        }
+        const path = parts.join(' > ');
+        if (path.includes('#')) return path;
+        return 'body > ' + path;
+    }
+
+    /**
+     * Returns a short human-readable context string for the element.
+     * e.g. "span#clock-days • classes: clock-label"
+     * @param {Element} el
+     * @returns {string}
+     */
+    function _getElementContext(el) {
+        if (!el || el === document.body) return 'body (page-level)';
+        const tag     = el.tagName.toLowerCase();
+        const id      = el.id ? `#${el.id}` : '';
+        const classes = el.className && typeof el.className === 'string'
+            ? el.className.trim().split(/\s+/).slice(0, 3).join(' ')
+            : '';
+        return `${tag}${id}${classes ? ' • ' + classes : ''}`;
+    }
+
+    // ── UI Capture: Shift + Left-Click interceptor ───────────────────────────
+    document.addEventListener('click', function (e) {
+        if (!e.shiftKey) return; // normal click — pass through
+        e.preventDefault();
+        e.stopPropagation();
+        // If in home/idle mode, instantly exit it and open prompt capture
+        if (_homeMode) {
+            _homeMode = false;
+            localStorage.removeItem('ripple_home');
+            _setIndicatorColor('prompt');
+        }
+        _openModal(e.target, e.pageX, e.pageY);
+    }, true);
+
+    // ── UI Capture: Breadcrumb Sticky Notes ───────────────────────────────────
     // After a prompt is saved, a throbbing ripple dot is pinned to the exact
     // x,y coordinates where the user Shift+Right-Clicked. Hover to see a
     // summary tooltip; click to open the dashboard in a new tab.
-    const _blobs = []; // { id, x, y, el }
+    const _breadcrumbs = []; // { id, x, y, el, selector, tip, targetEl }
 
-    function _spawnBlob(x, y, promptId, summary, dashUrl) {
-        const DOT_ID = '_rpl_blob_' + promptId;
+    function _updateBreadcrumbs() {
+        _breadcrumbs.forEach(bc => {
+            if (bc.selector && bc.selector !== 'body (page-level)') {
+                if (bc.targetEl && !document.contains(bc.targetEl)) {
+                    bc.targetEl = null;
+                }
+                if (!bc.targetEl) {
+                    try { 
+                        let sel = bc.selector;
+                        if (sel.startsWith('body > ') && sel.includes('#')) {
+                            sel = sel.replace('body > ', '');
+                        }
+                        const nodes = document.querySelectorAll(sel);
+                        if (nodes.length > 1 && bc.context) {
+                            bc.targetEl = Array.from(nodes).find(n => n.textContent && n.textContent.includes(bc.context)) || nodes[0];
+                        } else {
+                            bc.targetEl = nodes[0];
+                        }
+                    } catch(e) {}
+                }
+                if (bc.targetEl) {
+                    const rect = bc.targetEl.getBoundingClientRect();
+                    const style = window.getComputedStyle(bc.targetEl);
+                    if (rect.width === 0 && rect.height === 0 || style.display === 'none' || style.visibility === 'hidden') {
+                        bc.el.style.display = 'none';
+                        if (bc.tip) bc.tip.style.display = 'none';
+                    } else {
+                        if (bc.offsetX === undefined && bc.origX !== undefined && bc.origY !== undefined) {
+                            const absLeft = rect.left + window.scrollX;
+                            const absTop = rect.top + window.scrollY;
+                            let ox = bc.origX - absLeft;
+                            let oy = bc.origY - absTop;
+                            if (ox < 1) ox = 1;
+                            if (oy < 1) oy = 1;
+                            if (ox > rect.width - 2) ox = Math.max(1, rect.width - 2);
+                            if (oy > rect.height - 2) oy = Math.max(1, rect.height - 2);
+                            bc.offsetX = ox;
+                            bc.offsetY = oy;
+                        }
+                        const ox = bc.offsetX || 0;
+                        const oy = bc.offsetY || 0;
+                        const blobX = rect.left + ox;
+                        const blobY = rect.top + oy;
+
+                        let isCovered = false;
+                        if (blobX < 0 || blobX > window.innerWidth || blobY < 0 || blobY > window.innerHeight) {
+                            isCovered = true;
+                        } else {
+                            const oldPEs = [];
+                            _breadcrumbs.forEach(b => {
+                                oldPEs.push({ el: b.el.style.pointerEvents, tip: b.tip ? b.tip.style.pointerEvents : '' });
+                                b.el.style.pointerEvents = 'none';
+                                if (b.tip) b.tip.style.pointerEvents = 'none';
+                            });
+                            
+                            const ptEl = document.elementFromPoint(blobX, blobY);
+                            
+                            _breadcrumbs.forEach((b, i) => {
+                                b.el.style.pointerEvents = oldPEs[i].el;
+                                if (b.tip) b.tip.style.pointerEvents = oldPEs[i].tip;
+                            });
+
+                            if (ptEl && ptEl !== bc.targetEl && !bc.targetEl.contains(ptEl)) {
+                                isCovered = true;
+                            }
+                        }
+
+                        if (isCovered) {
+                            bc.el.style.display = 'none';
+                            if (bc.tip) bc.tip.style.display = 'none';
+                        } else {
+                            bc.el.style.display = 'block';
+                            bc.el.style.left = (blobX - 6) + 'px';
+                            bc.el.style.top  = (blobY - 6) + 'px';
+                            if (bc.tip && bc.tip.style.display !== 'none' && bc.tip.parentNode) {
+                                const r = bc.el.getBoundingClientRect();
+                                bc.tip.style.left = Math.min(r.right + 8, window.innerWidth - 240) + 'px';
+                                bc.tip.style.top  = Math.max(r.top - 48, 8) + 'px';
+                            }
+                        }
+                    }
+                } else {
+                    bc.el.style.display = 'none';
+                    if (bc.tip) bc.tip.style.display = 'none';
+                }
+            }
+        });
+        requestAnimationFrame(_updateBreadcrumbs);
+    }
+    requestAnimationFrame(_updateBreadcrumbs);
+
+    function _spawnBreadcrumb(x, y, promptId, summary, dashUrl, selector, contextText, explicitTargetEl = null) {
+        const DOT_ID = '_rpl_bc_' + promptId;
         if (document.getElementById(DOT_ID)) return; // already placed
 
         // Inject keyframe + styles once
-        if (!document.getElementById('_rpl_blob_styles')) {
+        if (!document.getElementById('_rpl_bc_styles')) {
             const s = document.createElement('style');
-            s.id = '_rpl_blob_styles';
+            s.id = '_rpl_bc_styles';
             s.textContent = `
-                @keyframes _rpl_blob_pulse {
+                @keyframes _rpl_bc_pulse {
                     0%, 100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.7), 0 0 0 0 rgba(167,139,250,0.35); }
                     60%       { box-shadow: 0 0 0 8px rgba(167,139,250,0), 0 0 0 16px rgba(167,139,250,0); }
                 }
-                .rpl-blob {
-                    position: absolute;
+                .rpl-breadcrumb {
+                    position: fixed;
                     width: 12px; height: 12px;
                     border-radius: 50%;
                     background: #a78bfa;
                     border: 2px solid rgba(255,255,255,0.9);
                     cursor: pointer;
                     z-index: 2147483640;
-                    animation: _rpl_blob_pulse 2s ease-in-out infinite;
+                    animation: _rpl_bc_pulse 2s ease-in-out infinite;
                     transition: transform 0.15s ease;
                     box-sizing: border-box;
                 }
-                .rpl-blob:hover { transform: scale(1.6); }
-                .rpl-blob-tip {
+                .rpl-breadcrumb:hover { transform: scale(1.6); }
+                .rpl-breadcrumb-tip {
                     position: fixed;
                     background: rgba(10,10,26,0.97);
                     border: 1px solid rgba(167,139,250,0.4);
@@ -536,69 +669,10 @@
                     max-width: 220px;
                     line-height: 1.5;
                     z-index: 2147483641;
-                    pointer-events: auto; /* changed from none to allow button clicks */
+                    pointer-events: auto;
                     box-shadow: 0 8px 24px rgba(0,0,0,0.7);
                 }
-                .rpl-blob-tip .rpl-blob-id {
-                    font-family: 'JetBrains Mono', monospace;
-                    font-size: 9px;
-                    color: rgba(167,139,250,0.7);
-                    display: block;
-                    margin-top: 4px;
-                }
-            `;
-            document.head.appendChild(s);
-        }
-
-        const dot = document.createElement('div');
-        dot.id = DOT_ID;
-        dot.className = 'rpl-blob';
-        dot.style.left = (x - 6) + 'px';
-        dot.style.top  = (y - 6) + 'px';
-        dot.title = summary;
-
-        let tip = null;
-        dot.addEventListener('mouseenter', function () {
-            // Remove existing tip if somehow stuck
-            if (tip) { tip.remove(); tip = null; }
-            tip = document.createElement('div');
-            tip.className = 'rpl-blob-tip';
-            const label = summary.length > 80 ? summary.slice(0, 77) + '...' : summary;
-            
-            // Add tooltip content and dismiss button
-            tip.innerHTML = `<div>💡 <strong>${label}</strong><span class="rpl-blob-id">${promptId}</span></div>
-            <button onclick="localStorage.setItem('_rpl_dismissed_${promptId}', '1'); document.getElementById('${DOT_ID}').remove(); this.parentNode.remove();" style="margin-top:8px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:9px; width:100%;">Dismiss Blob</button>`;
-            
-            // Position tip above and to the right of the dot
-            const r = dot.getBoundingClientRect();
-            tip.style.left = Math.min(r.right + 8, window.innerWidth - 240) + 'px';
-            tip.style.top  = Math.max(r.top - 48, 8) + 'px';
-            
-            // Handle mouse leaving the dot and the tip
-            // We need a timeout so moving mouse from dot to tip doesn't instantly close it
-            let hideTimeout;
-            dot.addEventListener('mouseleave', () => {
-                hideTimeout = setTimeout(() => { if (tip) { tip.remove(); tip = null; } }, 200);
-            }, { once: true });
-            
-            tip.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
-            tip.addEventListener('mouseleave', () => {
-                if (tip) { tip.remove(); tip = null; }
-            });
-
-            document.body.appendChild(tip);
-        });
-
-        dot.addEventListener('click', function (e) {
-            // Prevent tip button click from triggering window.open
-            if (e.target.tagName !== 'BUTTON') {
-                window.open(dashUrl, '_blank');
-            }
-        });
-
-        document.body.appendChild(dot);
-        _blobs.push({ id: promptId, x, y, el: dot, tip: null });
-    }-breadcrumb-tip .rpl-bc-id {
+                .rpl-breadcrumb-tip .rpl-bc-id {
                     font-family: 'JetBrains Mono', monospace;
                     font-size: 9px;
                     color: rgba(167,139,250,0.7);
@@ -617,26 +691,97 @@
         dot.title = summary;
 
         let tip = null;
+        let hideTimeout = null;
+
         dot.addEventListener('mouseenter', function () {
+            if (hideTimeout) clearTimeout(hideTimeout);
+            if (tip) return;
             tip = document.createElement('div');
             tip.className = 'rpl-breadcrumb-tip';
             const label = summary.length > 80 ? summary.slice(0, 77) + '…' : summary;
-            tip.innerHTML = `💬 <strong>${label}</strong><span class="rpl-bc-id">${promptId}</span>`;
+            tip.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                    <div>💬 <strong>${label}</strong><span class="rpl-bc-id">${promptId}</span></div>
+                    <div style="display:flex; gap:4px;">
+                        <div class="rpl-bc-cancel" style="color:rgba(255,100,100,0.6); cursor:pointer; font-size:14px; line-height:1; padding:0 4px;" title="Cancel Request">🚫</div>
+                        <div class="rpl-bc-dismiss" style="color:rgba(255,255,255,0.4); cursor:pointer; font-size:14px; line-height:1; padding:0 4px;" title="Dismiss">✕</div>
+                    </div>
+                </div>
+            `;
+
+            tip.querySelector('.rpl-bc-cancel').addEventListener('click', (e) => {
+                e.stopPropagation();
+                fetch((PROJECT_PATH || '') + '/ripple/api/update_prompt.php', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ promptId: promptId, status: 'canceled' })
+                }).catch(()=>{});
+
+                const dismissed = JSON.parse(localStorage.getItem('ripple_dismissed_prompts') || '[]');
+                if (!dismissed.includes(promptId)) {
+                    dismissed.push(promptId);
+                    localStorage.setItem('ripple_dismissed_prompts', JSON.stringify(dismissed));
+                }
+                dot.remove();
+                if (tip) tip.remove();
+                const idx = _breadcrumbs.findIndex(b => b.id === promptId);
+                if (idx > -1) _breadcrumbs.splice(idx, 1);
+            });
+
+            tip.querySelector('.rpl-bc-dismiss').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const dismissed = JSON.parse(localStorage.getItem('ripple_dismissed_prompts') || '[]');
+                if (!dismissed.includes(promptId)) {
+                    dismissed.push(promptId);
+                    localStorage.setItem('ripple_dismissed_prompts', JSON.stringify(dismissed));
+                }
+                dot.remove();
+                if (tip) tip.remove();
+                const idx = _breadcrumbs.findIndex(b => b.id === promptId);
+                if (idx > -1) _breadcrumbs.splice(idx, 1);
+            });
+
+            tip.addEventListener('mouseenter', () => { if (hideTimeout) clearTimeout(hideTimeout); });
+            tip.addEventListener('mouseleave', () => {
+                hideTimeout = setTimeout(() => { 
+                    if (tip) { tip.remove(); tip = null; } 
+                    const bc = _breadcrumbs.find(b => b.id === promptId);
+                    if (bc) bc.tip = null;
+                }, 200);
+            });
+
             // Position tip above and to the right of the dot
             const r = dot.getBoundingClientRect();
             tip.style.left = Math.min(r.right + 8, window.innerWidth - 240) + 'px';
             tip.style.top  = Math.max(r.top - 48, 8) + 'px';
             document.body.appendChild(tip);
+            const bc = _breadcrumbs.find(b => b.id === promptId);
+            if (bc) bc.tip = tip;
         });
+
         dot.addEventListener('mouseleave', function () {
-            if (tip) { tip.remove(); tip = null; }
+            hideTimeout = setTimeout(() => { 
+                if (tip) { tip.remove(); tip = null; } 
+                const bc = _breadcrumbs.find(b => b.id === promptId);
+                if (bc) bc.tip = null;
+            }, 200);
         });
+
         dot.addEventListener('click', function () {
             window.open(dashUrl, '_blank');
         });
 
         document.body.appendChild(dot);
-        _breadcrumbs.push({ id: promptId, x, y, el: dot });
+        _breadcrumbs.push({
+            promptId: promptId,
+            el: dot,
+            tip: tip,
+            selector: selector,
+            context: contextText,
+            targetEl: explicitTargetEl,
+            origX: x,
+            origY: y
+        });
     }
 
     // ── UI Capture: Modal ─────────────────────────────────────────────────────
@@ -988,7 +1133,7 @@
                     });
                     // Spawn a throbbing breadcrumb at the exact click coordinates
                     const dashUrl = (PROJECT_PATH || '') + '/ripple/';
-                    _spawnBlob(_clickX, _clickY, data.promptId, text, dashUrl);
+                    _spawnBreadcrumb(_clickX, _clickY, data.promptId, text, dashUrl, selectorPath, elementCtx, targetEl);
                     window.dispatchEvent(new CustomEvent('ripplePromptSaved'));
                     setTimeout(_closeModal, 1400);
                 } else {
@@ -1248,14 +1393,72 @@
         }
     }
 
-    // ── Boot: inject indicator after DOM is ready ─────────────────────────────
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', _buildIndicator);
-    } else {
+    // ── Boot: fetch pending prompts and inject indicator ─────────────────────────────
+    function _initRipple() {
         _buildIndicator();
+        _loadPendingPrompts();
+    }
+
+    function _loadPendingPrompts() {
+        let rippleBase = '/ripple';
+        const me = document.querySelector('script[src*="ripple-tracker.js"]');
+        if (me && me.src) {
+            const idx = me.src.indexOf('/src/tracker/ripple-tracker.js');
+            if (idx !== -1) {
+                rippleBase = me.src.substring(0, idx);
+            }
+        }
+        const logUrl = rippleBase + '/data/prompt_log.json?t=' + Date.now();
+        const currentUrlStr = window.location.href;
+
+        fetch(logUrl)
+            .then(res => res.json())
+            .then(prompts => {
+                const dismissed = JSON.parse(localStorage.getItem('ripple_dismissed_prompts') || '[]');
+                let spawnedCount = 0;
+                prompts.forEach(p => {
+                    const pId = p.promptId || p.id;
+                    if (p.status !== 'shipped' && p.status !== 'dismissed' && p.status !== 'canceled' && !dismissed.includes(pId)) {
+                        // We no longer filter by URL!
+                        // If the target element exists on the screen, the blob will attach to it.
+                        // If it doesn't exist, it will gracefully hide in the background.
+                        const summaryText = p.prompt || p.text;
+                        const summary = summaryText ? (summaryText.length > 50 ? summaryText.substring(0, 47) + '...' : summaryText) : '...';
+                        const dashUrl = rippleBase + '/';
+                        _spawnBreadcrumb(p.x || 100, p.y || 100, pId, summary, dashUrl, p.elementSelector, p.elementContext);
+                    }
+                });
+            })
+            .catch(err => { 
+                console.error('Ripple Debug Error: ', err);
+            });
+    }
+
+    window.addEventListener('hashchange', () => {
+        _breadcrumbs.forEach(bc => {
+            if (bc.el) bc.el.remove();
+            if (bc.tip) bc.tip.remove();
+        });
+        _breadcrumbs.length = 0;
+        _loadPendingPrompts();
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _initRipple);
+    } else {
+        _initRipple();
     }
 
     // ── Expose ────────────────────────────────────────────────────────────────
+    Ripple.refreshBreadcrumbs = function() {
+        _breadcrumbs.forEach(bc => {
+            if (bc.el) bc.el.remove();
+            if (bc.tip) bc.tip.remove();
+        });
+        _breadcrumbs.length = 0;
+        _loadPendingPrompts();
+    };
+
     global.Ripple = Ripple;
 
 })(window);

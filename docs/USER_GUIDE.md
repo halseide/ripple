@@ -1,6 +1,6 @@
 # Ripple — User Guide
 
-> **Version:** v0.7.6 · **Last Updated:** 2026-06-05
+> **Version:** v0.8.1 · **Last Updated:** 2026-06-08
 
 Ripple is a live UI capture and session analytics tool. It runs on every page where the tracker is installed, gives you a direct line from browser to AI inbox, and measures whether your changes actually worked.
 
@@ -55,12 +55,16 @@ After a prompt is saved, a **small pulsing purple dot** appears at the x,y coord
 
 | Action | What happens |
 |---|---|
-| **Hover** | Shows a tooltip with the first 80 chars of your prompt + prompt ID |
-| **Click** | Opens the Ripple dashboard in a new tab |
-| **Page refresh** | Dot disappears — breadcrumbs are session-only, not persisted to the DOM |
-| **Scroll** | Dot scrolls with the page (uses `position: absolute` + page coordinates) |
+| **Hover** | Shows a tooltip with a snippet of your prompt |
+| **Click** | (Reserved for future actions) |
+| **Page refresh** | **Dot persists!** The tracker fetches pending prompts from the database and visually re-attaches them to the correct DOM elements. |
+| **Scroll / Navigate** | Dots intelligently hide if scrolled underneath a sticky header, or if you switch tabs in a Single Page App. |
 
-> **Why do breadcrumbs disappear on refresh?** They are injected into the live DOM by the tracker JS at the moment of capture. They are not saved to any database or localStorage — only the prompt itself is saved. To see all your prompts, go to the Ripple dashboard → **Ripple Log** tab. Your prompt is safe; only the visual marker is gone.
+> **How does persistence work?** Breadcrumbs are mathematically bound to the specific DOM element you clicked. If you navigate away or refresh, the tracker reads `prompt_log.json`, finds the target element, and re-attaches the dot. Once an AI agent resolves or dismisses your prompt, the dot disappears permanently.
+
+### What about "Blobs"?
+
+You might hear these visual markers referred to informally as "Blobs." *Breadcrumbs* is the formal name for the feature because they function like a trail of notes you leave behind, letting you navigate back to exactly where you were. "Blobs" is simply the colloquial term used to describe their visual appearance—little pulsing dots on the screen. Functionally, they are the exact same thing.
 
 ---
 
@@ -117,7 +121,7 @@ Switch modes from the modal footer (`⚪ Home · 🔵 Prompt · 🔴 Debug`):
 ## FAQ
 
 **Q: The breadcrumb dot disappeared when I refreshed. Did I lose my prompt?**
-No. The dot is a visual-only marker injected at capture time. Your prompt was saved to `prompt_log.json` and `/raw/` the moment you hit Send. Open the dashboard → Ripple Log to see it.
+No! If a dot disappears, it simply means the exact DOM element you clicked on no longer exists on the screen (e.g. you navigated to a different view), or the AI agent has marked your prompt as `shipped` or `dismissed`. Your prompt is always safe in `prompt_log.json`. Open the dashboard → Ripple Log to see it.
 
 **Q: How do I dismiss a prompt I no longer need?**
 From the Ripple dashboard → Ripple Log, the AI can mark it `dismissed` on your behalf when you tell it to. The prompt thread is then archived.
