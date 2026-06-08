@@ -90,11 +90,28 @@ $timestamp       = $data['timestamp'] ?? date('c');
 $unixTs   = time();
 $promptId = "prompt_{$unixTs}_{$projectKey}";
 
-// ── Atlas2.0 raw inbox path ───────────────────────────────────────────────────
-$rawInbox = '[VAULT_PATH]\\raw';
+// ── Load Configuration ────────────────────────────────────────────────────────
+$configPath = realpath(__DIR__ . '/../ripple.config.json');
+$config = [];
+if ($configPath && file_exists($configPath)) {
+    $configRaw = file_get_contents($configPath);
+    if ($configRaw) {
+        $config = json_decode($configRaw, true) ?: [];
+    }
+}
+
+// ── Vault raw inbox path ───────────────────────────────────────────────────
+$vaultPath = $config['vault_path'] ?? '[VAULT_PATH]';
+if ($vaultPath === '[VAULT_PATH]') {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'Please set "vault_path" in ripple.config.json']);
+    exit;
+}
+
+$rawInbox = rtrim($vaultPath, '\\/') . DIRECTORY_SEPARATOR . 'raw';
 if (!is_dir($rawInbox)) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'Atlas2.0 raw inbox directory not found']);
+    echo json_encode(['ok' => false, 'error' => 'Vault raw inbox directory not found at: ' . $rawInbox]);
     exit;
 }
 

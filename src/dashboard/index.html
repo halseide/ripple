@@ -982,6 +982,7 @@
         .prompt-item.dismissed { opacity: 0.4; }
         .prompt-item.dismissed .prompt-thread { display: none !important; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 </head>
 <body>
 
@@ -1119,6 +1120,15 @@
                     <div id="commitsContainer">
                         <!-- Dynamic commits list -->
                     </div>
+                </section>
+
+                <!-- Traffic & Commit Activity Timeline Chart -->
+                <section class="card" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📈 Traffic &amp; Commit Activity</span>
+                        <span style="font-size:0.75rem;font-weight:400;color:var(--text-muted);">Sessions (left) · Commits (right) · Deployments = dashed lines</span>
+                    </div>
+                    <div id="stats-chart" style="width:100%;height:420px;"></div>
                 </section>
 
                 <!-- Session Explorer & Journey Analyzer -->
@@ -1352,11 +1362,133 @@
         let suggestionsData = null;
         let rippleConfig = null;   // loaded from api/config.php
         let activeProjectKey = "";
-        let explorerMode = "cumulative"; // "cumulative" or "unique"
+        let explorerMode = 'cumulative'; // 'cumulative' or 'unique'
+        let statsChart = null;
         let drilldownCommitHash = null;
         let drilldownCommitMsgText = "";
         let drilldownPerspective = "after"; // "before" or "after"
         let visitorAliases = {}; // Map of visitor IDs to custom names
+
+        function buildStatsChart(project) {
+            const dom = document.getElementById('stats-chart');
+            if (!dom) return;
+            if (!statsChart) {
+                statsChart = echarts.init(dom, 'dark', { backgroundColor: 'transparent' });
+                window.addEventListener('resize', () => statsChart && statsChart.resize());
+            }
+
+            let proj = project;
+            if (activeProjectKey === 'all') {
+                proj = getCombinedProjectVirtual();
+            }
+            if (!proj) return;
+
+            // Daily trend (sessions per day)
+            const daily = proj.daily_trend || {};
+            const dates = Object.keys(daily).sort();
+            const sessionCounts = dates.map(d => daily[d]);
+
+            // Commits bucketed by date
+            const commits = proj.commits || [];
+            const commitsByDate = {};
+            commits.forEach(c => {
+                const d = (c.date_iso || '').slice(0, 10);
+                if (d) commitsByDate[d] = (commitsByDate[d] || 0) + 1;
+            });
+            const commitCounts = dates.map(d => commitsByDate[d] || 0);
+
+            // Deployment markLines
+            const deployments = proj.deployments || [];
+            const markLines = deployments.map(dep => {
+                const d = (dep.date_iso || '').slice(0, 10);
+                const idx = dates.indexOf(d);
+                const msg = (dep.message || '').slice(0, 40);
+                return idx >= 0 ? {
+                    xAxis: idx,
+                    lineStyle: { color: '#bc8cff', type: 'dashed', width: 1.5 },
+                    label: { formatter: msg, color: '#bc8cff', position: 'insideStartTop', fontSize: 10 }
+                } : null;
+            }).filter(Boolean);
+
+            const zoomStart = dates.length > 30 ? ((dates.length - 30) / dates.length) * 100 : 0;
+
+            statsChart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(18,22,32,0.92)',
+                    borderColor: '#222a3d',
+                    textStyle: { color: '#f0f3f6', fontSize: 12 },
+                    formatter(params) {
+                        const label = params[0]?.axisValueLabel || '';
+                        let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                        params.forEach(p => {
+                            html += `<div style="display:flex;gap:8px;align-items:center">
+                                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color}"></span>
+                                <span>${p.seriesName}</span>
+                                <span style="margin-left:auto;font-weight:700">${p.value}</span>
+                            </div>`;
+                        });
+                        return html;
+                    }
+                },
+                legend: {
+                    data: ['Sessions / Day', 'Commits / Day'],
+                    textStyle: { color: '#8b949e', fontFamily: 'Plus Jakarta Sans' },
+                    top: 0
+                },
+                grid: { left: '3%', right: '5%', bottom: '15%', top: '15%', containLabel: true },
+                dataZoom: [
+                    { type: 'slider', show: true, xAxisIndex: 0, start: zoomStart, end: 100,
+                      borderColor: 'rgba(100,100,200,0.2)', textStyle: { color: '#8b949e' },
+                      fillerColor: 'rgba(188,140,255,0.06)', handleStyle: { color: '#bc8cff' } },
+                    { type: 'inside', xAxisIndex: 0, start: zoomStart, end: 100 }
+                ],
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLine: { lineStyle: { color: '#222a3d' } },
+                    axisLabel: { color: '#8b949e', fontSize: 11, fontFamily: 'Plus Jakarta Sans' },
+                    boundaryGap: false
+                },
+                yAxis: [
+                    { type: 'value', name: 'Sessions', position: 'left', min: 0,
+                      splitLine: { lineStyle: { color: '#222a3d', type: 'dashed' } },
+                      axisLabel: { color: '#3fb950', fontFamily: 'Plus Jakarta Sans' }, nameTextStyle: { color: '#3fb950', fontSize: 11, fontFamily: 'Plus Jakarta Sans' } },
+                    { type: 'value', name: 'Commits', position: 'right', min: 0,
+                      splitLine: { show: false },
+                      axisLabel: { color: '#bc8cff', fontFamily: 'Plus Jakarta Sans' }, nameTextStyle: { color: '#bc8cff', fontSize: 11, fontFamily: 'Plus Jakarta Sans' } }
+                ],
+                series: [
+                    {
+                        name: 'Sessions / Day',
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'circle', symbolSize: 5,
+                        itemStyle: { color: '#3fb950' },
+                        lineStyle: { width: 2.5 },
+                        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                            colorStops: [{ offset: 0, color: 'rgba(63,185,80,0.25)' }, { offset: 1, color: 'rgba(63,185,80,0.02)' }] } },
+                        data: sessionCounts,
+                        markLine: {
+                            symbol: ['none', 'none'],
+                            silent: false,
+                            data: markLines
+                        }
+                    },
+                    {
+                        name: 'Commits / Day',
+                        type: 'bar',
+                        yAxisIndex: 1,
+                        barMaxWidth: 18,
+                        itemStyle: { color: 'rgba(188,140,255,0.7)', borderRadius: [3, 3, 0, 0] },
+                        emphasis: { itemStyle: { color: '#bc8cff' } },
+                        data: commitCounts
+                    }
+                ]
+            }, true);
+            
+            setTimeout(() => statsChart && statsChart.resize(), 80);
+        }
 
         function getVisitorDisplayName(visitorId) {
             return localStorage.getItem('alias_' + visitorId) || visitorAliases[visitorId] || visitorId;
@@ -1565,7 +1697,11 @@
             clearCommitDrilldown();
 
             // 1. Render Url
-            document.getElementById('projectUrl').textContent = project.url || '';
+            if (activeProjectKey !== 'all' && project) {
+                document.getElementById('projectUrl').innerHTML = `<a href="${project.url || '#'}" target="_blank" style="color:var(--accent-blue);text-decoration:none;">${project.url || '(no URL configured)'}</a>`;
+            } else {
+                document.getElementById('projectUrl').innerText = "All Configured Repositories";
+            }
 
             // 2. Render Goals
             const goalsContainer = document.getElementById('goalsList');
@@ -1592,7 +1728,8 @@
             const projectSuggestions = (suggestionsData.suggestions || []).filter(s => {
                 return projectKey === 'all' || s.project_key === projectKey;
             });
-            document.getElementById('suggestionCount').textContent = projectSuggestions.length;
+            const suggestionCountEl = document.getElementById('suggestionCount');
+            if (suggestionCountEl) suggestionCountEl.textContent = projectSuggestions.length;
 
             if (projectSuggestions.length > 0) {
                 projectSuggestions.forEach(s => {
@@ -1631,6 +1768,9 @@
 
             // Populate filter selections dynamically based on the project's sessions
             populateFilterDropdowns(project);
+            applyFilters();
+            buildStatsChart(project);
+            if (window.Ripple) Ripple.track('project_details_loaded', { projectKey });
         }
 
         // ── Combined Projects Virtual Aggregator ──────────────────────────────────
@@ -2250,6 +2390,41 @@
                         }
                     }
 
+                    // Calculate A/B metrics dynamically
+                    const getMetrics = (sessions) => {
+                        let bots = 0, engaged = 0, bounce = 0;
+                        sessions.forEach(s => {
+                            if (s.classification === 'bot') bots++;
+                            else if (s.classification === 'engaged' || s.classification === 'deep') engaged++;
+                            else if (s.classification === 'bounce') bounce++;
+                        });
+                        const real = sessions.length - bots;
+                        return {
+                            real,
+                            engPct: real > 0 ? (engaged / real * 100) : 0,
+                            bouncePct: real > 0 ? (bounce / real * 100) : 0
+                        };
+                    };
+
+                    const bMetrics = getMetrics(filteredBefore);
+                    const aMetrics = getMetrics(filteredAfter);
+
+                    let engClass = "var(--text-muted)";
+                    let bounceClass = "var(--text-muted)";
+                    let engDeltaStr = "";
+                    let bounceDeltaStr = "";
+
+                    if (bMetrics.real > 0 && aMetrics.real > 0) {
+                        const engDelta = aMetrics.engPct - bMetrics.engPct;
+                        const bounceDelta = aMetrics.bouncePct - bMetrics.bouncePct;
+                        
+                        engDeltaStr = engDelta > 0 ? `(+${engDelta.toFixed(1)}%)` : (engDelta < 0 ? `(${engDelta.toFixed(1)}%)` : '');
+                        engClass = engDelta > 2 ? "var(--accent-green)" : (engDelta < -2 ? "var(--accent-red)" : "var(--text-muted)");
+                        
+                        bounceDeltaStr = bounceDelta > 0 ? `(+${bounceDelta.toFixed(1)}%)` : (bounceDelta < 0 ? `(${bounceDelta.toFixed(1)}%)` : '');
+                        bounceClass = bounceDelta > 2 ? "var(--accent-red)" : (bounceDelta < -2 ? "var(--accent-green)" : "var(--text-muted)");
+                    }
+
                     const row = document.createElement('div');
                     row.className = "commit-row";
                     if (commit.hash === drilldownCommitHash) {
@@ -2271,6 +2446,17 @@
                         <div class="commit-info">
                             <h4>${commit.message_short}</h4>
                             <p>${commit.date_display} • by ${commit.author_name}</p>
+                            
+                            <div style="display:flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.75rem;">
+                                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                                    <span style="color:var(--text-muted); font-size:0.65rem; text-transform:uppercase;">Engagement</span>
+                                    <span>${bMetrics.engPct.toFixed(1)}% → <span style="color:${engClass}; font-weight:600;">${aMetrics.engPct.toFixed(1)}% ${engDeltaStr}</span></span>
+                                </div>
+                                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                                    <span style="color:var(--text-muted); font-size:0.65rem; text-transform:uppercase;">Bounce Rate</span>
+                                    <span>${bMetrics.bouncePct.toFixed(1)}% → <span style="color:${bounceClass}; font-weight:600;">${aMetrics.bouncePct.toFixed(1)}% ${bounceDeltaStr}</span></span>
+                                </div>
+                            </div>
                         </div>
                         <div class="diff-metric-pill">
                             <div class="diff-side before">${filteredBefore.length} sess</div>

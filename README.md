@@ -1,6 +1,6 @@
 # Ripple
 
-> **The Continuous Design Loop** · v0.7.6
+> **The Continuous Design Loop** · v0.8.0
 
 Ripple turns your live website into an active canvas for AI-assisted design. Instead of copy-pasting code snippets to your LLM, Ripple's UI Capture drops a direct tether to the element you want to change. It’s the fastest way to iterate on front-end design, backed by a session analytics engine that proves whether your changes actually worked.
 
