@@ -4,6 +4,23 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.8.1] 2026-06-08 — Prompt Search, Cache-Busters & Inbox Sync
+
+### Fixed
+- **fix** · `efb5f87` — Prompt ID search filter on dashboard. Added `promptId` to the search haystack.
+- **fix** · `efb5f87` — Dashboard data caching. Added cache-busters (`?t=timestamp`) to all `fetch()` calls to ensure fresh JSON loads.
+- **fix** · `efb5f87` — Resubmit sync to Vault. Modified `api/update_prompt.php` to dynamically regenerate and drop the `.md` file back into the Vault's `/raw/` inbox when a prompt's status flips back to `pending`.
+
+---
+
+## [v0.8.0] 2026-06-08 — Vault Path Decoupling & A/B Metrics
+
+### Added
+- **feature** · `7b2044a` — **A/B Metrics and Journey Analyzer.** Unified the Numen and Ripple dashboards. Added a Traffic & Commit Activity Timeline Chart and a Session Explorer & Journey Analyzer to the primary workspace.
+- **feature** · `7b2044a` — **Vault Path Decoupling.** Scrubbed hardcoded local system paths and decoupled the Vault path logic, now cleanly driven by `ripple.config.json`.
+
+---
+
 ## [Vibe Session] 2026-06-05 — Breadcrumb Dots + Handshake Deploy
 
 > 2 Ripple prompts shipped. AI executor: Antigravity.
