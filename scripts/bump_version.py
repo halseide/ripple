@@ -60,4 +60,36 @@ if __name__ == "__main__":
         fr"\g<1>{new_version}\g<2>"
     )
     
-    print("\nDone! Remember to run `git commit` to save the version bump.")
+    # 3. Update CHANGELOG.md
+    changelog_path = os.path.join(repo_root, "CHANGELOG.md")
+    if os.path.exists(changelog_path):
+        from datetime import date
+        import subprocess
+        
+        today = date.today().isoformat()
+        recent_commits = ""
+        
+        try:
+            # Grab the last 10 commits for context so the developer/AI can quickly format them
+            res = subprocess.run(
+                ["git", "log", "-n", "10", "--pretty=format:- `%h` — %s"], 
+                capture_output=True, text=True, cwd=repo_root
+            )
+            if res.returncode == 0:
+                recent_commits = res.stdout.strip()
+        except Exception:
+            pass
+
+        stub = f"## [{new_version}] {today} — [Feature / Fix Summary]\n\n### Changes\n{recent_commits}\n\n---\n\n"
+        
+        with open(changelog_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+        parts = content.split('---', 1)
+        if len(parts) == 2:
+            new_content = parts[0] + "---\n\n" + stub + parts[1].lstrip()
+            with open(changelog_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            print(f"Injected new changelog stub into {changelog_path}")
+
+    print("\nDone! Remember to edit CHANGELOG.md to clean up the commits, then run `git commit` to save the version bump.")
