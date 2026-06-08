@@ -21,11 +21,12 @@
             --accent-red: #f85149;
             --accent-purple: #bc8cff;
             --font-main: 'Plus Jakarta Sans', sans-serif;
-            --font-mono: 'Fira Code', monospace;
+        html {
+            /* scroll-behavior: smooth; */
         }
 
-        html {
-            scroll-behavior: smooth;
+        .panel-hidden {
+            display: none !important;
         }
 
         * {
@@ -1046,12 +1047,12 @@
                     <div class="card-title" style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem; color: var(--accent-purple);">
                         🧭 Quick Navigation
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
-                        <a href="#section-suggestions" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">💡 Goal-Aware Suggestions</a>
-                        <a href="#section-commits" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">🔁 Deployment Correlation</a>
-                        <a href="#section-traffic" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">📈 Traffic &amp; Commit Activity</a>
-                        <a href="#sessionExplorerSection" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">🔍 Session Explorer</a>
-                        <a href="#section-prompts" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">🎯 UI Prompt Log</a>
+                    <div id="quick-nav" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+                        <a href="#section-suggestions" id="nav-section-suggestions" onclick="switchPanel('section-suggestions'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">💡 Goal-Aware Suggestions</a>
+                        <a href="#section-commits" id="nav-section-commits" onclick="switchPanel('section-commits'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔁 Deployment Correlation</a>
+                        <a href="#section-traffic" id="nav-section-traffic" onclick="switchPanel('section-traffic'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📈 Traffic &amp; Commit Activity</a>
+                        <a href="#sessionExplorerSection" id="nav-sessionExplorerSection" onclick="switchPanel('sessionExplorerSection'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔍 Session Explorer</a>
+                        <a href="#section-prompts" id="nav-section-prompts" onclick="switchPanel('section-prompts'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🎯 UI Prompt Log</a>
                     </div>
                 </div>
                 
@@ -1386,6 +1387,46 @@
         let drilldownCommitMsgText = "";
         let drilldownPerspective = "after"; // "before" or "after"
         let visitorAliases = {}; // Map of visitor IDs to custom names
+
+        // --- Panel Navigation Logic ---
+        function switchPanel(panelId) {
+            // Hide all workspace sections
+            const sections = document.querySelectorAll('.workspace > section');
+            sections.forEach(sec => sec.classList.add('panel-hidden'));
+            
+            // Show target
+            const target = document.getElementById(panelId);
+            if (target) target.classList.remove('panel-hidden');
+            
+            // Update URL hash
+            window.history.replaceState(null, null, '#' + panelId);
+            
+            // Highlight nav link
+            const links = document.querySelectorAll('#quick-nav a');
+            links.forEach(a => {
+                if (a.id === 'nav-' + panelId) {
+                    a.style.background = 'rgba(188, 140, 255, 0.15)';
+                    a.style.borderLeft = '3px solid var(--accent-purple)';
+                } else {
+                    a.style.background = 'rgba(255,255,255,0.03)';
+                    a.style.borderLeft = '3px solid transparent';
+                }
+            });
+            
+            // Resize chart if the traffic section is shown
+            if (panelId === 'section-traffic' && statsChart) {
+                setTimeout(() => statsChart.resize(), 50);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash.replace('#', '');
+            if (hash && document.getElementById(hash)) {
+                switchPanel(hash);
+            } else {
+                switchPanel('section-suggestions'); // default
+            }
+        });
 
         function buildStatsChart(project) {
             const dom = document.getElementById('stats-chart');
