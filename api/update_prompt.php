@@ -104,13 +104,83 @@ if (!is_array($logData)) {
 $found = false;
 foreach ($logData as &$record) {
     if (($record['promptId'] ?? '') === $promptId) {
+        $targetRecord = null;
         foreach ($allowedFields as $field) {
             if (array_key_exists($field, $data)) {
                 $record[$field] = $data[$field];
             }
         }
+        $targetRecord = $record;
         $found = true;
         break;
+    }
+}
+unset($record);
+
+if ($found && ($targetRecord['status'] ?? '') === 'pending') {
+    $configPath = realpath(__DIR__ . '/../ripple.config.json');
+    if ($configPath && file_exists($configPath)) {
+        $config = json_decode(file_get_contents($configPath), true) ?: [];
+        if (!empty($config['vault_path']) && $config['vault_path'] !== '[VAULT_PATH]') {
+            $rawInbox = rtrim($config['vault_path'], '\\/') . DIRECTORY_SEPARATOR . 'raw';
+            if (is_dir($rawInbox)) {
+                $pId       = $targetRecord['promptId'];
+                $pKey      = $targetRecord['projectKey'] ?? 'unknown';
+                $pCat      = $targetRecord['category'] ?? 'question';
+                $pUrl      = htmlspecialchars($targetRecord['pageUrl'] ?? '', ENT_QUOTES, 'UTF-8');
+                $pSel      = htmlspecialchars($targetRecord['elementSelector'] ?? '', ENT_QUOTES, 'UTF-8');
+                $pCtx      = htmlspecialchars($targetRecord['elementContext'] ?? '', ENT_QUOTES, 'UTF-8');
+                $pSess     = $targetRecord['sessionId'] ?? 'unknown';
+                $pTime     = $targetRecord['capturedAt'] ?? date('c');
+                $pPrompt   = $targetRecord['prompt'] ?? '';
+                $pDateFmt  = date('Y-m-d H:i', strtotime($pTime));
+                
+                $replySec  = '';
+                if (!empty($targetRecord['reply'])) {
+                    $replySec = "\n## User Reply / Follow-up\n\n" . $targetRecord['reply'] . "\n";
+                }
+
+                $markdown = <<<MD
+---
+prompt_id: {$pId}
+project_key: {$pKey}
+category: {$pCat}
+page_url: {$pUrl}
+element_selector: "{$pSel}"
+element_context: "{$pCtx}"
+session_id: {$pSess}
+captured_at: {$pTime}
+status: pending
+---
+
+# 🎯 Ripple UI Capture — {$pId}
+
+**Captured:** {$pDateFmt}
+**Project:** `{$pKey}`
+**Category:** `{$pCat}`
+**Page:** `{$pUrl}`
+
+## Element Context
+
+**Target:** `{$pCtx}`
+**Selector Path:** `{$pSel}`
+
+## Prompt
+
+{$pPrompt}
+{$replySec}
+---
+
+> [!NOTE] AI Processing Instructions
+> The element selector path above pinpoints the exact DOM node the user Shift+Right-Clicked.
+> Map `{$pUrl}` to the physical file in the `{$pKey}` repository (see `ripple.config.json` for the `git_repo` path),
+> then search the file for the selector's tag/class/ID to locate the relevant lines of code.
+> Commit message format: `[Vibe] {$pCat}: <description>\\n- Resolves Prompt: {$pId}`
+
+MD;
+                file_put_contents($rawInbox . DIRECTORY_SEPARATOR . $pId . '.md', $markdown);
+            }
+        }
     }
 }
 unset($record);

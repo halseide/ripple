@@ -2997,7 +2997,7 @@
 
         async function loadPromptLog() {
             try {
-                const res = await fetch('../../data/prompt_log.json');
+                const res = await fetch('../../data/prompt_log.json?t=' + Date.now());
                 allPrompts = await res.json();
             } catch(e) {
                 allPrompts = [];
@@ -3071,7 +3071,7 @@
                 if (statusFilter   !== 'all' && p.status    !== statusFilter)   return false;
                 if (categoryFilter !== 'all' && p.category  !== categoryFilter) return false;
                 if (searchTerm) {
-                    const haystack = [p.prompt, p.elementContext, p.elementSelector, p.pageUrl, p.commitMessage, p.answer].join(' ').toLowerCase();
+                    const haystack = [p.promptId, p.prompt, p.elementContext, p.elementSelector, p.pageUrl, p.commitMessage, p.answer].join(' ').toLowerCase();
                     if (!haystack.includes(searchTerm)) return false;
                 }
                 return true;
