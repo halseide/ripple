@@ -3363,6 +3363,11 @@ function renderPaths() {
         function openSettings() {
             const overlay = document.getElementById('settingsOverlay');
             overlay.classList.add('open');
+            if (activeProjectKey && activeProjectKey !== 'all') {
+                settingsActiveProjectKey = activeProjectKey;
+            } else {
+                settingsActiveProjectKey = null;
+            }
             renderSettingsPanel();
             if (window.Ripple) Ripple.track('settings_opened');
         }
