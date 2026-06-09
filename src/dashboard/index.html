@@ -1159,7 +1159,71 @@
                     <div id="stats-chart" style="width:100%;height:420px;"></div>
                 </section>
 
-                <!-- Session Explorer & Journey Analyzer -->
+                
+                <!-- View Funnel -->
+                <section class="workspace-section panel-hidden" id="section-funnel">
+                    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
+                        <span>🕳️ View Funnel</span>
+                    </h2>
+                    <!-- View Funnel -->
+    <div class="dashboard-panel">
+      <div class="hidden">
+        <div class="panel-title">≡ƒôÉ View Funnel ΓÇö where users went</div>
+        <span style="font-size:11px;color:var(--text-3)">click a view to filter paths & sessions below</span>
+      </div>
+      <div class="funnel-grid" id="funnel-grid">
+        <div class="skeleton" style="height:100px;border-radius:8px"></div>
+        <div class="skeleton" style="height:100px;border-radius:8px"></div>
+        <div class="skeleton" style="height:100px;border-radius:8px"></div>
+      </div>
+    </div>
+
+    
+                </section>
+
+
+                <!-- Navigation Paths -->
+                <section class="workspace-section panel-hidden" id="section-paths">
+                    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
+                        <span>🛣️ Navigation Paths</span>
+                    </h2>
+                    <!-- Navigation Paths -->
+    <div class="dashboard-panel">
+      <div class="hidden">
+        <div class="panel-title">≡ƒù║∩╕Å Navigation Paths</div>
+        <button class="panel-action" onclick="clearViewFilter()">Clear filter</button>
+      </div>
+      <div class="filter-bar">
+        <select class="filter-select" id="path-filter-ref" onchange="renderPaths()">
+          <option value="">All referrers</option>
+        </select>
+        <select class="filter-select" id="path-filter-dev" onchange="renderPaths()">
+          <option value="">All devices</option>
+          <option value="mobile">Mobile</option>
+          <option value="desktop">Desktop</option>
+        </select>
+        <span class="filter-count" id="path-filter-count">ΓÇö</span>
+      </div>
+      <table class="path-table" id="path-table">
+        <thead>
+          <tr>
+            <th>Path</th>
+            <th>Sessions</th>
+            <th>% of real users</th>
+            <th>Avg duration</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="path-tbody">
+          <tr><td colspan="5"><div class="skeleton"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    
+                </section>
+
+<!-- Session Explorer & Journey Analyzer -->
                 <section class="card" id="sessionExplorerSection">
                     <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
                         <span>🔍 Session Explorer & Journey Analyzer</span>
@@ -1434,7 +1498,10 @@
                         if (allPrompts && data.prompts && allPrompts.length !== data.prompts.length) {
                             allPrompts = data.prompts;
                             renderPrompts();
-                        }
+            if(typeof populateFilters !== "undefined") populateFilters();
+            if(typeof renderFunnel !== "undefined") renderFunnel();
+            if(typeof renderPaths !== "undefined") renderPaths();
+        }
                     })
                     .catch(e => console.error("Live reload fetch failed", e));
             }, 3000);
@@ -1846,7 +1913,26 @@
                 deployment_windows: []
             };
 
+            
+            let funnelMap = {};
+            let pathsMap = {};
+            
             allProjects.forEach(p => {
+                if (p.view_funnel) {
+                    p.view_funnel.forEach(v => {
+                        if(!funnelMap[v.view]) funnelMap[v.view] = { view: v.view, visits: 0, exit_count: 0, avg_duration: 0 };
+                        funnelMap[v.view].visits += v.visits;
+                        funnelMap[v.view].exit_count += (v.exit_count || 0);
+                        funnelMap[v.view].avg_duration = Math.max(funnelMap[v.view].avg_duration, v.avg_duration || 0);
+                    });
+                }
+                if (p.navigation_paths) {
+                    p.navigation_paths.forEach(pth => {
+                        if(!pathsMap[pth.path]) pathsMap[pth.path] = { path: pth.path, session_ids: [] };
+                        pathsMap[pth.path].session_ids.push(...(pth.session_ids || []));
+                    });
+                }
+
                 if (p.classification_breakdown) {
                     Object.entries(p.classification_breakdown).forEach(([k, v]) => {
                         project.classification_breakdown[k] = (project.classification_breakdown[k] || 0) + v;
@@ -1916,6 +2002,15 @@
                 project.duration = { median_display: "0s" };
             }
 
+            
+            project.view_funnel = Object.values(funnelMap).sort((a,b) => b.visits - a.visits);
+            project.view_funnel.forEach(v => {
+                v.visit_pct = project.sessions.length ? (v.visits / project.sessions.length * 100).toFixed(1) : 0;
+                v.exit_pct = v.visits ? (v.exit_count / v.visits * 100).toFixed(1) : 0;
+                v.avg_display = v.avg_duration + 's';
+            });
+            project.navigation_paths = Object.values(pathsMap).sort((a,b) => b.session_ids.length - a.session_ids.length);
+            
             return project;
         }
 
@@ -2215,6 +2310,181 @@
 
             return queryMatch && projMatch && dateMatch && durMatch && deviceMatch && browserMatch && sourceMatch && classMatch;
         }
+
+        
+        let activeViewFilter = null;
+        function renderFunnel() {
+  const p = activeProjectKey === 'all' ? getCombinedProjectVirtual() : (analyticsData.projects.find(proj => proj.project_key === activeProjectKey) || {});
+  const maxVisits = Math.max(...(p.view_funnel||[]).map(v => v.visits), 1);
+  document.getElementById('funnel-grid').innerHTML = (p.view_funnel||[]).map(v => `
+    <div class="funnel-card ${activeViewFilter===v.view?'active':''}"
+         onclick="toggleViewFilter('${v.view}')">
+      <div class="funnel-view-name">${v.view}</div>
+      <div class="funnel-visits">${v.visits}</div>
+      <div class="funnel-pct">${v.visit_pct}% of users</div>
+      <div class="funnel-dur">avg ${v.avg_display}</div>
+      <div class="funnel-exit">${v.exit_pct}% exit here</div>
+      <div class="funnel-bar"><div class="funnel-bar-fill" style="width:${Math.round(v.visits/maxVisits*100)}%"></div></div>
+    </div>
+  `).join('');
+}
+
+function toggleViewFilter(view) {
+  activeViewFilter = activeViewFilter === view ? null : view;
+  renderFunnel();
+  renderPaths();
+  renderSessions();
+}
+function clearViewFilter() { activeViewFilter = null; renderFunnel(); renderPaths(); renderSessions(); }
+
+// ΓöÇΓöÇ Deployments ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+function renderDeployments() {
+  const p = activeProjectKey === 'all' ? getCombinedProjectVirtual() : (analyticsData.projects.find(proj => proj.project_key === activeProjectKey) || {});
+  const panel = document.getElementById('panel-deployments');
+  const list  = document.getElementById('deploy-list');
+  const deps  = p.deployments || [];
+
+  if (!deps.length) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+
+  list.innerHTML = deps.map((d, i) => {
+    const after  = d.sessions_after  || {};
+    const before = d.sessions_before || {};
+
+    const deltaCount = after.count - (before.count || 0);
+    const deltaLabel = before.count
+      ? `<span class="deploy-delta ${deltaCount >= 0 ? 'delta-up' : 'delta-down'}">${deltaCount >= 0 ? '+' : ''}${deltaCount}</span>`
+      : '';
+
+    const afterPaths  = (after.top_paths  || []).slice(0, 3);
+    const beforePaths = (before.top_paths || []).slice(0, 3);
+
+    return `
+      <div class="deploy-card">
+        <div class="deploy-header" onclick="toggleDeploy(${i})">
+          <span class="deploy-hash">${d.hash}</span>
+          <span class="deploy-date">${d.date_display}</span>
+          <span class="deploy-msg">${esc(d.message)}</span>
+          <span class="deploy-toggle" id="dep-toggle-${i}">Γû╛</span>
+        </div>
+        <div class="deploy-body collapsed" id="dep-body-${i}">
+          <div>
+            <div class="deploy-window-title">After this commit</div>
+            ${after.count
+              ? `<div class="deploy-stat"><span class="deploy-stat-label">Sessions</span>
+                  <span class="deploy-stat-val">${after.count}${deltaLabel}</span></div>
+                 <div class="deploy-stat"><span class="deploy-stat-label">Median duration</span>
+                  <span class="deploy-stat-val">${after.median_display || 'ΓÇö'}</span></div>
+                 ${afterPaths.map(pt =>
+                   `<div class="deploy-stat"><span class="deploy-stat-label" style="font-family:var(--font-mono);font-size:10px">${esc(pt.path)}</span>
+                    <span class="deploy-stat-val">${pt.count}</span></div>`
+                 ).join('')}`
+              : '<div class="no-data">No sessions recorded after this commit yet</div>'}
+          </div>
+          <div>
+            <div class="deploy-window-title">Before this commit</div>
+            ${before.count
+              ? `<div class="deploy-stat"><span class="deploy-stat-label">Sessions</span>
+                  <span class="deploy-stat-val">${before.count}</span></div>
+                 <div class="deploy-stat"><span class="deploy-stat-label">Median duration</span>
+                  <span class="deploy-stat-val">${before.median_display || 'ΓÇö'}</span></div>
+                 ${beforePaths.map(pt =>
+                   `<div class="deploy-stat"><span class="deploy-stat-label" style="font-family:var(--font-mono);font-size:10px">${esc(pt.path)}</span>
+                    <span class="deploy-stat-val">${pt.count}</span></div>`
+                 ).join('')}`
+              : '<div class="no-data">No prior sessions in window</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleDeploy(i) {
+  const body   = document.getElementById(`dep-body-${i}`);
+  const toggle = document.getElementById(`dep-toggle-${i}`);
+  const open   = !body.classList.contains('collapsed');
+  body.classList.toggle('collapsed', !open);
+  toggle.textContent = open ? 'Γû╛' : 'Γû┤';
+}
+
+// ΓöÇΓöÇ Populate filter dropdowns ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+function populateFilters() {
+  const p = activeProjectKey === 'all' ? getCombinedProjectVirtual() : (analyticsData.projects.find(proj => proj.project_key === activeProjectKey) || {});
+  const refs = [...new Set((p.sessions||[]).map(s => s.referrer))].sort();
+  const paths = [...new Set((p.navigation_paths||[]).map(n => n.path))];
+
+  ['path-filter-ref','sess-filter-ref'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = `<option value="">All referrers</option>` +
+      refs.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  });
+
+  const pathSel = document.getElementById('sess-filter-path');
+  pathSel.innerHTML = `<option value="">All paths</option>` +
+    paths.map(path => `<option value="${esc(path)}">${esc(path)}</option>`).join('');
+}
+
+// ΓöÇΓöÇ Navigation Paths ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+function renderPaths() {
+  const p = activeProjectKey === 'all' ? getCombinedProjectVirtual() : (analyticsData.projects.find(proj => proj.project_key === activeProjectKey) || {});
+  const refFilter = document.getElementById('path-filter-ref').value;
+  const devFilter = document.getElementById('path-filter-dev').value;
+
+  // Build a lookup of session metadata for filtering
+  const sessLookup = {};
+  (p.sessions||[]).forEach(s => { sessLookup[s.id] = s; });
+
+  // Filter paths based on which sessions pass the filter
+  let paths = (p.navigation_paths||[]).map(path => {
+    let sids = path.session_ids;
+    if (activeViewFilter) sids = sids.filter(id => (sessLookup[id]?.path||'').includes(activeViewFilter));
+    if (refFilter) sids = sids.filter(id => sessLookup[id]?.referrer === refFilter);
+    if (devFilter) sids = sids.filter(id => sessLookup[id]?.device === devFilter);
+    return { ...path, filtered_count: sids.length, filtered_ids: sids };
+  }).filter(path => path.filtered_count > 0)
+    .sort((a,b) => b.filtered_count - a.filtered_count);
+
+  const maxCount = Math.max(...paths.map(p => p.filtered_count), 1);
+  document.getElementById('path-filter-count').textContent = `${paths.length} paths`;
+
+  const tbody = document.getElementById('path-tbody');
+  if (!paths.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-3);text-align:center;padding:24px">No paths match filters</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = paths.map((path, i) => {
+    const views = path.path === '(no views)' ? ['(no views)'] : path.path.split(' ΓåÆ ');
+    const chips = views.map((v,j) =>
+      `${j>0?'<span class="view-arrow">ΓåÆ</span>':''}<span class="view-chip">${esc(v)}</span>`
+    ).join('');
+    return `
+      <tr id="path-row-${i}">
+        <td><div class="path-str">${chips}</div></td>
+        <td class="bar-cell">
+          ${path.filtered_count}
+          <div class="inline-bar"><div class="inline-bar-fill" style="width:${Math.round(path.filtered_count/maxCount*100)}%"></div></div>
+        </td>
+        <td style="color:var(--text-2)">${Math.round(path.filtered_count/(activeProject.real_user_count||1)*100)}%</td>
+        <td style="font-family:var(--font-mono);color:var(--neon-blue)">${path.avg_display}</td>
+        <td><button class="btn-drill" id="drill-btn-${i}"
+              onclick="toggleDrill(${i}, ${JSON.stringify(path.filtered_ids)})">
+              Γû╛ ${path.filtered_count} sessions
+            </button></td>
+      </tr>
+      <tr class="drill-row" id="drill-row-${i}">
+        <td colspan="5">
+          <div class="drill-inner" id="drill-inner-${i}">
+            <div class="drill-sessions">${renderDrillSessions(path.filtered_ids, i)}</div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+
 
         function applyFilters() {
             const project = activeProjectKey === 'all' ? getCombinedProjectVirtual() : analyticsData.projects.find(p => p.project_key === activeProjectKey);

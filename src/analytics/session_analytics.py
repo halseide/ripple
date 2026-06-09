@@ -282,14 +282,20 @@ def parse_sessions(
     else:
         mean_dur = median_dur = p75_dur = 0
 
-    # ── Referrers ─────────────────────────────────────────────────────────────
+    # ── Referrers & Geography ─────────────────────────────────────────────────
     ref_counts = defaultdict(int)
+    country_counts = defaultdict(int)
     for s in real_sessions:
         ref_counts[referrer_label(s.get("referrer", "") or "direct")] += 1
+        if "geo" in s and isinstance(s["geo"], dict):
+            country_counts[s["geo"].get("country", "Unknown")] += 1
+            
     top_referrers = [{"source": r, "count": c}
                      for r, c in sorted(ref_counts.items(), key=lambda x: -x[1])[:10]]
+    top_countries = [{"country": c, "count": n}
+                     for c, n in sorted(country_counts.items(), key=lambda x: -x[1])[:10]]
 
-    # ── Device ────────────────────────────────────────────────────────────────
+    # 📱 Device 📱
     mobile_count  = sum(1 for s in real_sessions if device_type(s.get("userAgent", "")) == "mobile")
     desktop_count = real_count - mobile_count
 
@@ -451,6 +457,7 @@ def parse_sessions(
         },
         "device":           {"mobile": mobile_count, "desktop": desktop_count},
         "top_referrers":    top_referrers,
+        "top_countries":    top_countries,
         "top_events":       top_events,
         "hourly_chart":     hourly_chart,
         "daily_trend":      daily_trend,

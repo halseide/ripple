@@ -90,6 +90,47 @@ if (!is_dir($sessionsDir)) {
 }
 
 $filename = $sessionsDir . DIRECTORY_SEPARATOR . $sessionId . '.json';
+
+// --- GEOGRAPHIC TRACKING ---
+if (!isset($data['geo'])) {
+    if (file_exists($filename)) {
+        $existing = json_decode(file_get_contents($filename), true);
+        if (isset($existing['geo'])) {
+            $data['geo'] = $existing['geo'];
+        }
+    }
+    
+    // If still not set, fetch it
+    if (!isset($data['geo'])) {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        // Note: For local testing, ::1 won't return geo data. The API returns status: fail.
+        if ($ip && $ip !== '::1' && $ip !== '127.0.0.1') {
+            $geoUrl = "http://ip-api.com/json/" . urlencode($ip) . "?fields=status,country,regionName,city,lat,lon";
+            
+            // Set a short timeout so we don't block the request if the API is down
+            $ctx = stream_context_create(['http' => ['timeout' => 2]]);
+            $geoRaw = @file_get_contents($geoUrl, false, $ctx);
+            if ($geoRaw) {
+                $geoDec = json_decode($geoRaw, true);
+                if ($geoDec && isset($geoDec['status']) && $geoDec['status'] === 'success') {
+                    $data['geo'] = $geoDec;
+                }
+            }
+        } else {
+            // Local fallback for testing
+            $data['geo'] = [
+                'status' => 'success',
+                'country' => 'Localhost',
+                'regionName' => 'Local',
+                'city' => 'Local',
+                'lat' => 0,
+                'lon' => 0
+            ];
+        }
+    }
+}
+// ---------------------------
+
 $written  = file_put_contents(
     $filename,
     json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
