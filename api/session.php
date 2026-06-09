@@ -105,7 +105,7 @@ if (!isset($data['geo'])) {
         $ip = $_SERVER['REMOTE_ADDR'] ?? '';
         // Note: For local testing, ::1 won't return geo data. The API returns status: fail.
         if ($ip && $ip !== '::1' && $ip !== '127.0.0.1') {
-            $geoUrl = "http://ip-api.com/json/" . urlencode($ip) . "?fields=status,country,regionName,city,lat,lon";
+            $geoUrl = "http://ip-api.com/json/" . urlencode($ip) . "?fields=status,message,country,countryCode,region,regionName,city,district,zip,lat,lon,timezone,offset,currency,isp,org,as,asname,reverse,mobile,proxy,hosting,query";
             
             // Set a short timeout so we don't block the request if the API is down
             $ctx = stream_context_create(['http' => ['timeout' => 2]]);
