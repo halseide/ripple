@@ -987,6 +987,7 @@
                 <textarea id="_rpl_prompt_text" class="_rpl_textarea" placeholder="Describe what you want to change or add here…" autofocus></textarea>
                 <div class="_rpl_controls">
                     <select id="_rpl_cat_select" class="_rpl_cat_select" aria-label="Category">${catOpts}</select>
+                    <button id="_rpl_btn_mic" class="_rpl_btn_mic" title="Use Microphone">🎤</button>
                     <button id="_rpl_btn_cancel" class="_rpl_btn_cancel">Cancel</button>
                     <button id="_rpl_btn_send" class="_rpl_btn_send">⚡ Send to AI Inbox</button>
                 </div>
@@ -1074,7 +1075,7 @@
         const _escHandler = (e) => { if (e.key === 'Escape') _closeModal(); };
         document.addEventListener('keydown', _escHandler, { once: true });
 
-        // Shift+Enter submit (prompt mode only)
+// Shift+Enter submit (prompt mode only)
         if (!_homeMode && textarea) {
             textarea.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && e.shiftKey) {
@@ -1082,6 +1083,62 @@
                     document.getElementById('_rpl_btn_send').click();
                 }
             });
+        }
+
+        // 🎤 Speech Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const _micBtn = document.getElementById('_rpl_btn_mic');
+        if (_micBtn) {
+            if (!SpeechRecognition) {
+                _micBtn.style.display = 'none';
+            } else {
+                let _recognition = new SpeechRecognition();
+                _recognition.continuous = false;
+                _recognition.interimResults = true;
+                let _isRecording = false;
+                let _originalText = '';
+                
+                _recognition.onstart = function() {
+                    _isRecording = true;
+                    _micBtn.classList.add('recording');
+                    _micBtn.title = "Listening...";
+                };
+                
+                _recognition.onresult = function(event) {
+                    let transcript = '';
+                    for (let i = 0; i < event.results.length; i++) {
+                        transcript += event.results[i][0].transcript;
+                    }
+                    if (textarea) textarea.value = _originalText + transcript;
+                };
+                
+                _recognition.onerror = function(event) {
+                    console.error("Ripple Speech Error: ", event.error);
+                    _recognition.stop();
+                };
+                
+                _recognition.onend = function() {
+                    _isRecording = false;
+                    _micBtn.classList.remove('recording');
+                    _micBtn.title = "Use Microphone";
+                    if (textarea) {
+                        textarea.focus();
+                        textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+                    }
+                };
+                
+                _micBtn.addEventListener('click', function() {
+                    if (_isRecording) {
+                        _recognition.stop();
+                    } else {
+                        _originalText = textarea ? textarea.value : '';
+                        if (_originalText && !_originalText.endsWith(' ') && !_originalText.endsWith('\n')) {
+                            _originalText += ' ';
+                        }
+                        _recognition.start();
+                    }
+                });
+            }
         }
 
         // ── Wire send ────────────────────────────────────────────────────────
