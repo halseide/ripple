@@ -219,6 +219,80 @@ def build_deployment_impact(project: dict, real_sessions: list) -> list:
     return result
 
 
+def build_visitors(session_records: list) -> list:
+    """Groups sessions by visitor ID and generates an audience profile narrative."""
+    from collections import defaultdict
+    visitors_map = defaultdict(list)
+    for s in session_records:
+        sid = s["id"]
+        parts = sid.split('_')
+        vid = parts[1] if (len(parts) >= 3 and parts[0] == "sess") else sid
+        visitors_map[vid].append(s)
+        
+    visitors = []
+    for vid, sessions in visitors_map.items():
+        # Sort chronologically to find first visit
+        sessions = sorted(sessions, key=lambda x: x["start"])
+        
+        count = len(sessions)
+        first_visit = sessions[0]["start"]
+        last_visit = sessions[-1]["start"]
+        
+        total_duration = sum(s["duration_s"] for s in sessions)
+        avg_duration = total_duration / count
+        
+        # Deduplicate browsers, devices, locations
+        browsers = list(set(s["browser"] for s in sessions))
+        devices = list(set(s["device"] for s in sessions))
+        locations = list(set(f"{s['city']}, {s['country']}" for s in sessions if s.get("country") and s["country"] != "Unknown"))
+        if not locations:
+            locations = ["Unknown Location"]
+            
+        # Determine classification (highest intent wins)
+        classes = [s["classification"] for s in sessions]
+        if "deep" in classes: user_type = "deep"
+        elif "engaged" in classes: user_type = "engaged"
+        elif "glancer" in classes: user_type = "glancer"
+        else: user_type = "bounce"
+        
+        # Narrative
+        try:
+            dt = datetime.fromisoformat(first_visit.replace("Z", "+00:00"))
+            date_str = dt.strftime("%b %d")
+            time_str = dt.strftime("%I:%M %p")
+        except Exception:
+            date_str = "an unknown date"
+            time_str = "an unknown time"
+            
+        loc_str = locations[0]
+        b_str = browsers[0]
+        d_str = devices[0]
+        
+        narrative = (
+            f"This user first visited on {date_str} at {time_str} from {loc_str}. "
+            f"They have visited {count} time(s) using {b_str} on a {d_str} device. "
+            f"With an average session duration of {fmt_duration(avg_duration)}, they are classified as a '{user_type.capitalize()}' user."
+        )
+        
+        visitors.append({
+            "visitor_id": vid,
+            "session_count": count,
+            "first_visit": first_visit,
+            "last_visit": last_visit,
+            "total_duration_s": total_duration,
+            "avg_duration_s": avg_duration,
+            "avg_duration": fmt_duration(avg_duration),
+            "user_type": user_type,
+            "locations": locations,
+            "browsers": browsers,
+            "devices": devices,
+            "narrative": narrative,
+            "sessions": sorted(sessions, key=lambda x: x["start"], reverse=True)
+        })
+        
+    return sorted(visitors, key=lambda x: x["last_visit"], reverse=True)
+
+
 # ── Main parse ────────────────────────────────────────────────────────────────
 
 def parse_sessions(
@@ -406,6 +480,10 @@ def parse_sessions(
     for s in sorted(real_sessions, key=lambda x: x.get("startTime", ""), reverse=True)[:max_sessions_stored]:
         sid = s.get("sessionId", "?")
         ua  = s.get("userAgent", "")
+        geo = s.get("geo", {})
+        country = geo.get("country", "Unknown") if isinstance(geo, dict) else "Unknown"
+        city = geo.get("city", "Unknown") if isinstance(geo, dict) else "Unknown"
+        
         session_records.append({
             "id":             sid,
             "start":          s.get("startTime", ""),
@@ -416,6 +494,8 @@ def parse_sessions(
             "device":         device_type(ua),
             "browser":        parse_browser(ua),
             "path":           session_path(s),
+            "country":        country,
+            "city":           city,
             "views": [
                 {
                     "view":       v.get("view", "?"),
@@ -466,6 +546,7 @@ def parse_sessions(
         "daily_glancers":   daily_glancers_dict,
         "navigation_paths": navigation_paths,
         "view_funnel":      view_funnel,
+        "visitors":         build_visitors(session_records),
         "sessions":         session_records,
         "deployments":      build_deployment_impact(project, real_sessions),
     }
