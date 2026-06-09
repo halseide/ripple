@@ -313,7 +313,7 @@ def parse_sessions(
         if c == "bot": continue
         try:
             dt = datetime.fromisoformat(s["startTime"].replace("Z", "+00:00"))
-            d_str = dt.strftime("%Y-%m-%d %H:%M")
+            d_str = dt.strftime("%Y-%m-%d")
             if c != "bounce": # Keep daily_trend matching real_sessions + ghost (wait, is_real_user is glancer, engaged, deep)
                 if is_real_user(c):
                     daily[d_str] += 1
