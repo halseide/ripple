@@ -69,13 +69,13 @@ Stages and their gates are defined once, before the project starts — not impro
 Problem statement: "What did this commit do to my users?" No tool answers this automatically for indie developers.
 
 ### 2026-06-03 — Research Complete
-Market research conducted. PostHog closest competitor, but not git-native or zero-config for the before/after diff use case. Full report in Atlas2.0 vault.
+Market research conducted. PostHog closest competitor, but not git-native or zero-config for the before/after diff use case. Full report in the internal vault.
 
 ### 2026-06-03 — Develop Started
-Repo initialized at `[WEB_ROOT]\ripple`. Option B confirmed: standalone product, not Atlas2.0 internal.
+Repo initialized at `[WEB_ROOT]\ripple`. Option B confirmed: standalone product, not internal to the parent system.
 
 ### 2026-06-03 — Analytics engine extracted
-`src/analytics/session_analytics.py` copied from Atlas2.0. `scripts/analyze.py` written as standalone entry point. `ripple.config.json` live with example.com as proving ground.
+`src/analytics/session_analytics.py` copied from the parent system. `scripts/analyze.py` written as standalone entry point. `ripple.config.json` live with example.com as proving ground.
 
 ---
 

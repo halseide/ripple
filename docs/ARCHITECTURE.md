@@ -29,7 +29,7 @@ You run: python scripts/analyze.py
 - Stores as: `/sessions/sess_[uuid].json` on the server via fetch POST to `track.php`
 - Design principle: no cookies, no fingerprinting, no PII
 
-### analytics/ — Python core (extracted from Atlas2.0)
+### analytics/ — Python core (extracted from parent system)
 - `session_analytics.py` — session classification, path analysis, funnel, deployment correlation
 - `classify.py` — bot/ghost/bounce/glancer/engaged/deep classifier
 - `paths.py` — navigation path aggregation

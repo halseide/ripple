@@ -19,7 +19,7 @@ frontmatter block. This skill governs how the agent processes those files.
 ### Why This Skill Exists
 
 On 2026-06-05 the agent read a `category: question` prompt, diagnosed a UX gap,
-and immediately called the Handshake API to change a live record — without being
+and immediately called the CRM application API to change a live record — without being
 asked to. The user had to stop it and demand a re-eval. This skill exists to
 prevent that failure mode and all similar ones.
 

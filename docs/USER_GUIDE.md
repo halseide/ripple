@@ -41,11 +41,11 @@ A modal appears with:
 
 ### 4. Press ⚡ Send to AI Inbox (or `Shift+Enter`)
 
-The prompt is saved to `/raw/` as a `.md` file and logged to `prompt_log.json`. A **throbbing purple dot** (breadcrumb) appears at the exact pixel where you clicked.
+The prompt is saved to your raw inbox as a `.md` file and logged to `prompt_log.json`. A **throbbing purple dot** (breadcrumb) appears at the exact pixel where you clicked.
 
 ### 5. AI processes the inbox
 
-Next time you ask the AI to process `/raw/`, it reads the prompt, executes the correct workflow for the category, commits the fix, and archives the file.
+Next time you ask the AI to process the raw inbox, it reads the prompt, executes the correct workflow for the category, commits the fix, and archives the file.
 
 ---
 
@@ -86,9 +86,9 @@ Each project has a dashboard at `http://localhost/{project}/ripple/`.
 
 | Project | Dashboard URL |
 |---|---|
-| Handshake | http://localhost/project-beta/ripple/ |
-| Numen | http://localhost/project-alpha/ripple/ |
-| Jumpoff | http://localhost/example.com/ripple/ |
+| App Alpha | http://localhost/app-alpha/ripple/ |
+| App Beta | http://localhost/app-beta/ripple/ |
+| Example Site | http://localhost/example-site/ripple/ |
 
 The dashboard shows:
 - **Vitals** — sessions, engagement, bounce rate, and project-specific metrics
