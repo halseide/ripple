@@ -1,6 +1,6 @@
 # Ripple — User Guide
 
-> **Version:** v0.8.1 · **Last Updated:** 2026-06-08
+> **Version:** v0.9.0 · **Last Updated:** 2026-06-08
 
 Ripple is a live UI capture and session analytics tool. It runs on every page where the tracker is installed, gives you a direct line from browser to AI inbox, and measures whether your changes actually worked.
 
