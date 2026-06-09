@@ -4,6 +4,22 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.10.0] 2026-06-09 — Geographic IP Tracking, Speech-to-Text Prompts, and Dashboard Settings Upgrades
+
+### Changes
+- `602a732` — [Vibe] fix: set GitHub remote for ripple project and auto-select active project tab in Settings - Resolves Prompt: prompt_1781043445_ripple
+- `592aa2f` — [Vibe] fix: complete geo parsing in session analytics and redirect dashboard
+- `67541f6` — [Vibe] design: update visitor modal header instantly upon renaming user - Resolves Prompt: prompt_1781042939_ripple
+- `0147db7` — feat: capture all available geo fields from ip-api.com
+- `a1fa8c1` — feat: implement native geographic IP tracking via ip-api.com
+- `3fb2ce1` — [Vibe] data: group sessions by day instead of minute in daily trend chart - Resolves Prompt: prompt_1780972783_ripple
+- `fe65ff2` — fix: correct utf-8 encoding corruption in tracker script
+- `b74f3b3` — fix: add missing css styles for microphone button
+- `514626a` — fix: enable continuous speech recognition for longer dictation
+- `8edde82` — feat: add speech-to-text input to prompt capture modal
+
+---
+
 ## [v0.9.0] 2026-06-08 🔮 Global Filters & Persistent Tracker Blobs
 
 ### Changes
