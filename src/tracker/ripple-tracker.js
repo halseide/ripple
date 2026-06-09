@@ -15,22 +15,22 @@
  *   Console:       Ripple.debug.enable()
  *
  * UI Capture Mode (omnipresent prompt capture):
- *   Shift + Right-Click any element â†’ opens prompt modal
- *   Click floating Ripple indicator â†’ opens modal targeting body
+ *   Shift + Right-Click any element → opens prompt modal
+ *   Click floating Ripple indicator → opens modal targeting body
  *
  * Manual API:
  *   Ripple.track('event_name', { optional: 'details' })
  *   Ripple.setView('view-name')
  *   Ripple.debug.toggle()
  *   Ripple.flush()
- *   Ripple.capture(element)   â† open prompt modal targeting any element
+ *   Ripple.capture(element)   ← open prompt modal targeting any element
  */
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.8.1';
+    const RIPPLE_VERSION = 'v0.9.1';
 
-    // â”€â”€ Config from <script> tag â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
     // when the host page creates a <script> element via JS and appends it).
     // Fallback: scan document.scripts for the ripple-tracker src to recover
@@ -50,11 +50,11 @@
     let   _homeMode    = localStorage.getItem('ripple_home') === 'true';
 
 
-    // â”€â”€ Session state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Session state ─────────────────────────────────────────────────────────
     const _startMs   = Date.now();
     const _startTime = new Date().toISOString();
 
-    // Persistent visitor ID â€” stored in localStorage so multiple sessions
+    // Persistent visitor ID — stored in localStorage so multiple sessions
     // from the same browser share the same prefix. This lets session_analytics.py
     // group them into inferred journeys ("Unique Visitors" tab).
     const _VISITOR_KEY = '_ripple_vid';
@@ -67,7 +67,7 @@
             }
             return vid;
         } catch (_) {
-            // localStorage blocked (private mode, iframe, etc.) â€” fall back to random
+            // localStorage blocked (private mode, iframe, etc.) — fall back to random
             return Math.random().toString(36).slice(2, 13);
         }
     }());
@@ -85,7 +85,7 @@
     let _flushed      = false;
     let _modalOpen    = false;
 
-    // â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Public API ────────────────────────────────────────────────────────────
     const Ripple = {
         /**
          * Record a named event with optional details dict.
@@ -145,11 +145,11 @@
         },
     };
 
-    // â”€â”€ Auto-tracking: page load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Auto-tracking: page load ──────────────────────────────────────────────
     Ripple.track('page_loaded', { href: location.href });
 
-    // â”€â”€ Auto-Instrumentation Layer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // Everything below fires automatically on injection â€” zero changes needed
+    // ── Auto-Instrumentation Layer ────────────────────────────────────────────
+    // Everything below fires automatically on injection — zero changes needed
     // in the host page. All events flow into Ripple.track() and appear in the
     // debug overlay and session payload.
 
@@ -185,7 +185,7 @@
         return lbl.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 80);
     }
 
-    // â”€â”€ 1. Universal click capture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 1. Universal click capture ────────────────────────────────────────────
     // Captures EVERY click, not just buttons/links. Uses capturing phase so it
     // fires before any handler on the page can stopPropagation.
     const _recentClicks = []; // for rage-click detection
@@ -234,7 +234,7 @@
 
         Ripple.track(evtName, details);
 
-        // â”€â”€ Rage-click detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Rage-click detection ─────────────────────────────────────────────
         const now = Date.now();
         _recentClicks.push({ key, t: now });
         // Keep only last 600ms window
@@ -247,7 +247,7 @@
 
     }, true); // capture phase
 
-    // â”€â”€ 2. Input / Select / Textarea changes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 2. Input / Select / Textarea changes ──────────────────────────────────
     document.addEventListener('change', function (e) {
         const el  = e.target;
         const tag = (el.tagName || '').toLowerCase();
@@ -277,7 +277,7 @@
         });
     }, true);
 
-    // â”€â”€ 3. Keyboard: focus engagement on inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 3. Keyboard: focus engagement on inputs ───────────────────────────────
     let _focusedEl = null;
     document.addEventListener('focusin', function (e) {
         const el  = e.target;
@@ -300,7 +300,7 @@
         Ripple.track('field_blurred', { timeInField: secs + 's' });
     }, true);
 
-    // â”€â”€ 4. Scroll depth milestones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 4. Scroll depth milestones ────────────────────────────────────────────
     const _scrollMilestones = new Set();
     function _onScroll() {
         const el     = document.scrollingElement || document.documentElement;
@@ -316,7 +316,7 @@
     }
     window.addEventListener('scroll', _onScroll, { passive: true });
 
-    // â”€â”€ 5. Form submissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 5. Form submissions ───────────────────────────────────────────────────
     document.addEventListener('submit', function (e) {
         const form = e.target;
         Ripple.track('form_submitted', {
@@ -326,7 +326,7 @@
         });
     }, true);
 
-    // â”€â”€ 6. Visibility / tab focus (idle + return) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 6. Visibility / tab focus (idle + return) ─────────────────────────────
     let _hiddenAt = null;
     document.addEventListener('visibilitychange', function () {
         if (document.hidden) {
@@ -339,7 +339,7 @@
         }
     });
 
-    // â”€â”€ 7. DOM mutation observer â€” widget state changes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 7. DOM mutation observer — widget state changes ───────────────────────
     // Watches for attribute changes that indicate state transitions in
     // custom widgets: aria-expanded (accordions, dropdowns), aria-selected
     // (tabs, listboxes), data-active (custom toggle systems), open (details).
@@ -376,7 +376,7 @@
         _startMutObs();
     }
 
-    // â”€â”€ 8. Auto-detect views from [data-ripple-view] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 8. Auto-detect views from [data-ripple-view] ─────────────────────────
     if ('IntersectionObserver' in window) {
         const io = new IntersectionObserver((entries) => {
             entries.forEach(e => {
@@ -395,7 +395,7 @@
     }
 
 
-    // â”€â”€ Auto-tracking: URL routing (History & Hash) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Auto-tracking: URL routing (History & Hash) ───────────────────────────
     function _autoViewFromUrl() {
         // e.g. /project-alpha/ripple/ or /dashboard?tab=active
         const path = location.pathname + location.search + location.hash;
@@ -425,7 +425,7 @@
         return res;
     };
 
-    // â”€â”€ Flush logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Flush logic ───────────────────────────────────────────────────────────
     function _buildPayload() {
         const nowMs     = Date.now();
         const snapViews = [..._views];
@@ -461,7 +461,7 @@
                 headers:   { 'Content-Type': 'application/json' },
                 body,
                 keepalive: true,
-            }).catch(() => {}); // silent â€” offline/localhost failures are fine
+            }).catch(() => {}); // silent — offline/localhost failures are fine
         }
     }
 
@@ -472,7 +472,7 @@
     window.addEventListener('pagehide',      () => _flush(true));
     window.addEventListener('beforeunload',  () => _flush(true));
 
-    // â”€â”€ UI Capture: CSS Selector Path Builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── UI Capture: CSS Selector Path Builder ─────────────────────────────────
     /**
      * Builds a unique CSS selector path for an element, walking up the DOM tree.
      * e.g. "body > div.top-bar > span#clock-days"
@@ -488,7 +488,7 @@
             if (node.id) {
                 selector += '#' + node.id;
                 parts.unshift(selector);
-                break; // ID is unique â€” stop walking
+                break; // ID is unique — stop walking
             } else {
                 const classes = Array.from(node.classList)
                     .filter(c => /^[a-zA-Z_-][a-zA-Z0-9_-]*$/.test(c))
@@ -506,7 +506,7 @@
 
     /**
      * Returns a short human-readable context string for the element.
-     * e.g. "span#clock-days â€¢ classes: clock-label"
+     * e.g. "span#clock-days • classes: clock-label"
      * @param {Element} el
      * @returns {string}
      */
@@ -517,12 +517,12 @@
         const classes = el.className && typeof el.className === 'string'
             ? el.className.trim().split(/\s+/).slice(0, 3).join(' ')
             : '';
-        return `${tag}${id}${classes ? ' â€¢ ' + classes : ''}`;
+        return `${tag}${id}${classes ? ' • ' + classes : ''}`;
     }
 
-    // â”€â”€ UI Capture: Shift + Left-Click interceptor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── UI Capture: Shift + Left-Click interceptor ───────────────────────────
     document.addEventListener('click', function (e) {
-        if (!e.shiftKey) return; // normal click â€” pass through
+        if (!e.shiftKey) return; // normal click — pass through
         e.preventDefault();
         e.stopPropagation();
         // If in home/idle mode, instantly exit it and open prompt capture
@@ -534,7 +534,7 @@
         _openModal(e.target, e.pageX, e.pageY);
     }, true);
 
-    // â”€â”€ UI Capture: Breadcrumb Sticky Notes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── UI Capture: Breadcrumb Sticky Notes ───────────────────────────────────
     // After a prompt is saved, a throbbing ripple dot is pinned to the exact
     // x,y coordinates where the user Shift+Right-Clicked. Hover to see a
     // summary tooltip; click to open the dashboard in a new tab.
@@ -698,13 +698,13 @@
             if (tip) return;
             tip = document.createElement('div');
             tip.className = 'rpl-breadcrumb-tip';
-            const label = summary.length > 80 ? summary.slice(0, 77) + 'â€¦' : summary;
+            const label = summary.length > 80 ? summary.slice(0, 77) + '…' : summary;
             tip.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-                    <div>ðŸ’¬ <strong>${label}</strong><span class="rpl-bc-id">${promptId}</span></div>
+                    <div>💬 <strong>${label}</strong><span class="rpl-bc-id">${promptId}</span></div>
                     <div style="display:flex; gap:4px;">
-                        <div class="rpl-bc-cancel" style="color:rgba(255,100,100,0.6); cursor:pointer; font-size:14px; line-height:1; padding:0 4px;" title="Cancel Request">ðŸš«</div>
-                        <div class="rpl-bc-dismiss" style="color:rgba(255,255,255,0.4); cursor:pointer; font-size:14px; line-height:1; padding:0 4px;" title="Dismiss">âœ•</div>
+                        <div class="rpl-bc-cancel" style="color:rgba(255,100,100,0.6); cursor:pointer; font-size:14px; line-height:1; padding:0 4px;" title="Cancel Request">🚫</div>
+                        <div class="rpl-bc-dismiss" style="color:rgba(255,255,255,0.4); cursor:pointer; font-size:14px; line-height:1; padding:0 4px;" title="Dismiss">✕</div>
                     </div>
                 </div>
             `;
@@ -784,7 +784,7 @@
         });
     }
 
-    // â”€â”€ UI Capture: Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── UI Capture: Modal ─────────────────────────────────────────────────────
     const CATEGORIES = ['fix', 'feature', 'design', 'copy', 'data', 'question'];
     const MODAL_ID   = '_rpl_capture_modal';
 
@@ -799,7 +799,7 @@
         const elementCtx    = _getElementContext(targetEl);
         const pageUrl       = location.href;
 
-        // â”€â”€ Inject styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Inject styles ────────────────────────────────────────────────────
         if (!document.getElementById('_rpl_modal_styles')) {
             const style = document.createElement('style');
             style.id = '_rpl_modal_styles';
@@ -920,7 +920,6 @@
                     border-color: rgba(255,255,255,0.2);
                     color: rgba(220,210,255,0.9);
                 }
-
                 ._rpl_btn_mic {
                     background: rgba(20,20,50,0.9); border: 1px solid rgba(100,80,200,0.2);
                     color: #c0b8f0; padding: 8px 12px; border-radius: 8px; font-size: 14px;
@@ -947,12 +946,12 @@
             document.head.appendChild(style);
         }
 
-        // â”€â”€ Build backdrop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Build backdrop ───────────────────────────────────────────────────
         const backdrop = document.createElement('div');
         backdrop.id = '_rpl_backdrop';
         backdrop.addEventListener('click', _closeModal);
 
-        // â”€â”€ Build modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Build modal ──────────────────────────────────────────────────────
         const modal = document.createElement('div');
         modal.id = MODAL_ID;
         modal.setAttribute('role', 'dialog');
@@ -981,46 +980,46 @@
             `<option value="${c}">${c.charAt(0).toUpperCase() + c.slice(1)}</option>`
         ).join('');
 
-        // â”€â”€ Home mode: replace capture form with info card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Home mode: replace capture form with info card ───────────────────
         const modalBody = _homeMode ? `
             <div style="padding:16px 4px 4px; text-align:center;">
-                <div style="font-size:28px; margin-bottom:8px;">âšª</div>
+                <div style="font-size:28px; margin-bottom:8px;">⚪</div>
                 <div style="color:#e8e8f5; font-weight:700; font-size:15px; margin-bottom:4px;">Home</div>
                 <div style="color:rgba(140,130,200,0.7); font-size:11px; font-family:'JetBrains Mono',monospace; margin-bottom:16px;">
-                    ${PROJECT_KEY} Â· ${RIPPLE_VERSION}
+                    ${PROJECT_KEY} · ${RIPPLE_VERSION}
                 </div>
                 <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(100,80,200,0.15); border-radius:8px; padding:12px; text-align:left; font-size:11px; font-family:'JetBrains Mono',monospace; color:rgba(180,170,220,0.8); line-height:2;">
-                    <div>ðŸ“ <strong>Page:</strong> ${pageUrl.replace(/^https?:\/\/[^/]+/, '').slice(0, 52) || '/'}</div>
-                    <div>ðŸŽ¯ <strong>Session:</strong> ${_sessionId}</div>
-                    <div>ðŸ“¦ <strong>Events logged:</strong> ${_events.length}</div>
-                    <div>ðŸ”µ <strong>Prompt mode:</strong> off (idle)</div>
-                    <div>ðŸ”´ <strong>Debug mode:</strong> ${DEBUG_MODE ? 'on' : 'off'}</div>
+                    <div>📍 <strong>Page:</strong> ${pageUrl.replace(/^https?:\/\/[^/]+/, '').slice(0, 52) || '/'}</div>
+                    <div>🎯 <strong>Session:</strong> ${_sessionId}</div>
+                    <div>📦 <strong>Events logged:</strong> ${_events.length}</div>
+                    <div>🔵 <strong>Prompt mode:</strong> off (idle)</div>
+                    <div>🔴 <strong>Debug mode:</strong> ${DEBUG_MODE ? 'on' : 'off'}</div>
                 </div>
                 <div style="margin-top:14px; font-size:11px; color:rgba(120,110,160,0.6);">Shift+Right-Click any element to return to Prompt mode</div>
             </div>` : `
             <div class="_rpl_modal_body">
-                <div class="_rpl_ctx_pill" title="${selectorPath}">${elementCtx}<br><span style="opacity:0.6">${selectorPath.slice(0, 72)}${selectorPath.length > 72 ? 'â€¦' : ''}</span></div>
-                <textarea id="_rpl_prompt_text" class="_rpl_textarea" placeholder="Describe what you want to change or add hereâ€¦" autofocus></textarea>
+                <div class="_rpl_ctx_pill" title="${selectorPath}">${elementCtx}<br><span style="opacity:0.6">${selectorPath.slice(0, 72)}${selectorPath.length > 72 ? '…' : ''}</span></div>
+                <textarea id="_rpl_prompt_text" class="_rpl_textarea" placeholder="Describe what you want to change or add here…" autofocus></textarea>
                 <div class="_rpl_controls">
                     <select id="_rpl_cat_select" class="_rpl_cat_select" aria-label="Category">${catOpts}</select>
-                    <button id="_rpl_btn_mic" class="_rpl_btn_mic" title="Use Microphone">ðŸŽ¤</button>
+                    <button id="_rpl_btn_mic" class="_rpl_btn_mic" title="Use Microphone">🎤</button>
                     <button id="_rpl_btn_cancel" class="_rpl_btn_cancel">Cancel</button>
-                    <button id="_rpl_btn_send" class="_rpl_btn_send">âš¡ Send to AI Inbox</button>
+                    <button id="_rpl_btn_send" class="_rpl_btn_send">⚡ Send to AI Inbox</button>
                 </div>
                 <div id="_rpl_status" class="_rpl_status"></div>
             </div>`;
 
-        // Nav acts as legend â€” active = current _indicatorState() only, others always clickable
+        // Nav acts as legend — active = current _indicatorState() only, others always clickable
         const _curState = _indicatorState(); // 'idle' | 'prompt' | 'debug'
         const navHome  = _curState === 'idle'
-            ? `<span style="font-size:11px; color:#e8e8f5; font-weight:600; cursor:default;">âšª Home</span>`
-            : `<a id="_rpl_home_toggle" href="#" style="font-size:11px; color:rgba(220,215,235,0.55); text-decoration:none; cursor:pointer;">âšª Home</a>`;
+            ? `<span style="font-size:11px; color:#e8e8f5; font-weight:600; cursor:default;">⚪ Home</span>`
+            : `<a id="_rpl_home_toggle" href="#" style="font-size:11px; color:rgba(220,215,235,0.55); text-decoration:none; cursor:pointer;">⚪ Home</a>`;
         const navPrompt = _curState === 'prompt'
-            ? `<span style="font-size:11px; color:#58a6ff; font-weight:600; cursor:default;">ðŸ”µ Prompt</span>`
-            : `<a id="_rpl_prompt_toggle" href="#" style="font-size:11px; color:#58a6ff; text-decoration:none; opacity:0.55; cursor:pointer;">ðŸ”µ Prompt</a>`;
+            ? `<span style="font-size:11px; color:#58a6ff; font-weight:600; cursor:default;">🔵 Prompt</span>`
+            : `<a id="_rpl_prompt_toggle" href="#" style="font-size:11px; color:#58a6ff; text-decoration:none; opacity:0.55; cursor:pointer;">🔵 Prompt</a>`;
         const navDebug  = _curState === 'debug'
-            ? `<span style="font-size:11px; color:#ff6b6b; font-weight:600; cursor:default;">ðŸ”´ Debug</span>`
-            : `<a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:#ff6b6b; text-decoration:none; opacity:0.55; cursor:pointer;">ðŸ”´ Debug</a>`;
+            ? `<span style="font-size:11px; color:#ff6b6b; font-weight:600; cursor:default;">🔴 Debug</span>`
+            : `<a id="_rpl_debug_toggle" href="#" style="font-size:11px; color:#ff6b6b; text-decoration:none; opacity:0.55; cursor:pointer;">🔴 Debug</a>`;
 
         modal.innerHTML = `
             <div class="_rpl_modal_header">
@@ -1029,7 +1028,7 @@
                 </a>
                 <div>
                     <div style="color:#e8e8f5;font-weight:700;font-size:14px;line-height:1.2;">Ripple UI Capture <span style="font-size:10px; color:rgba(140,130,200,0.8); font-weight:normal;">${RIPPLE_VERSION}</span></div>
-                    <div style="color:rgba(140,130,200,0.7);font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:2px;">${PROJECT_KEY} Â· ${pageUrl.replace(/^https?:\/\/[^/]+/, '').slice(0, 48) || '/'}</div>
+                    <div style="color:rgba(140,130,200,0.7);font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:2px;">${PROJECT_KEY} · ${pageUrl.replace(/^https?:\/\/[^/]+/, '').slice(0, 48) || '/'}</div>
                 </div>
                 <button id="_rpl_close_x" style="margin-left:auto;background:transparent;border:none;color:rgba(180,170,220,0.5);font-size:20px;cursor:pointer;line-height:1;padding:0 4px;transition:color 0.2s;" aria-label="Close">&times;</button>
             </div>
@@ -1038,12 +1037,12 @@
                 <a href="${PROJECT_PATH}/ripple/" target="_blank" style="font-size:11px; color:rgba(140,130,220,0.6); text-decoration:underline;">Dashboard</a>
                 <span style="color:rgba(80,70,120,0.3); font-size:10px;">|</span>
                 ${navHome}
-                <span style="color:rgba(80,70,120,0.3); font-size:10px;">Â·</span>
+                <span style="color:rgba(80,70,120,0.3); font-size:10px;">·</span>
                 ${navPrompt}
-                <span style="color:rgba(80,70,120,0.3); font-size:10px;">Â·</span>
+                <span style="color:rgba(80,70,120,0.3); font-size:10px;">·</span>
                 ${navDebug}
             </div>
-            <div style="margin-top:8px;font-size:10px;color:rgba(120,110,170,0.5);text-align:center;font-family:'JetBrains Mono',monospace;">Shift+Enter to submit Â· Esc to close</div>
+            <div style="margin-top:8px;font-size:10px;color:rgba(120,110,170,0.5);text-align:center;font-family:'JetBrains Mono',monospace;">Shift+Enter to submit · Esc to close</div>
         `;
 
         document.body.appendChild(backdrop);
@@ -1053,7 +1052,7 @@
         const textarea = document.getElementById('_rpl_prompt_text');
         setTimeout(() => textarea && textarea.focus(), 80);
 
-        // â”€â”€ Wire close actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Wire close actions ───────────────────────────────────────────────
         document.getElementById('_rpl_close_x').addEventListener('click', _closeModal);
         const _cancelBtn = document.getElementById('_rpl_btn_cancel');
         if (_cancelBtn) _cancelBtn.addEventListener('click', _closeModal);
@@ -1066,7 +1065,7 @@
             Ripple.home.toggle();
         });
 
-        // Prompt toggle (exit home or debug â†’ back to prompt)
+        // Prompt toggle (exit home or debug → back to prompt)
         const _promptBtn = document.getElementById('_rpl_prompt_toggle');
         if (_promptBtn) _promptBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1075,7 +1074,7 @@
             if (DEBUG_MODE) Ripple.debug.disable();
         });
 
-        // Debug toggle â€” always enable when coming from home (never toggle, stale flag may be set)
+        // Debug toggle — always enable when coming from home (never toggle, stale flag may be set)
         const _debugBtn = document.getElementById('_rpl_debug_toggle');
         if (_debugBtn) _debugBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1091,7 +1090,7 @@
         const _escHandler = (e) => { if (e.key === 'Escape') _closeModal(); };
         document.addEventListener('keydown', _escHandler, { once: true });
 
-// Shift+Enter submit (prompt mode only)
+        // Shift+Enter submit (prompt mode only)
         if (!_homeMode && textarea) {
             textarea.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && e.shiftKey) {
@@ -1101,7 +1100,7 @@
             });
         }
 
-        // ðŸŽ¤ Speech Recognition
+        // 🎤 Speech Recognition
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const _micBtn = document.getElementById('_rpl_btn_mic');
         if (_micBtn) {
@@ -1157,14 +1156,14 @@
             }
         }
 
-        // â”€â”€ Wire send â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Wire send ────────────────────────────────────────────────────────
         document.getElementById('_rpl_btn_send').addEventListener('click', function () {
             const text     = textarea.value.trim();
             const category = document.getElementById('_rpl_cat_select').value;
             const statusEl = document.getElementById('_rpl_status');
 
             if (!text) {
-                statusEl.textContent = 'âš  Please enter a prompt.';
+                statusEl.textContent = '⚠ Please enter a prompt.';
                 statusEl.className   = '_rpl_status error';
                 textarea.focus();
                 return;
@@ -1172,7 +1171,7 @@
 
             const btn = document.getElementById('_rpl_btn_send');
             btn.disabled    = true;
-            btn.textContent = 'Sendingâ€¦';
+            btn.textContent = 'Sending…';
             statusEl.textContent = '';
 
             const capturePayload = {
@@ -1196,7 +1195,7 @@
             .then(r => r.json())
             .then(data => {
                 if (data.ok) {
-                    statusEl.textContent = `âœ“ Saved â†’ ${data.promptId}`;
+                    statusEl.textContent = `✓ Saved → ${data.promptId}`;
                     statusEl.className   = '_rpl_status ok';
                     Ripple.track('prompt_captured', {
                         promptId:  data.promptId,
@@ -1214,10 +1213,10 @@
                 }
             })
             .catch(err => {
-                statusEl.textContent = `âœ— Error: ${err.message}`;
+                statusEl.textContent = `✗ Error: ${err.message}`;
                 statusEl.className   = '_rpl_status error';
                 btn.disabled    = false;
-                btn.textContent = 'âš¡ Send to AI Inbox';
+                btn.textContent = '⚡ Send to AI Inbox';
             });
         });
     }
@@ -1230,17 +1229,17 @@
         _modalOpen = false;
     }
 
-    // â”€â”€ UI Capture: Floating Indicator Icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── UI Capture: Floating Indicator Icon ───────────────────────────────────
     //
     // Three states:
-    //   idle   â€” white  â€” tracker loaded, no active mode
-    //   prompt â€” blue   â€” prompt capture mode (default when tracker is active)
-    //   debug  â€” red    â€” ?ripple_debug=1 or localStorage ripple_debug=true
+    //   idle   — white  — tracker loaded, no active mode
+    //   prompt — blue   — prompt capture mode (default when tracker is active)
+    //   debug  — red    — ?ripple_debug=1 or localStorage ripple_debug=true
 
     const INDICATOR_COLORS = {
-        idle:   { fill: '#e8e8f5', stroke: '#c0b8d8', label: 'âšª Idle â€” click to open' },
-        prompt: { fill: '#388bfd', stroke: '#58a6ff', label: 'ðŸ”µ Prompt Mode â€” Shift+Right-Click any element' },
-        debug:  { fill: '#ff6b6b', stroke: '#f85149', label: 'ðŸ”´ Debug Mode â€” live event stream active' },
+        idle:   { fill: '#e8e8f5', stroke: '#c0b8d8', label: '⚪ Idle — click to open' },
+        prompt: { fill: '#388bfd', stroke: '#58a6ff', label: '🔵 Prompt Mode — Shift+Right-Click any element' },
+        debug:  { fill: '#ff6b6b', stroke: '#f85149', label: '🔴 Debug Mode — live event stream active' },
     };
 
     function _indicatorState() {
@@ -1263,7 +1262,7 @@
         });
         // Update tooltip
         const tip = ind.querySelector('[data-rpl-tooltip]');
-        if (tip) tip.textContent = `Ripple ${RIPPLE_VERSION} Â· ${cfg.label}`;
+        if (tip) tip.textContent = `Ripple ${RIPPLE_VERSION} · ${cfg.label}`;
     }
 
     function _buildIndicator() {
@@ -1289,7 +1288,7 @@
         const indicator = document.createElement('div');
         indicator.id = '_rpl_indicator';
         indicator.setAttribute('role', 'button');
-        indicator.setAttribute('aria-label', 'Ripple â€” click to open prompt');
+        indicator.setAttribute('aria-label', 'Ripple — click to open prompt');
         indicator.setAttribute('tabindex', '0');
         indicator.style.cssText = [
             'position:fixed', 'bottom:20px', 'right:20px',
@@ -1317,7 +1316,7 @@
             'opacity:0', 'transition:opacity 0.2s',
             'box-shadow:0 4px 16px rgba(0,0,0,0.6)',
         ].join(';');
-        tooltip.textContent = `Ripple ${RIPPLE_VERSION} Â· ${cfg.label}`;
+        tooltip.textContent = `Ripple ${RIPPLE_VERSION} · ${cfg.label}`;
 
         indicator.appendChild(tooltip);
         indicator.innerHTML += svgMarkup;
@@ -1335,7 +1334,7 @@
             tooltip.style.opacity     = '0';
         });
 
-        // Click â†’ open modal targeting body
+        // Click → open modal targeting body
         indicator.addEventListener('click', (e) => {
             e.stopPropagation();
             _openModal(document.body);
@@ -1348,7 +1347,7 @@
         });
     }
 
-    // â”€â”€ Debug overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Debug overlay ─────────────────────────────────────────────────────────
     const LOG_COLORS = { event: '#3fb950', view: '#d29922', sys: '#388bfd' };
 
     function _debugLog(name, details, type) {
@@ -1424,7 +1423,7 @@
   <div style="display:flex;gap:8px;align-items:center;">
     <span id="_rpl_count" style="color:#8b949e;font-size:0.7rem;">0 events</span>
     <button id="_rpl_toggle" style="background:transparent;border:1px solid #2e3b56;color:#8b949e;
-            padding:1px 7px;border-radius:4px;cursor:pointer;font-size:0.7rem;font-family:inherit;">âˆ’</button>
+            padding:1px 7px;border-radius:4px;cursor:pointer;font-size:0.7rem;font-family:inherit;">−</button>
   </div>
 </div>
 <div id="_rpl_body" style="padding:8px 12px;overflow-y:auto;max-height:390px;">
@@ -1438,14 +1437,14 @@
         document.body.appendChild(panel);
         _overlayReady = true;
 
-        // Toggle collapse/expand â€” tracked as an event so session data captures
+        // Toggle collapse/expand — tracked as an event so session data captures
         // whether the developer actively monitors the overlay or hides it away.
         let _collapsed = false;
         document.getElementById('_rpl_toggle').addEventListener('click', (e) => {
             e.stopPropagation();
             _collapsed = !_collapsed;
             document.getElementById('_rpl_body').style.display = _collapsed ? 'none' : 'block';
-            document.getElementById('_rpl_toggle').textContent = _collapsed ? '+' : 'âˆ’';
+            document.getElementById('_rpl_toggle').textContent = _collapsed ? '+' : '−';
             panel.style.maxHeight = _collapsed ? '37px' : '440px';
             Ripple.track('debug_panel_toggled', { state: _collapsed ? 'collapsed' : 'expanded' });
         });
@@ -1466,7 +1465,7 @@
         }
     }
 
-    // â”€â”€ Boot: fetch pending prompts and inject indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Boot: fetch pending prompts and inject indicator ─────────────────────────────
     function _initRipple() {
         _buildIndicator();
         _loadPendingPrompts();
@@ -1522,7 +1521,7 @@
         _initRipple();
     }
 
-    // â”€â”€ Expose â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Expose ────────────────────────────────────────────────────────────────
     Ripple.refreshBreadcrumbs = function() {
         _breadcrumbs.forEach(bc => {
             if (bc.el) bc.el.remove();
@@ -1535,4 +1534,3 @@
     global.Ripple = Ripple;
 
 })(window);
-
