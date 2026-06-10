@@ -276,7 +276,7 @@ def main():
             print(f"    Commits:  none found (git_repo not set or empty repo)")
 
         # 3. Build deployment windows (before/after behavioral diff per commit)
-        real_sessions = [s for s in analytics.get("sessions", [])]
+        real_sessions = [s for s in analytics.get("sessions", []) if not s.get("is_localhost", False)]
         windows = git_reader.build_deployment_windows(commits, real_sessions)
 
         if windows:
@@ -289,41 +289,47 @@ def main():
         # 4. Compute A/B metrics for deployment windows
         interaction_events = set(proj["interaction_events"])
         for w in windows:
-            for side in ["before", "after"]:
-                sessions = w[f"sessions_{side}"]
-                total = len(sessions)
-                if total == 0:
-                    w[f"{side}_metrics"] = {"bounce_pct": 0.0, "engaged_pct": 0.0, "real_users": 0}
-                    continue
-                
-                bounces = 0
-                engaged = 0
-                bots = 0
-                
-                for s in sessions:
-                    events = [e.get('name') for e in s.get('events', [])]
-                    duration = s.get('duration_s', 0)
-                    has_interaction = any(e in interaction_events for e in events)
-                    
-                    # Bots are handled earlier by session_analytics, but just in case:
-                    if duration < 2.0:
-                        bots += 1
+            for suffix in ["", "_3d"]:
+                for side in ["before", "after"]:
+                    sessions = w[f"sessions_{side}{suffix}"]
+                    total = len(sessions)
+                    metric_key = f"{side}{suffix}_metrics"
+                    if total == 0:
+                        w[metric_key] = {"bounce_pct": 0.0, "engaged_pct": 0.0, "real_users": 0, "median_ttfa": None}
                         continue
+                    
+                    bounces = 0
+                    engaged = 0
+                    bots = 0
+                    
+                    for s in sessions:
+                        events = [e.get('name') for e in s.get('events', [])]
+                        duration = s.get('duration_s', 0)
+                        has_interaction = any(e in interaction_events for e in events)
                         
-                    if has_interaction:
-                        engaged += 1
-                    elif duration < 10:
-                        bounces += 1
-                        
-                real_users = total - bots
-                if real_users > 0:
-                    w[f"{side}_metrics"] = {
-                        "bounce_pct": round((bounces / real_users) * 100, 1),
-                        "engaged_pct": round((engaged / real_users) * 100, 1),
-                        "real_users": real_users
-                    }
-                else:
-                    w[f"{side}_metrics"] = {"bounce_pct": 0.0, "engaged_pct": 0.0, "real_users": 0}
+                        # Bots are handled earlier by session_analytics, but just in case:
+                        if duration < 2.0:
+                            bots += 1
+                            continue
+                            
+                        if has_interaction:
+                            engaged += 1
+                        elif duration < 10:
+                            bounces += 1
+                            
+                    real_users = total - bots
+                    ttfas = sorted(s.get("ttfa_s") for s in sessions if s.get("ttfa_s") is not None)
+                    median_ttfa = ttfas[len(ttfas) // 2] if ttfas else None
+
+                    if real_users > 0:
+                        w[metric_key] = {
+                            "bounce_pct": round((bounces / real_users) * 100, 1),
+                            "engaged_pct": round((engaged / real_users) * 100, 1),
+                            "real_users": real_users,
+                            "median_ttfa": round(median_ttfa, 1) if median_ttfa is not None else None
+                        }
+                    else:
+                        w[metric_key] = {"bounce_pct": 0.0, "engaged_pct": 0.0, "real_users": 0, "median_ttfa": None}
 
         # 4.5 Evaluate goals
         analytics["goals_status"]        = evaluate_goals(proj, real_sessions, commits, config)

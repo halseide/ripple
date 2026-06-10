@@ -1,0 +1,104 @@
+{
+    "_comment": "Ripple config for Peder's projects. This file is gitignored — your local config stays local.",
+    "vault_path": "c:\\Atlas2.0",
+    "output_dir": "./data",
+    "max_sessions_stored": 300,
+    "thresholds": {
+        "bot_max_duration_s": 2,
+        "ghost_min_duration_s": 300,
+        "deep_min_duration_s": 60
+    },
+    "projects": [
+        {
+            "key": "jumpoff",
+            "name": "jumpoff.space",
+            "url": "https://jumpoff.space",
+            "github_url": "https://github.com/halseide/ripple",
+            "sessions_dir": "C:\\laragon\\www\\jumpoff.space\\sessions",
+            "git_repo": "C:\\laragon\\www\\jumpoff.space",
+            "goals": [
+                "Increase median session duration above 60 seconds",
+                "Get more users to reach the trivia view (currently only 22% do)",
+                "Drive swag store purchases",
+                "Grow the active user base month over month"
+            ],
+            "interaction_events": [
+                "game_started",
+                "jump_initiated",
+                "jump_landed",
+                "view_switched",
+                "chat_sent",
+                "swag_ordered",
+                "swag_dismissed",
+                "swag_stack_reloaded",
+                "trivia_loaded",
+                "modal_opened",
+                "modal_closed",
+                "tile_flipped"
+            ]
+        },
+        {
+            "key": "numen",
+            "name": "Numen Project Dashboard",
+            "url": "http://localhost/numen",
+            "github_url": "",
+            "sessions_dir": "C:\\laragon\\www\\numen\\sessions",
+            "git_repo": "C:\\laragon\\www\\numen",
+            "goals": [
+                "Track project health and git status across all workspaces",
+                "Audit codebase dependencies and file counts",
+                "Provide a fast, responsive UI for project overview"
+            ],
+            "interaction_events": [
+                "tab_switched",
+                "refresh_clicked",
+                "project_expanded"
+            ]
+        },
+        {
+            "key": "ripple",
+            "name": "Ripple Dashboard",
+            "url": "http://localhost/ripple/src/dashboard/",
+            "github_url": "https://github.com/halseide/ripple",
+            "sessions_dir": "C:\\laragon\\www\\Ripple\\sessions",
+            "git_repo": "C:\\laragon\\www\\Ripple",
+            "goals": [
+                "User acknowledges at least 1 suggestion per session (feedback loop is closing)",
+                "User drills into at least 1 deployment commit per session",
+                "Session duration exceeds 2 minutes (active analysis, not a glance)"
+            ],
+            "interaction_events": [
+                "suggestion_acknowledged",
+                "commit_drilldown",
+                "explorer_tab_switched",
+                "filter_applied",
+                "project_selected",
+                "explorer_searched",
+                "visitor_named"
+            ]
+        },
+        {
+            "key": "handshake",
+            "name": "Handshake CRM",
+            "url": "http://localhost/handshake",
+            "github_url": "",
+            "sessions_dir": "C:\\laragon\\www\\handshake\\sessions",
+            "git_repo": "C:\\laragon\\www\\handshake",
+            "goals": [
+                "User successfully sends at least one invite per session",
+                "Originator returns to check invite status (link opened rate)",
+                "Record creation flow completes without abandonment"
+            ],
+            "interaction_events": [
+                "record_created",
+                "invite_copied",
+                "invite_viewed",
+                "invite_accepted",
+                "invite_declined",
+                "participant_added",
+                "record_archived"
+            ]
+        }
+    ],
+    "version": "v0.7.0"
+}

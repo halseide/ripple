@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ripple — Inspect Selection Mode Demo (Consensus Build)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090a0f;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-primary: #f0f6fc;
+      --text-secondary: #8b949e;
+      --text-dim: #484f58;
+      
+      --accent-blue: #3b82f6;
+      --accent-purple: #a78bfa;
+      --accent-glow-blue: rgba(59, 130, 246, 0.3);
+      --accent-glow-purple: rgba(167, 139, 250, 0.3);
+      
+      --radius: 12px;
+      --font-main: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: var(--font-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* Selection Mode Cursor Override (Body is crosshair, controls are pointers) */
+    body.rpl-inspect-active {
+      cursor: crosshair !important;
+      user-select: none;
+    }
+    body.rpl-inspect-active * {
+      cursor: crosshair !important;
+    }
+
+    /* Banner & Modal cursor overrides to prevent crosshair slips (Norman audit) */
+    body.rpl-inspect-active #rpl-banner,
+    body.rpl-inspect-active #rpl-banner *,
+    body.rpl-inspect-active #rpl-modal-backdrop,
+    body.rpl-inspect-active #rpl-modal-backdrop * {
+      cursor: default !important;
+    }
+    body.rpl-inspect-active #rpl-banner .banner-cancel-btn,
+    body.rpl-inspect-active #rpl-modal .modal-btn-send,
+    body.rpl-inspect-active #rpl-modal .btn {
+      cursor: pointer !important;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    /* Header styling */
+    header {
+      margin-bottom: 30px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #fff 40%, var(--accent-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tagline {
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+
+    /* Top banner for stateful inspect mode (Norman suggestion) */
+    /* Top banner for stateful inspect mode (Norman suggestion) */
+    #rpl-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: #111420;
+      border-bottom: 1px solid var(--accent-blue);
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 0 24px;
+      gap: 16px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 10000000;
+      transform: translateY(-50px);
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.2s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    #rpl-banner.show {
+      transform: translateY(0);
+    }
+    #rpl-banner.mode-prompt {
+      border-color: var(--accent-blue);
+    }
+    #rpl-banner.mode-debug {
+      border-color: #ff6b6b;
+    }
+    .banner-mode-tabs {
+      display: flex;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .banner-tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-main);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .banner-tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .banner-tab-btn.active[data-mode="home"] {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .banner-tab-btn.active[data-mode="prompt"] {
+      background: rgba(59, 130, 246, 0.12);
+      color: #93c5fd;
+      border-color: rgba(59, 130, 246, 0.2);
+    }
+    .banner-tab-btn.active[data-mode="debug"] {
+      background: rgba(255, 100, 100, 0.12);
+      color: #fca5a5;
+      border-color: rgba(255, 100, 100, 0.2);
+    }
+    .banner-cancel-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: var(--font-main);
+      transition: all 0.2s;
+    }
+    .banner-cancel-btn:hover {
+      background: rgba(255, 100, 100, 0.15);
+      border-color: rgba(255, 100, 100, 0.3);
+      color: #ff6b6b;
+    }
+
+    /* Instruction board */
+    .instruction-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .instruction-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-blue);
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .key-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    /* Grid layout */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Interactive components */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .card:hover {
+      background-color: rgba(255, 255, 255, 0.04);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Scroll area wrapper */
+    .scroll-box {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      height: 220px;
+      overflow-y: scroll;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 15px;
+    }
+
+    .scroll-item {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 13px;
+    }
+    .scroll-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Floating indicator */
+    #_rpl_indicator {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(10, 10, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 1000000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    #_rpl_indicator:hover {
+      transform: scale(1.08);
+    }
+
+    #_rpl_indicator .wave {
+      stroke: var(--text-dim);
+      transition: stroke 0.25s;
+    }
+    #_rpl_indicator .dot {
+      fill: #fff;
+      transition: fill 0.25s, filter 0.25s;
+    }
+
+    /* Sinusoidal breathing throb for active state (Itten suggestion) */
+    @keyframes rpl_pulse_blue {
+      0%, 100% { transform: scale(1.1); box-shadow: 0 0 16px var(--accent-glow-blue); }
+      50% { transform: scale(1.18); box-shadow: 0 0 24px rgba(59, 130, 246, 0.5); }
+    }
+    @keyframes rpl_pulse_red {
+      0%, 100% { transform: scale(1.1); box-shadow: 0 0 16px rgba(255, 100, 100, 0.3); }
+      50% { transform: scale(1.18); box-shadow: 0 0 24px rgba(255, 100, 100, 0.5); }
+    }
+
+    /* Prompt Mode (Blue) */
+    #_rpl_indicator.mode-prompt {
+      border-color: var(--accent-blue);
+      background: rgba(10, 15, 35, 0.98);
+      animation: rpl_pulse_blue 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    #_rpl_indicator.mode-prompt .dot {
+      fill: var(--accent-blue);
+      filter: drop-shadow(0 0 4px var(--accent-blue));
+    }
+    #_rpl_indicator.mode-prompt .wave {
+      stroke: var(--accent-blue);
+    }
+
+    /* Debug Mode (Red) */
+    #_rpl_indicator.mode-debug {
+      border-color: #ff6b6b;
+      background: rgba(25, 10, 15, 0.98);
+      animation: rpl_pulse_red 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    #_rpl_indicator.mode-debug .dot {
+      fill: #ff6b6b;
+      filter: drop-shadow(0 0 4px #ff6b6b);
+    }
+    #_rpl_indicator.mode-debug .wave {
+      stroke: #ff6b6b;
+    }
+
+    @keyframes rotate-dash {
+      to { stroke-dashoffset: -20; }
+    }
+    #_rpl_indicator.mode-prompt .rotating-ring,
+    #_rpl_indicator.mode-debug .rotating-ring {
+      animation: rotate-dash 4s linear infinite;
+    }
+
+
+    /* Mock Debug Panel */
+    .rpl-debug-panel {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      width: 380px;
+      height: 240px;
+      background: rgba(10, 10, 20, 0.95);
+      border: 1px solid rgba(255, 100, 100, 0.15);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      display: none;
+      flex-direction: column;
+      z-index: 1000000;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+    .rpl-debug-panel.show {
+      display: flex;
+    }
+    .rpl-debug-header {
+      padding: 8px 12px;
+      background: rgba(255, 100, 100, 0.08);
+      border-bottom: 1px solid rgba(255, 100, 100, 0.15);
+      color: #ff6b6b;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rpl-debug-clear {
+      background: transparent;
+      border: 1px solid rgba(255, 100, 100, 0.3);
+      color: #ff6b6b;
+      border-radius: 4px;
+      padding: 2px 6px;
+      cursor: pointer;
+      font-size: 10px;
+      font-family: var(--font-mono);
+    }
+    .rpl-debug-clear:hover {
+      background: rgba(255, 100, 100, 0.15);
+    }
+    .rpl-debug-events {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .rpl-debug-line {
+      padding: 4px 8px;
+      border-radius: 4px;
+      line-height: 1.4;
+      background: rgba(255, 255, 255, 0.02);
+      word-break: break-all;
+    }
+    .rpl-debug-line.sys {
+      color: var(--text-secondary);
+      border-left: 2px solid var(--text-secondary);
+    }
+    .rpl-debug-line.event {
+      color: var(--accent-purple);
+      border-left: 2px solid var(--accent-purple);
+    }
+    .rpl-debug-line.view {
+      color: var(--accent-blue);
+      border-left: 2px solid var(--accent-blue);
+    }
+
+    /* Morphing Highlighter Outline (Consensus Build - Tufte & Jobs outline) */
+    #rpl-highlighter {
+      position: absolute;
+      pointer-events: none;
+      border: 1px solid var(--accent-blue);
+      background: rgba(59, 130, 246, 0.04);
+      z-index: 9999999;
+      display: none;
+      box-sizing: border-box;
+      box-shadow: inset 0 0 8px rgba(59, 130, 246, 0.1);
+      /* Organic transition (Jobs suggestion) */
+      transition: left 0.1s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                  top 0.1s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                  width 0.1s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                  height 0.1s cubic-bezier(0.25, 0.8, 0.25, 1),
+                  opacity 0.15s ease,
+                  border-radius 0.1s ease;
+    }
+
+    /* Monospace precision data badge (Tufte suggestion) */
+    .rpl-highlighter-badge {
+      position: absolute;
+      background: var(--accent-blue);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 10000000;
+    }
+
+    /* Throbbing tracker blobs */
+    @keyframes rpl_pulse {
+      0%, 100% { box-shadow: 0 0 0 0 var(--accent-purple), 0 0 0 0 rgba(167,139,250,0.4); }
+      60%       { box-shadow: 0 0 0 6px rgba(167,139,250,0), 0 0 0 12px rgba(167,139,250,0); }
+    }
+    .rpl-blob {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-purple);
+      border: 2px solid #fff;
+      z-index: 99999;
+      animation: rpl_pulse 2s ease-in-out infinite;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .rpl-blob:hover {
+      transform: scale(1.5);
+    }
+
+
+    /* Tooltip styling */
+    .rpl-blob-tip {
+      position: fixed;
+      background: rgba(10, 10, 26, 0.98);
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 11px;
+      max-width: 220px;
+      z-index: 100000;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+    }
+    .rpl-blob-tip strong {
+      color: var(--accent-purple);
+    }
+
+    /* Mock capture modal */
+    #rpl-modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(4, 4, 8, 0.8);
+      backdrop-filter: blur(4px);
+      z-index: 2147483640;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #rpl-modal {
+      background: #0e111a;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      width: 420px;
+      padding: 24px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.8);
+      animation: modal-slide 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes modal-slide {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-header {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .modal-meta-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .modal-input {
+      width: 100%;
+      height: 90px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px;
+      color: #fff;
+      font-family: var(--font-main);
+      font-size: 13px;
+      resize: none;
+      outline: none;
+      margin-bottom: 16px;
+    }
+    .modal-input:focus {
+      border-color: var(--accent-blue);
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .modal-btn-send {
+      background: var(--accent-blue);
+      border: none;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .modal-btn-send:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Stateful Viewport Session Control Banner -->
+  <div id="rpl-banner">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-weight:700; color:#fff; font-size:14px; letter-spacing:-0.01em;">⚡ Ripple</span>
+    </div>
+    
+    <div class="banner-mode-tabs">
+      <button class="banner-tab-btn" data-mode="home">⚪ Home</button>
+      <button class="banner-tab-btn" data-mode="prompt">🔵 Prompt</button>
+      <button class="banner-tab-btn" data-mode="debug">🔴 Debug</button>
+    </div>
+    
+    <div id="banner-status-text" style="color:var(--text-secondary); font-size:12px; margin-left:12px;">
+      Hover elements to target, click to select.
+    </div>
+    
+    <button class="banner-cancel-btn" onclick="cancelInspectMode()" style="margin-left:auto;">Exit</button>
+  </div>
+
+  <!-- Mock Prompt Capture Modal -->
+  <div id="rpl-modal-backdrop">
+    <div id="rpl-modal">
+      <div class="modal-header">
+        <span>⚡ Create Prompt Target</span>
+        <span class="modal-meta-label" id="modal-target-tag">div</span>
+      </div>
+      <div id="modal-target-path" style="font-family:var(--font-mono); font-size:10px; color:var(--text-secondary); margin-bottom:12px; word-break:break-all;">body</div>
+      <textarea class="modal-input" placeholder="What should the AI do with this element?" id="modal-textarea"></textarea>
+      <div class="modal-actions">
+        <button class="btn" style="border:none" onclick="closeModal()">Cancel</button>
+        <button class="modal-btn-send" onclick="submitPrompt()">⚡ Send to AI Inbox</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <h1>Ripple Selection Mode Consensus Sandbox</h1>
+      <div class="tagline">Interactive prototype demonstrating the unified board specifications.</div>
+    </header>
+
+    <!-- Instructions -->
+    <div class="instruction-card">
+      <div class="instruction-title">📐 Test Cases</div>
+      <div style="font-size:14px;">
+        <p style="margin-bottom: 12px;">
+          👉 <strong>Test A: Spring-Loaded Hold (Stateless)</strong><br>
+          Press and **hold the <span class="key-badge">Shift</span> key** down. Move your cursor around. Outlines and data badges appear. **Release the <span class="key-badge">Shift</span> key**—they disappear instantly. Click while holding Shift to capture.
+        </p>
+        <p style="margin-bottom: 12px;">
+          👉 <strong>Test B: Morphing Indicator Toggle (Stateful)</strong><br>
+          Click the **pulsing float orb** in the bottom-right to open the mode dropdown. Choose **Prompt Mode** to enter inspect mode statefully. Hover elements and click to capture.
+        </p>
+        <p style="margin-bottom: 12px;">
+          👉 <strong>Test C: High-Precision Outline & Morphing Transitions</strong><br>
+          While in inspect mode, hover between the cards. Watch the crisp 1px outline **smoothly slide and morph** to fit the bounding boxes and match rounded corners. Notice the floating badge showing: `tag#id.class [width × height]`.
+        </p>
+        <p>
+          👉 <strong>Test D: Preserving Modes (Home, Prompt, Debug)</strong><br>
+          Select **Debug Mode** from the orb dropdown to view the live telemetry stream console overlay in the bottom-left. Switch to **Home Mode** to disable all tracking overlays. Learn in the walkthrough how Ripple preserves these states.
+        </p>
+      </div>
+    </div>
+
+    <!-- Playground grid -->
+    <div class="grid">
+      <div class="card" id="card-alpha" style="border-radius: 6px;">
+        <div class="card-title">Project Alpha (6px Radius)</div>
+        <div class="card-desc">Outline inherits the 6px rounded border-radius.</div>
+        <button class="btn" id="btn-alpha" style="border-radius: 4px;">Alpha Button</button>
+      </div>
+
+      <div class="card" id="card-beta" style="border-radius: 20px;">
+        <div class="card-title">Project Beta (20px Radius)</div>
+        <div class="card-desc">Outline inherits the 20px rounded border-radius.</div>
+        <button class="btn" id="btn-beta" style="border-radius: 10px;">Beta Action</button>
+      </div>
+    </div>
+
+    <!-- Scrollable playground area -->
+    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">Scroll Area Targeting</h2>
+    <div class="scroll-box" id="sample-scroll-box">
+      <div class="scroll-item" id="item-1">📁 <strong>item_01.php</strong> — Config files</div>
+      <div class="scroll-item" id="item-2">📁 <strong>database_wrapper.js</strong> — SQL handler</div>
+      <div class="scroll-item" id="item-3">📁 <strong>styles.css</strong> — Main layout</div>
+      <div class="scroll-item" id="item-4">📁 <strong>session_brief.json</strong> — Telemetry file</div>
+      <div class="scroll-item" id="item-5">📁 <strong>auth_provider.py</strong> — Token auth</div>
+      <div class="scroll-item" id="item-6">📁 <strong>tracker_blob.svg</strong> — Blob asset</div>
+      <div class="scroll-item" id="item-7">📁 <strong>analytics.py</strong> — Funnel calculation</div>
+      <div class="scroll-item" id="item-8">📁 <strong>dashboard_layout.php</strong> — UI grid</div>
+    </div>
+  </div>
+
+
+  <!-- Mock Debug Panel -->
+  <div id="rpl-debug-panel" class="rpl-debug-panel">
+    <div class="rpl-debug-header">
+      <span>🔴 Ripple Debug Live Stream</span>
+      <button class="rpl-debug-clear" onclick="clearDebugLog()">Clear</button>
+    </div>
+    <div id="rpl-debug-events" class="rpl-debug-events">
+      <div class="rpl-debug-line sys"><span style="opacity:0.5; margin-right:6px;">[system]</span>tracker ready (home mode active)</div>
+    </div>
+  </div>
+
+  <!-- Morphing Ripple Indicator SVG -->
+  <div id="_rpl_indicator" role="button" aria-label="Toggle Ripple Mode Selector">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle class="dot" cx="12" cy="12" r="3"/>
+      <circle class="wave rotating-ring" cx="12" cy="12" r="7" stroke-width="1.5" stroke-dasharray="4 2"/>
+      <circle class="wave" cx="12" cy="12" r="10" stroke-dasharray="2 4" opacity="0.6"/>
+    </svg>
+  </div>
+
+  <script>
+    // State indicators
+    let isInspectMode = false;
+    let isSpringLoaded = false;
+    let currentMode = 'home'; // 'home' | 'prompt' | 'debug'
+    
+    const indicator = document.getElementById('_rpl_indicator');
+    const banner = document.getElementById('rpl-banner');
+    
+    // Create consensus morphing highlighter outline
+    const highlighter = document.createElement('div');
+    highlighter.id = 'rpl-highlighter';
+    
+    // Create data badge
+    const badge = document.createElement('div');
+    badge.className = 'rpl-highlighter-badge';
+    highlighter.appendChild(badge);
+    
+    document.body.appendChild(highlighter);
+
+    let hoveredEl = null;
+    let pendingBlobCoords = null; // { x, y, el }
+    const blobs = []; // { el, targetEl, selector, offsetX, offsetY }
+
+    // Global coordinate tracker for activation ripple alignment
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    window.addEventListener('mousemove', (e) => {
+      mouseX = e.pageX;
+      mouseY = e.pageY;
+    });
+
+    // Set active state mode (Home, Prompt, or Debug)
+    function setMode(mode) {
+      currentMode = mode;
+      
+      // Update top banner tab button active classes
+      document.querySelectorAll('.banner-tab-btn').forEach(btn => {
+        if (btn.getAttribute('data-mode') === mode) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      
+      // Update banner style classes
+      banner.classList.remove('mode-prompt', 'mode-debug');
+      const statusText = document.getElementById('banner-status-text');
+
+      if (mode === 'prompt') {
+        banner.classList.add('show', 'mode-prompt');
+        statusText.textContent = "🔍 Inspect mode active — Hover elements, click to select.";
+        toggleInspectMode(true, false);
+        document.getElementById('rpl-debug-panel').classList.remove('show');
+      } else if (mode === 'debug') {
+        banner.classList.add('show', 'mode-debug');
+        statusText.textContent = "🔴 Debug mode active — Live telemetry event logging.";
+        toggleInspectMode(false);
+        document.getElementById('rpl-debug-panel').classList.add('show');
+        logDebugEvent('debug mode enabled', 'sys');
+      } else {
+        // home mode
+        banner.classList.remove('show');
+        toggleInspectMode(false);
+        document.getElementById('rpl-debug-panel').classList.remove('show');
+      }
+    }
+
+    // Toggle inspect state
+    function toggleInspectMode(active, springLoaded = false) {
+      isInspectMode = active;
+      isSpringLoaded = springLoaded;
+
+      if (isInspectMode) {
+        document.body.classList.add('rpl-inspect-active');
+        indicator.classList.remove('mode-prompt', 'mode-debug');
+        indicator.classList.add('mode-prompt');
+        if (!isSpringLoaded) {
+          banner.classList.add('show', 'mode-prompt');
+        }
+      } else {
+        document.body.classList.remove('rpl-inspect-active');
+        highlighter.style.display = 'none';
+        hoveredEl = null;
+        
+        // Restore indicator state back to active mode
+        indicator.classList.remove('mode-prompt', 'mode-debug');
+        if (currentMode === 'prompt') indicator.classList.add('mode-prompt');
+        else if (currentMode === 'debug') indicator.classList.add('mode-debug');
+      }
+    }
+
+    // Cancel stateful inspect mode
+    function cancelInspectMode() {
+      setMode('home');
+    }
+
+    // Indicator orb click toggles Prompt Mode statefully
+    indicator.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (currentMode === 'prompt') {
+        setMode('home');
+      } else {
+        setMode('prompt');
+      }
+    });
+
+    // Top banner tab button selection hooks
+    document.querySelectorAll('.banner-tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const mode = e.target.getAttribute('data-mode');
+        setMode(mode);
+      });
+    });
+
+    // Debug panel helpers
+    function logDebugEvent(message, type = 'event') {
+      const eventsContainer = document.getElementById('rpl-debug-events');
+      if (!eventsContainer) return;
+      
+      const line = document.createElement('div');
+      line.className = `rpl-debug-line ${type}`;
+      
+      const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      line.innerHTML = `<span style="opacity:0.5; margin-right:6px;">[${time}]</span>${message}`;
+      
+      eventsContainer.appendChild(line);
+      eventsContainer.scrollTop = eventsContainer.scrollHeight;
+    }
+
+    function clearDebugLog() {
+      const eventsContainer = document.getElementById('rpl-debug-events');
+      if (eventsContainer) {
+        eventsContainer.innerHTML = `<div class="rpl-debug-line sys"><span style="opacity:0.5; margin-right:6px;">[system]</span>log cleared</div>`;
+      }
+    }
+
+    // Global telemetry hooks for Debug Mode
+    window.addEventListener('mousemove', (e) => {
+      if (currentMode !== 'debug') return;
+      const target = e.target;
+      if (target.closest('#_rpl_indicator, #rpl-banner, #rpl-debug-panel')) return;
+      
+      const id = target.id ? `#${target.id}` : '';
+      const classes = target.className && typeof target.className === 'string'
+        ? '.' + Array.from(target.classList).filter(c=>!c.startsWith('rpl')).join('.')
+        : '';
+      const tag = target.tagName.toLowerCase();
+      
+      // Throttle mousemove logs to avoid flooding
+      if (!window._lastLogTime || Date.now() - window._lastLogTime > 400) {
+        logDebugEvent(`hovered: <strong style="color:var(--accent-blue)">${tag}${id}${classes === '.' ? '' : classes}</strong>`, 'sys');
+        window._lastLogTime = Date.now();
+      }
+    });
+
+    window.addEventListener('click', (e) => {
+      if (currentMode !== 'debug') return;
+      if (e.target.closest('#_rpl_indicator, #rpl-banner, #rpl-debug-panel')) return;
+      
+      const id = e.target.id ? `#${e.target.id}` : '';
+      const tag = e.target.tagName.toLowerCase();
+      logDebugEvent(`clicked: <strong style="color:var(--accent-purple)">${tag}${id}</strong>`, 'event');
+    }, true);
+
+    // Keyboard bindings hook (Norman cancel hatch & spring-load toggle)
+    window.addEventListener('keydown', (e) => {
+      // 1. Shift key (Spring-loaded quasimode)
+      if (e.key === 'Shift') {
+        if (isInspectMode) return;
+        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+        toggleInspectMode(true, true);
+      }
+      
+      // 2. Escape key (Norman cancel hatch)
+      if (e.key === 'Escape' && isInspectMode) {
+        e.preventDefault();
+        setMode('home');
+      }
+    });
+
+    // Keyup Shift hook
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift' && isSpringLoaded) {
+        toggleInspectMode(false);
+      }
+    });
+
+    // Deactivate on window blur/focus loss to prevent key stuck errors
+    window.addEventListener('blur', () => {
+      if (isSpringLoaded) {
+        toggleInspectMode(false);
+      }
+    });
+
+    // Mouse movement inspection
+    window.addEventListener('mousemove', (e) => {
+      if (!isInspectMode) return;
+      
+      const target = e.target;
+      
+      // Ignore utility nodes
+      if (
+        target.closest('#_rpl_indicator, .rpl-blob, .rpl-blob-tip, #rpl-banner, #rpl-modal-backdrop') || 
+        target === document.body || 
+        target === document.documentElement
+      ) {
+        highlighter.style.opacity = '0';
+        setTimeout(() => { if (highlighter.style.opacity === '0') highlighter.style.display = 'none'; }, 150);
+        hoveredEl = null;
+        return;
+      }
+
+      hoveredEl = target;
+      const rect = target.getBoundingClientRect();
+      const style = window.getComputedStyle(target);
+      
+      // Position outline
+      highlighter.style.display = 'block';
+      highlighter.style.opacity = '1';
+      highlighter.style.left = (rect.left + window.scrollX) + 'px';
+      highlighter.style.top = (rect.top + window.scrollY) + 'px';
+      highlighter.style.width = rect.width + 'px';
+      highlighter.style.height = rect.height + 'px';
+      highlighter.style.borderRadius = style.borderRadius; // Inherit border radius!
+
+      // Update Tufte Data Badge text
+      const selector = getCssPath(target);
+      const tag = target.tagName.toLowerCase();
+      const idStr = target.id ? `#${target.id}` : '';
+      const classStr = target.className && typeof target.className === 'string' 
+        ? '.' + Array.from(target.classList).filter(c=>!c.startsWith('rpl')).join('.') 
+        : '';
+      
+      // Badge contents: tag + id/class + dimension
+      badge.textContent = `${tag}${idStr}${classStr === '.' ? '' : classStr} [${Math.round(rect.width)} × ${Math.round(rect.height)}px]`;
+
+      // Position data badge above, or flip below if element is at the top of the screen
+      if (rect.top < 30) {
+        badge.style.bottom = 'auto';
+        badge.style.top = 'calc(100% + 4px)';
+      } else {
+        badge.style.top = 'auto';
+        badge.style.bottom = 'calc(100% + 4px)';
+      }
+    });
+
+    // Intercept clicks on inspect
+    window.addEventListener('click', (e) => {
+      if (!isInspectMode) return;
+      if (e.target.closest('#_rpl_indicator, #rpl-banner, #rpl-modal-backdrop')) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (hoveredEl) {
+        pendingBlobCoords = {
+          x: e.pageX,
+          y: e.pageY,
+          el: hoveredEl
+        };
+        openModal(hoveredEl);
+      }
+
+      setMode('home');
+    }, true);
+
+    // Path builder helper
+    function getCssPath(el) {
+      if (!el || el === document.body) return 'body';
+      const parts = [];
+      let node = el;
+      while (node && node !== document.body && node.nodeType === 1) {
+        let sel = node.tagName.toLowerCase();
+        if (node.id) {
+          sel += '#' + node.id;
+          parts.unshift(sel);
+          break;
+        } else {
+          const classes = Array.from(node.classList).filter(c=>!c.startsWith('rpl')).join('.');
+          if (classes) sel += '.' + classes;
+          parts.unshift(sel);
+        }
+        node = node.parentNode;
+      }
+      return 'body > ' + parts.join(' > ');
+    }
+
+    // Modal control
+    function openModal(el) {
+      const tag = el.tagName.toLowerCase();
+      const path = getCssPath(el);
+      
+      document.getElementById('modal-target-tag').textContent = tag;
+      document.getElementById('modal-target-path').textContent = path;
+      document.getElementById('modal-textarea').value = '';
+      
+      document.getElementById('rpl-modal-backdrop').style.display = 'flex';
+      document.getElementById('modal-textarea').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('rpl-modal-backdrop').style.display = 'none';
+      pendingBlobCoords = null;
+    }
+
+    function submitPrompt() {
+      const text = document.getElementById('modal-textarea').value.trim();
+      if (!text) return;
+      
+      if (pendingBlobCoords) {
+        dropBlob(pendingBlobCoords.x, pendingBlobCoords.y, pendingBlobCoords.el, text);
+      }
+      closeModal();
+    }
+
+    // Drop Blob (Jobs suggestion)
+    function dropBlob(x, y, targetEl, desc) {
+      // 2. Create the blob dot
+      const dot = document.createElement('div');
+      dot.className = 'rpl-blob';
+      dot.style.left = (x - 6) + 'px';
+      dot.style.top = (y - 6) + 'px';
+      dot.title = desc;
+
+      const path = getCssPath(targetEl);
+      const rect = targetEl.getBoundingClientRect();
+      const offsetX = x - (rect.left + window.scrollX);
+      const offsetY = y - (rect.top + window.scrollY);
+
+      let tip = null;
+      dot.addEventListener('mouseenter', () => {
+        if (tip) tip.remove();
+        tip = document.createElement('div');
+        tip.className = 'rpl-blob-tip';
+        const truncatedDesc = desc.length > 60 ? desc.slice(0, 57) + '...' : desc;
+        tip.innerHTML = `💬 <strong>"${truncatedDesc}"</strong><br>` + 
+                        `<span style="font-family:var(--font-mono); font-size:9px; color:#aaa;">${path}</span>`;
+        
+        const r = dot.getBoundingClientRect();
+        tip.style.left = Math.min(r.right + 8, window.innerWidth - 240) + 'px';
+        tip.style.top = Math.max(r.top - 20, 8) + 'px';
+        document.body.appendChild(tip);
+      });
+
+      dot.addEventListener('mouseleave', () => {
+        if (tip) {
+          tip.remove();
+          tip = null;
+        }
+      });
+
+      document.body.appendChild(dot);
+
+      blobs.push({
+        el: dot,
+        targetEl: targetEl,
+        selector: path,
+        offsetX: offsetX,
+        offsetY: offsetY
+      });
+    }
+
+    // Reposition loop on scroll/resize
+    function updateBlobs() {
+      blobs.forEach(bc => {
+        if (!document.body.contains(bc.targetEl)) {
+          bc.el.style.display = 'none';
+          return;
+        }
+        const rect = bc.targetEl.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) {
+          bc.el.style.display = 'none';
+          return;
+        }
+        bc.el.style.display = 'block';
+        
+        const blobX = rect.left + window.scrollX + bc.offsetX;
+        const blobY = rect.top + window.scrollY + bc.offsetY;
+
+        bc.el.style.left = (blobX - 6) + 'px';
+        bc.el.style.top = (blobY - 6) + 'px';
+      });
+      requestAnimationFrame(updateBlobs);
+    }
+    requestAnimationFrame(updateBlobs);
+  </script>
+</body>
+</html>

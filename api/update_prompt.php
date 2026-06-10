@@ -119,16 +119,28 @@ unset($record);
 
 if ($found) {
     $status = $targetRecord['status'] ?? '';
-    if ($status === 'pending' || $status === 'canceled') {
-        $configPath = realpath(__DIR__ . '/../ripple.config.json');
-        if ($configPath && file_exists($configPath)) {
-            $config = json_decode(file_get_contents($configPath), true) ?: [];
-            if (!empty($config['vault_path']) && $config['vault_path'] !== '[VAULT_PATH]') {
-                $rawInbox = rtrim($config['vault_path'], '\\/') . DIRECTORY_SEPARATOR . 'raw';
-                if (is_dir($rawInbox)) {
-                    $pId = $targetRecord['promptId'];
-                    $mdFile = $rawInbox . DIRECTORY_SEPARATOR . $pId . '.md';
+    $configPath = realpath(__DIR__ . '/../ripple.config.json');
+    if ($configPath && file_exists($configPath)) {
+        $config = json_decode(file_get_contents($configPath), true) ?: [];
+        if (!empty($config['vault_path']) && $config['vault_path'] !== '[VAULT_PATH]') {
+            $rawInbox = rtrim($config['vault_path'], '\\/') . DIRECTORY_SEPARATOR . 'raw';
+            if (is_dir($rawInbox)) {
+                $pId = $targetRecord['promptId'];
+                $mdFile = $rawInbox . DIRECTORY_SEPARATOR . $pId . '.md';
 
+                if ($status === 'dismissed' || $status === 'shipped') {
+                    $archiveDir = $rawInbox . DIRECTORY_SEPARATOR . 'Archive';
+                    if (!is_dir($archiveDir)) {
+                        mkdir($archiveDir, 0777, true);
+                    }
+                    $archiveFile = $archiveDir . DIRECTORY_SEPARATOR . $pId . '.md';
+                    if (file_exists($mdFile)) {
+                        $content = file_get_contents($mdFile);
+                        $content = preg_replace('/^status:\s*(pending|answered|canceled|shipped|dismissed)\s*$/m', 'status: ' . $status, $content);
+                        file_put_contents($mdFile, $content);
+                        rename($mdFile, $archiveFile);
+                    }
+                } elseif ($status === 'pending' || $status === 'canceled') {
                     if ($status === 'canceled') {
                         if (file_exists($mdFile)) {
                             $content = file_get_contents($mdFile);

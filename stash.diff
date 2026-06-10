@@ -1,0 +1,753 @@
+﻿diff --git a/README.md b/README.md
+index 8b214b6..e779681 100644
+--- a/README.md
++++ b/README.md
+@@ -6,7 +6,7 @@ Ripple turns your live website into an active canvas for AI-assisted design. Ins
+ 
+ ## What It Does
+ 
+-1. **Omnipresent UI Capture**: `Shift+Right-Click` any element on your live site to instantly send its precise DOM context and your prompt to your AI assistant.
++1. **Omnipresent UI Capture**: `Shift+Right-Click` any element on your live site to instantly send its precise DOM context and your prompt to your AI assistant. A persistent visual breadcrumb will stay pinned to the element to mark where you left feedback.
+ 2. **Instant Iteration**: Your AI assistant edits the exact files, commits them, and your live site updates.
+ 3. **Silent Validation**: In the background, Ripple tracks session data to compute before/after behavioral diffs of every deployment.
+ 4. **Goal-Aware Insights**: Surfaces the impact in plain language: "Median session dropped 18% ΓÇö here's why and what to try."
+diff --git a/api/capture_prompt.php b/api/capture_prompt.php
+index fad341e..cebc562 100644
+--- a/api/capture_prompt.php
++++ b/api/capture_prompt.php
+@@ -190,6 +190,8 @@ array_unshift($logData, [
+     'sessionId'       => $sessionId,
+     'status'          => 'pending',
+     'capturedAt'      => $timestamp,
++    'x'               => $data['captureX'] ?? 100,
++    'y'               => $data['captureY'] ?? 100,
+     'resolvedAt'      => null,
+     'commitHash'      => null,
+     'commitMessage'   => null
+diff --git a/api/update_prompt.php b/api/update_prompt.php
+index f64a9b0..df9ea30 100644
+--- a/api/update_prompt.php
++++ b/api/update_prompt.php
+@@ -117,30 +117,41 @@ foreach ($logData as &$record) {
+ }
+ unset($record);
+ 
+-if ($found && ($targetRecord['status'] ?? '') === 'pending') {
+-    $configPath = realpath(__DIR__ . '/../ripple.config.json');
+-    if ($configPath && file_exists($configPath)) {
+-        $config = json_decode(file_get_contents($configPath), true) ?: [];
+-        if (!empty($config['vault_path']) && $config['vault_path'] !== '[VAULT_PATH]') {
+-            $rawInbox = rtrim($config['vault_path'], '\\/') . DIRECTORY_SEPARATOR . 'raw';
+-            if (is_dir($rawInbox)) {
+-                $pId       = $targetRecord['promptId'];
+-                $pKey      = $targetRecord['projectKey'] ?? 'unknown';
+-                $pCat      = $targetRecord['category'] ?? 'question';
+-                $pUrl      = htmlspecialchars($targetRecord['pageUrl'] ?? '', ENT_QUOTES, 'UTF-8');
+-                $pSel      = htmlspecialchars($targetRecord['elementSelector'] ?? '', ENT_QUOTES, 'UTF-8');
+-                $pCtx      = htmlspecialchars($targetRecord['elementContext'] ?? '', ENT_QUOTES, 'UTF-8');
+-                $pSess     = $targetRecord['sessionId'] ?? 'unknown';
+-                $pTime     = $targetRecord['capturedAt'] ?? date('c');
+-                $pPrompt   = $targetRecord['prompt'] ?? '';
+-                $pDateFmt  = date('Y-m-d H:i', strtotime($pTime));
+-                
+-                $replySec  = '';
+-                if (!empty($targetRecord['reply'])) {
+-                    $replySec = "\n## User Reply / Follow-up\n\n" . $targetRecord['reply'] . "\n";
+-                }
+-
+-                $markdown = <<<MD
++if ($found) {
++    $status = $targetRecord['status'] ?? '';
++    if ($status === 'pending' || $status === 'canceled') {
++        $configPath = realpath(__DIR__ . '/../ripple.config.json');
++        if ($configPath && file_exists($configPath)) {
++            $config = json_decode(file_get_contents($configPath), true) ?: [];
++            if (!empty($config['vault_path']) && $config['vault_path'] !== '[VAULT_PATH]') {
++                $rawInbox = rtrim($config['vault_path'], '\\/') . DIRECTORY_SEPARATOR . 'raw';
++                if (is_dir($rawInbox)) {
++                    $pId = $targetRecord['promptId'];
++                    $mdFile = $rawInbox . DIRECTORY_SEPARATOR . $pId . '.md';
++
++                    if ($status === 'canceled') {
++                        if (file_exists($mdFile)) {
++                            $content = file_get_contents($mdFile);
++                            $content = preg_replace('/^status:\s*pending\s*$/m', 'status: canceled', $content);
++                            file_put_contents($mdFile, $content);
++                        }
++                    } else {
++                        $pKey      = $targetRecord['projectKey'] ?? 'unknown';
++                        $pCat      = $targetRecord['category'] ?? 'question';
++                        $pUrl      = htmlspecialchars($targetRecord['pageUrl'] ?? '', ENT_QUOTES, 'UTF-8');
++                        $pSel      = htmlspecialchars($targetRecord['elementSelector'] ?? '', ENT_QUOTES, 'UTF-8');
++                        $pCtx      = htmlspecialchars($targetRecord['elementContext'] ?? '', ENT_QUOTES, 'UTF-8');
++                        $pSess     = $targetRecord['sessionId'] ?? 'unknown';
++                        $pTime     = $targetRecord['capturedAt'] ?? date('c');
++                        $pPrompt   = $targetRecord['prompt'] ?? '';
++                        $pDateFmt  = date('Y-m-d H:i', strtotime($pTime));
++                        
++                        $replySec  = '';
++                        if (!empty($targetRecord['reply'])) {
++                            $replySec = "\n## User Reply / Follow-up\n\n" . $targetRecord['reply'] . "\n";
++                        }
++
++                        $markdown = <<<MD
+ ---
+ prompt_id: {$pId}
+ project_key: {$pKey}
+@@ -172,13 +183,15 @@ status: pending
+ ---
+ 
+ > [!NOTE] AI Processing Instructions
+-> The element selector path above pinpoints the exact DOM node the user Shift+Right-Clicked.
++> The element selector path above pinpoints the exact DOM node the user Shift+Left-Clicked.
+ > Map `{$pUrl}` to the physical file in the `{$pKey}` repository (see `ripple.config.json` for the `git_repo` path),
+ > then search the file for the selector's tag/class/ID to locate the relevant lines of code.
+ > Commit message format: `[Vibe] {$pCat}: <description>\\n- Resolves Prompt: {$pId}`
+ 
+ MD;
+-                file_put_contents($rawInbox . DIRECTORY_SEPARATOR . $pId . '.md', $markdown);
++                        file_put_contents($mdFile, $markdown);
++                    }
++                }
+             }
+         }
+     }
+diff --git a/docs/USER_GUIDE.md b/docs/USER_GUIDE.md
+index 4ade075..089afaa 100644
+--- a/docs/USER_GUIDE.md
++++ b/docs/USER_GUIDE.md
+@@ -1,6 +1,6 @@
+ # Ripple ΓÇö User Guide
+ 
+-> **Version:** v0.7.6 ┬╖ **Last Updated:** 2026-06-05
++> **Version:** v0.8.1 ┬╖ **Last Updated:** 2026-06-08
+ 
+ Ripple is a live UI capture and session analytics tool. It runs on every page where the tracker is installed, gives you a direct line from browser to AI inbox, and measures whether your changes actually worked.
+ 
+@@ -55,12 +55,16 @@ After a prompt is saved, a **small pulsing purple dot** appears at the x,y coord
+ 
+ | Action | What happens |
+ |---|---|
+-| **Hover** | Shows a tooltip with the first 80 chars of your prompt + prompt ID |
+-| **Click** | Opens the Ripple dashboard in a new tab |
+-| **Page refresh** | Dot disappears ΓÇö breadcrumbs are session-only, not persisted to the DOM |
+-| **Scroll** | Dot scrolls with the page (uses `position: absolute` + page coordinates) |
++| **Hover** | Shows a tooltip with a snippet of your prompt |
++| **Click** | (Reserved for future actions) |
++| **Page refresh** | **Dot persists!** The tracker fetches pending prompts from the database and visually re-attaches them to the correct DOM elements. |
++| **Scroll / Navigate** | Dots intelligently hide if scrolled underneath a sticky header, or if you switch tabs in a Single Page App. |
+ 
+-> **Why do breadcrumbs disappear on refresh?** They are injected into the live DOM by the tracker JS at the moment of capture. They are not saved to any database or localStorage ΓÇö only the prompt itself is saved. To see all your prompts, go to the Ripple dashboard ΓåÆ **Ripple Log** tab. Your prompt is safe; only the visual marker is gone.
++> **How does persistence work?** Breadcrumbs are mathematically bound to the specific DOM element you clicked. If you navigate away or refresh, the tracker reads `prompt_log.json`, finds the target element, and re-attaches the dot. Once an AI agent resolves or dismisses your prompt, the dot disappears permanently.
++
++### What about "Blobs"?
++
++You might hear these visual markers referred to informally as "Blobs." *Breadcrumbs* is the formal name for the feature because they function like a trail of notes you leave behind, letting you navigate back to exactly where you were. "Blobs" is simply the colloquial term used to describe their visual appearanceΓÇölittle pulsing dots on the screen. Functionally, they are the exact same thing.
+ 
+ ---
+ 
+@@ -117,7 +121,7 @@ Switch modes from the modal footer (`ΓÜ¬ Home ┬╖ ≡ƒö╡ Prompt ┬╖ ≡ƒö┤ Debug`):
+ ## FAQ
+ 
+ **Q: The breadcrumb dot disappeared when I refreshed. Did I lose my prompt?**
+-No. The dot is a visual-only marker injected at capture time. Your prompt was saved to `prompt_log.json` and `/raw/` the moment you hit Send. Open the dashboard ΓåÆ Ripple Log to see it.
++No! If a dot disappears, it simply means the exact DOM element you clicked on no longer exists on the screen (e.g. you navigated to a different view), or the AI agent has marked your prompt as `shipped` or `dismissed`. Your prompt is always safe in `prompt_log.json`. Open the dashboard ΓåÆ Ripple Log to see it.
+ 
+ **Q: How do I dismiss a prompt I no longer need?**
+ From the Ripple dashboard ΓåÆ Ripple Log, the AI can mark it `dismissed` on your behalf when you tell it to. The prompt thread is then archived.
+diff --git a/scripts/bump_version.py b/scripts/bump_version.py
+index e79a7a7..33c7215 100644
+--- a/scripts/bump_version.py
++++ b/scripts/bump_version.py
+@@ -44,7 +44,18 @@ if __name__ == "__main__":
+         fr'\g<1>{new_version}'
+     )
+     
+-    # 2. Update ripple-tracker.js
++    # 2. Update USER_GUIDE.md
++    user_guide_path = os.path.join(repo_root, "docs", "USER_GUIDE.md")
++    from datetime import date
++    today = date.today().isoformat()
++    # Matches: > **Version:** vX.X.X ┬╖ **Last Updated:** YYYY-MM-DD
++    update_file(
++        user_guide_path,
++        r'(> \*\*Version:\*\* )v\d+\.\d+\.\d+( ┬╖ \*\*Last Updated:\*\* )\d{4}-\d{2}-\d{2}',
++        fr'\g<1>{new_version}\g<2>{today}'
++    )
++    
++    # 3. Update ripple-tracker.js
+     tracker_path = os.path.join(repo_root, "src", "tracker", "ripple-tracker.js")
+     # Matches: * Ripple Tracker  vX.X.X
+     update_file(
+@@ -60,7 +71,7 @@ if __name__ == "__main__":
+         fr"\g<1>{new_version}\g<2>"
+     )
+     
+-    # 3. Update CHANGELOG.md
++    # 4. Update CHANGELOG.md
+     changelog_path = os.path.join(repo_root, "CHANGELOG.md")
+     if os.path.exists(changelog_path):
+         from datetime import date
+diff --git a/src/dashboard/index.html b/src/dashboard/index.html
+index c40472d..a856f75 100644
+--- a/src/dashboard/index.html
++++ b/src/dashboard/index.html
+@@ -1006,12 +1006,7 @@
+             </div>
+             
+             <div style="display:flex; align-items:center; gap:1rem;">
+-                <div class="project-selector-wrapper">
+-                    <span class="project-selector-label">Project</span>
+-                    <select id="projectSelect" class="project-selector">
+-                        <option value="">Loading projects...</option>
+-                    </select>
+-                </div>
++
+                 <button class="btn-gear" id="gearBtn" onclick="openSettings()" title="Project Settings">
+                     ΓÜÖ∩╕Å Settings
+                 </button>
+@@ -1042,6 +1037,27 @@
+             <!-- Left Column (Sidebar) -->
+             <div class="sidebar">
+ 
++                <!-- Global Filters -->
++                <div class="card" style="padding: 1.1rem; border-color: rgba(56, 139, 253, 0.3);">
++                    <div class="card-title" style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem; color: var(--accent-blue);">
++                        ≡ƒÄ¢∩╕Å Global Filters
++                    </div>
++                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
++                        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
++                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Project</label>
++                            <select id="explorerProjectFilter" data-ripple-event="filter_changed" data-ripple-label="project" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.85rem; cursor: pointer; outline: none; font-family: var(--font-main);">
++                                <option value="all">All Projects</option>
++                            </select>
++                        </div>
++                        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
++                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Date Range</label>
++                            <select id="explorerDateFilter" data-ripple-event="filter_changed" data-ripple-label="date" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.85rem; cursor: pointer; outline: none; font-family: var(--font-main);">
++                                <option value="all">All Dates</option>
++                            </select>
++                        </div>
++                    </div>
++                </div>
++
+                 <!-- Quick Navigation -->
+                 <div class="card" style="padding: 1.1rem; border-color: rgba(188, 140, 255, 0.2);">
+                     <div class="card-title" style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem; color: var(--accent-purple);">
+@@ -1203,20 +1219,7 @@
+                     <div style="background: rgba(34, 42, 61, 0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                         <!-- Filters Grid -->
+                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.8rem;">
+-                            <!-- Project Select -->
+-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Project</label>
+-                                <select id="explorerProjectFilter" data-ripple-event="filter_changed" data-ripple-label="project" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+-                                    <option value="all">All Projects</option>
+-                                </select>
+-                            </div>
+-                            <!-- Date Select -->
+-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Date</label>
+-                                <select id="explorerDateFilter" data-ripple-event="filter_changed" data-ripple-label="date" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+-                                    <option value="all">All Dates</option>
+-                                </select>
+-                            </div>
++
+                             <!-- Duration Filter -->
+                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                 <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Duration</label>
+@@ -1327,10 +1330,6 @@
+                             <span id="promptBadgeShipped" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; background: rgba(63, 185, 80, 0.12); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.2); border-radius: 12px; font-weight: 700;">0 shipped</span>
+                         </div>
+                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+-                            <!-- Project filter -->
+-                            <select id="promptProjectFilter" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+-                                <option value="all">All Projects</option>
+-                            </select>
+                             <!-- Status filter -->
+                             <select id="promptStatusFilter" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                 <option value="all">All Statuses</option>
+@@ -1398,8 +1397,13 @@
+             const target = document.getElementById(panelId);
+             if (target) target.classList.remove('panel-hidden');
+             
+-            // Update URL hash
++            // Update URL hash and trigger event for Ripple Tracker
+             window.history.replaceState(null, null, '#' + panelId);
++            window.dispatchEvent(new Event('hashchange'));
++            
++            if (window.Ripple && typeof Ripple.refreshBreadcrumbs === 'function') {
++                Ripple.refreshBreadcrumbs();
++            }
+             
+             // Highlight nav link
+             const links = document.querySelectorAll('#quick-nav a');
+@@ -1653,15 +1657,12 @@
+         }
+ 
+         function populateProjectSelector() {
+-            const selectTop = document.getElementById('projectSelect');
+             const selectBottom = document.getElementById('explorerProjectFilter');
+             
+-            selectTop.innerHTML = "";
+             selectBottom.innerHTML = "";
+ 
+             if (!analyticsData.projects || analyticsData.projects.length === 0) {
+                 const opt = '<option value="">No projects found</option>';
+-                selectTop.innerHTML = opt;
+                 selectBottom.innerHTML = opt;
+                 return;
+             }
+@@ -1674,11 +1675,6 @@
+             });
+ 
+             options.forEach(optData => {
+-                const opt1 = document.createElement('option');
+-                opt1.value = optData.value;
+-                opt1.textContent = optData.text;
+-                selectTop.appendChild(opt1);
+-
+                 const opt2 = document.createElement('option');
+                 opt2.value = optData.value;
+                 opt2.textContent = optData.text;
+@@ -1687,28 +1683,17 @@
+ 
+             // Set default active project
+             activeProjectKey = "all";
+-            selectTop.value = "all";
+             selectBottom.value = "all";
+             loadProjectDetails("all");
+             applyFilters();
+ 
+             // Event Listeners for Selector Synchronization
+-            selectTop.addEventListener('change', (e) => {
+-                const val = e.target.value;
+-                selectBottom.value = val;
+-                activeProjectKey = val;
+-                loadProjectDetails(val);
+-                applyFilters();
+-                // ΓöÇΓöÇ Ripple self-tracking ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+-                if (window.Ripple) Ripple.track('project_switched', { project: val });
+-            });
+-
+             selectBottom.addEventListener('change', (e) => {
+                 const val = e.target.value;
+-                selectTop.value = val;
+                 activeProjectKey = val;
+                 loadProjectDetails(val);
+                 applyFilters();
++                if (window.Ripple) Ripple.track('project_switched', { project: val });
+             });
+         }
+ 
+@@ -2533,6 +2518,9 @@
+ 
+             // 8. Render Session Cards
+             renderSessionList(filtered);
++
++            // 9. Render Prompts Tab
++            renderPrompts();
+         }
+ 
+         function updateExplorerMetrics(baseList) {
+@@ -2858,7 +2846,6 @@
+ 
+         function resetAllFilters() {
+             document.getElementById('explorerSearch').value = "";
+-            document.getElementById('projectSelect').value = "all";
+             document.getElementById('explorerProjectFilter').value = "all";
+             activeProjectKey = "all";
+             loadProjectDetails("all");
+@@ -3057,13 +3044,22 @@
+         async function loadPromptLog() {
+             try {
+                 const res = await fetch('../../data/prompt_log.json?t=' + Date.now());
+-                allPrompts = await res.json();
++                const newData = await res.json();
++                if (JSON.stringify(newData) !== JSON.stringify(allPrompts)) {
++                    allPrompts = newData;
++                    renderPrompts();
++                }
+             } catch(e) {
+-                allPrompts = [];
++                if (allPrompts.length > 0) {
++                    allPrompts = [];
++                    renderPrompts();
++                }
+             }
+-            renderPrompts();
+         }
+ 
++        // Add Live Reload polling
++        setInterval(loadPromptLog, 3000);
++
+         // Returns the GitHub commit base URL for a project key, sourced from rippleConfig.
+         // Falls back to empty string if not configured (renders hash as plain text).
+         function getGithubRemote(projectKey) {
+@@ -3093,7 +3089,7 @@
+         function renderPrompts() {
+             const statusFilter   = document.getElementById('promptStatusFilter')?.value   || 'all';
+             const categoryFilter = document.getElementById('promptCategoryFilter')?.value || 'all';
+-            const projectFilter  = document.getElementById('promptProjectFilter')?.value  || 'all';
++            const projectFilter  = document.getElementById('explorerProjectFilter')?.value  || 'all';
+             const sortOrder      = document.getElementById('promptSort')?.value           || 'newest';
+             const searchTerm     = (document.getElementById('promptSearch')?.value || '').toLowerCase().trim();
+             const container      = document.getElementById('prompts-list');
+@@ -3113,17 +3109,6 @@
+                 return tB - tA;
+             });
+ 
+-            // Populate project dropdown once
+-            const projSelect = document.getElementById('promptProjectFilter');
+-            if (projSelect && projSelect.options.length === 1 && allPrompts.length > 0) {
+-                const keys = [...new Set(allPrompts.map(p => p.projectKey).filter(Boolean))].sort();
+-                keys.forEach(k => {
+-                    const opt = document.createElement('option');
+-                    opt.value = k; opt.textContent = k;
+-                    projSelect.appendChild(opt);
+-                });
+-            }
+-
+             // Filter
+             const filtered = sorted.filter(p => {
+                 if (projectFilter  !== 'all' && p.projectKey !== projectFilter) return false;
+diff --git a/src/tracker/ripple-tracker.js b/src/tracker/ripple-tracker.js
+index 3dd346f..e8fcc60 100644
+--- a/src/tracker/ripple-tracker.js
++++ b/src/tracker/ripple-tracker.js
+@@ -497,9 +497,11 @@
+                 if (classes) selector += '.' + classes;
+                 parts.unshift(selector);
+             }
+-            node = node.parentElement;
++            node = node.parentNode;
+         }
+-        return 'body > ' + parts.join(' > ');
++        const path = parts.join(' > ');
++        if (path.includes('#')) return path;
++        return 'body > ' + path;
+     }
+ 
+     /**
+@@ -518,10 +520,11 @@
+         return `${tag}${id}${classes ? ' ΓÇó ' + classes : ''}`;
+     }
+ 
+-    // ΓöÇΓöÇ UI Capture: Shift + Right-Click interceptor ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+-    document.addEventListener('contextmenu', function (e) {
+-        if (!e.shiftKey) return; // normal right-click ΓÇö pass through
++    // ΓöÇΓöÇ UI Capture: Shift + Left-Click interceptor ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++    document.addEventListener('click', function (e) {
++        if (!e.shiftKey) return; // normal click ΓÇö pass through
+         e.preventDefault();
++        e.stopPropagation();
+         // If in home/idle mode, instantly exit it and open prompt capture
+         if (_homeMode) {
+             _homeMode = false;
+@@ -535,9 +538,100 @@
+     // After a prompt is saved, a throbbing ripple dot is pinned to the exact
+     // x,y coordinates where the user Shift+Right-Clicked. Hover to see a
+     // summary tooltip; click to open the dashboard in a new tab.
+-    const _breadcrumbs = []; // { id, x, y, el }
++    const _breadcrumbs = []; // { id, x, y, el, selector, tip, targetEl }
+ 
+-    function _spawnBreadcrumb(x, y, promptId, summary, dashUrl) {
++    function _updateBreadcrumbs() {
++        _breadcrumbs.forEach(bc => {
++            if (bc.selector && bc.selector !== 'body (page-level)') {
++                if (bc.targetEl && !document.contains(bc.targetEl)) {
++                    bc.targetEl = null;
++                }
++                if (!bc.targetEl) {
++                    try { 
++                        let sel = bc.selector;
++                        if (sel.startsWith('body > ') && sel.includes('#')) {
++                            sel = sel.replace('body > ', '');
++                        }
++                        const nodes = document.querySelectorAll(sel);
++                        if (nodes.length > 1 && bc.context) {
++                            bc.targetEl = Array.from(nodes).find(n => n.textContent && n.textContent.includes(bc.context)) || nodes[0];
++                        } else {
++                            bc.targetEl = nodes[0];
++                        }
++                    } catch(e) {}
++                }
++                if (bc.targetEl) {
++                    const rect = bc.targetEl.getBoundingClientRect();
++                    const style = window.getComputedStyle(bc.targetEl);
++                    if (rect.width === 0 && rect.height === 0 || style.display === 'none' || style.visibility === 'hidden') {
++                        bc.el.style.display = 'none';
++                        if (bc.tip) bc.tip.style.display = 'none';
++                    } else {
++                        if (bc.offsetX === undefined && bc.origX !== undefined && bc.origY !== undefined) {
++                            const absLeft = rect.left + window.scrollX;
++                            const absTop = rect.top + window.scrollY;
++                            let ox = bc.origX - absLeft;
++                            let oy = bc.origY - absTop;
++                            if (ox < 1) ox = 1;
++                            if (oy < 1) oy = 1;
++                            if (ox > rect.width - 2) ox = Math.max(1, rect.width - 2);
++                            if (oy > rect.height - 2) oy = Math.max(1, rect.height - 2);
++                            bc.offsetX = ox;
++                            bc.offsetY = oy;
++                        }
++                        const ox = bc.offsetX || 0;
++                        const oy = bc.offsetY || 0;
++                        const blobX = rect.left + ox;
++                        const blobY = rect.top + oy;
++
++                        let isCovered = false;
++                        if (blobX < 0 || blobX > window.innerWidth || blobY < 0 || blobY > window.innerHeight) {
++                            isCovered = true;
++                        } else {
++                            const oldPEs = [];
++                            _breadcrumbs.forEach(b => {
++                                oldPEs.push({ el: b.el.style.pointerEvents, tip: b.tip ? b.tip.style.pointerEvents : '' });
++                                b.el.style.pointerEvents = 'none';
++                                if (b.tip) b.tip.style.pointerEvents = 'none';
++                            });
++                            
++                            const ptEl = document.elementFromPoint(blobX, blobY);
++                            
++                            _breadcrumbs.forEach((b, i) => {
++                                b.el.style.pointerEvents = oldPEs[i].el;
++                                if (b.tip) b.tip.style.pointerEvents = oldPEs[i].tip;
++                            });
++
++                            if (ptEl && ptEl !== bc.targetEl && !bc.targetEl.contains(ptEl)) {
++                                isCovered = true;
++                            }
++                        }
++
++                        if (isCovered) {
++                            bc.el.style.display = 'none';
++                            if (bc.tip) bc.tip.style.display = 'none';
++                        } else {
++                            bc.el.style.display = 'block';
++                            bc.el.style.left = (blobX - 6) + 'px';
++                            bc.el.style.top  = (blobY - 6) + 'px';
++                            if (bc.tip && bc.tip.style.display !== 'none' && bc.tip.parentNode) {
++                                const r = bc.el.getBoundingClientRect();
++                                bc.tip.style.left = Math.min(r.right + 8, window.innerWidth - 240) + 'px';
++                                bc.tip.style.top  = Math.max(r.top - 48, 8) + 'px';
++                            }
++                        }
++                    }
++                } else {
++                    bc.el.style.display = 'none';
++                    if (bc.tip) bc.tip.style.display = 'none';
++                }
++            }
++        });
++        requestAnimationFrame(_updateBreadcrumbs);
++    }
++    requestAnimationFrame(_updateBreadcrumbs);
++
++    function _spawnBreadcrumb(x, y, promptId, summary, dashUrl, selector, contextText, explicitTargetEl = null) {
+         const DOT_ID = '_rpl_bc_' + promptId;
+         if (document.getElementById(DOT_ID)) return; // already placed
+ 
+@@ -551,7 +645,7 @@
+                     60%       { box-shadow: 0 0 0 8px rgba(167,139,250,0), 0 0 0 16px rgba(167,139,250,0); }
+                 }
+                 .rpl-breadcrumb {
+-                    position: absolute;
++                    position: fixed;
+                     width: 12px; height: 12px;
+                     border-radius: 50%;
+                     background: #a78bfa;
+@@ -575,7 +669,7 @@
+                     max-width: 220px;
+                     line-height: 1.5;
+                     z-index: 2147483641;
+-                    pointer-events: none;
++                    pointer-events: auto;
+                     box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+                 }
+                 .rpl-breadcrumb-tip .rpl-bc-id {
+@@ -597,26 +691,97 @@
+         dot.title = summary;
+ 
+         let tip = null;
++        let hideTimeout = null;
++
+         dot.addEventListener('mouseenter', function () {
++            if (hideTimeout) clearTimeout(hideTimeout);
++            if (tip) return;
+             tip = document.createElement('div');
+             tip.className = 'rpl-breadcrumb-tip';
+             const label = summary.length > 80 ? summary.slice(0, 77) + 'ΓÇª' : summary;
+-            tip.innerHTML = `≡ƒÆ¼ <strong>${label}</strong><span class="rpl-bc-id">${promptId}</span>`;
++            tip.innerHTML = `
++                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
++                    <div>≡ƒÆ¼ <strong>${label}</strong><span class="rpl-bc-id">${promptId}</span></div>
++                    <div style="display:flex; gap:4px;">
++                        <div class="rpl-bc-cancel" style="color:rgba(255,100,100,0.6); cursor:pointer; font-size:14px; line-height:1; padding:0 4px;" title="Cancel Request">≡ƒÜ½</div>
++                        <div class="rpl-bc-dismiss" style="color:rgba(255,255,255,0.4); cursor:pointer; font-size:14px; line-height:1; padding:0 4px;" title="Dismiss">Γ£ò</div>
++                    </div>
++                </div>
++            `;
++
++            tip.querySelector('.rpl-bc-cancel').addEventListener('click', (e) => {
++                e.stopPropagation();
++                fetch((PROJECT_PATH || '') + '/ripple/api/update_prompt.php', {
++                    method: 'PATCH',
++                    headers: { 'Content-Type': 'application/json' },
++                    body: JSON.stringify({ promptId: promptId, status: 'canceled' })
++                }).catch(()=>{});
++
++                const dismissed = JSON.parse(localStorage.getItem('ripple_dismissed_prompts') || '[]');
++                if (!dismissed.includes(promptId)) {
++                    dismissed.push(promptId);
++                    localStorage.setItem('ripple_dismissed_prompts', JSON.stringify(dismissed));
++                }
++                dot.remove();
++                if (tip) tip.remove();
++                const idx = _breadcrumbs.findIndex(b => b.id === promptId);
++                if (idx > -1) _breadcrumbs.splice(idx, 1);
++            });
++
++            tip.querySelector('.rpl-bc-dismiss').addEventListener('click', (e) => {
++                e.stopPropagation();
++                const dismissed = JSON.parse(localStorage.getItem('ripple_dismissed_prompts') || '[]');
++                if (!dismissed.includes(promptId)) {
++                    dismissed.push(promptId);
++                    localStorage.setItem('ripple_dismissed_prompts', JSON.stringify(dismissed));
++                }
++                dot.remove();
++                if (tip) tip.remove();
++                const idx = _breadcrumbs.findIndex(b => b.id === promptId);
++                if (idx > -1) _breadcrumbs.splice(idx, 1);
++            });
++
++            tip.addEventListener('mouseenter', () => { if (hideTimeout) clearTimeout(hideTimeout); });
++            tip.addEventListener('mouseleave', () => {
++                hideTimeout = setTimeout(() => { 
++                    if (tip) { tip.remove(); tip = null; } 
++                    const bc = _breadcrumbs.find(b => b.id === promptId);
++                    if (bc) bc.tip = null;
++                }, 200);
++            });
++
+             // Position tip above and to the right of the dot
+             const r = dot.getBoundingClientRect();
+             tip.style.left = Math.min(r.right + 8, window.innerWidth - 240) + 'px';
+             tip.style.top  = Math.max(r.top - 48, 8) + 'px';
+             document.body.appendChild(tip);
++            const bc = _breadcrumbs.find(b => b.id === promptId);
++            if (bc) bc.tip = tip;
+         });
++
+         dot.addEventListener('mouseleave', function () {
+-            if (tip) { tip.remove(); tip = null; }
++            hideTimeout = setTimeout(() => { 
++                if (tip) { tip.remove(); tip = null; } 
++                const bc = _breadcrumbs.find(b => b.id === promptId);
++                if (bc) bc.tip = null;
++            }, 200);
+         });
++
+         dot.addEventListener('click', function () {
+             window.open(dashUrl, '_blank');
+         });
+ 
+         document.body.appendChild(dot);
+-        _breadcrumbs.push({ id: promptId, x, y, el: dot });
++        _breadcrumbs.push({
++            promptId: promptId,
++            el: dot,
++            tip: tip,
++            selector: selector,
++            context: contextText,
++            targetEl: explicitTargetEl,
++            origX: x,
++            origY: y
++        });
+     }
+ 
+     // ΓöÇΓöÇ UI Capture: Modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+@@ -968,7 +1133,7 @@
+                     });
+                     // Spawn a throbbing breadcrumb at the exact click coordinates
+                     const dashUrl = (PROJECT_PATH || '') + '/ripple/';
+-                    _spawnBreadcrumb(_clickX, _clickY, data.promptId, text, dashUrl);
++                    _spawnBreadcrumb(_clickX, _clickY, data.promptId, text, dashUrl, selectorPath, elementCtx, targetEl);
+                     window.dispatchEvent(new CustomEvent('ripplePromptSaved'));
+                     setTimeout(_closeModal, 1400);
+                 } else {
+@@ -1228,14 +1393,72 @@
+         }
+     }
+ 
+-    // ΓöÇΓöÇ Boot: inject indicator after DOM is ready ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++    // ΓöÇΓöÇ Boot: fetch pending prompts and inject indicator ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++    function _initRipple() {
++        _buildIndicator();
++        _loadPendingPrompts();
++    }
++
++    function _loadPendingPrompts() {
++        let rippleBase = '/ripple';
++        const me = document.querySelector('script[src*="ripple-tracker.js"]');
++        if (me && me.src) {
++            const idx = me.src.indexOf('/src/tracker/ripple-tracker.js');
++            if (idx !== -1) {
++                rippleBase = me.src.substring(0, idx);
++            }
++        }
++        const logUrl = rippleBase + '/data/prompt_log.json?t=' + Date.now();
++        const currentUrlStr = window.location.href;
++
++        fetch(logUrl)
++            .then(res => res.json())
++            .then(prompts => {
++                const dismissed = JSON.parse(localStorage.getItem('ripple_dismissed_prompts') || '[]');
++                let spawnedCount = 0;
++                prompts.forEach(p => {
++                    const pId = p.promptId || p.id;
++                    if (p.status !== 'shipped' && p.status !== 'dismissed' && p.status !== 'canceled' && !dismissed.includes(pId)) {
++                        // We no longer filter by URL!
++                        // If the target element exists on the screen, the blob will attach to it.
++                        // If it doesn't exist, it will gracefully hide in the background.
++                        const summaryText = p.prompt || p.text;
++                        const summary = summaryText ? (summaryText.length > 50 ? summaryText.substring(0, 47) + '...' : summaryText) : '...';
++                        const dashUrl = rippleBase + '/';
++                        _spawnBreadcrumb(p.x || 100, p.y || 100, pId, summary, dashUrl, p.elementSelector, p.elementContext);
++                    }
++                });
++            })
++            .catch(err => { 
++                console.error('Ripple Debug Error: ', err);
++            });
++    }
++
++    window.addEventListener('hashchange', () => {
++        _breadcrumbs.forEach(bc => {
++            if (bc.el) bc.el.remove();
++            if (bc.tip) bc.tip.remove();
++        });
++        _breadcrumbs.length = 0;
++        _loadPendingPrompts();
++    });
++
+     if (document.readyState === 'loading') {
+-        document.addEventListener('DOMContentLoaded', _buildIndicator);
++        document.addEventListener('DOMContentLoaded', _initRipple);
+     } else {
+-        _buildIndicator();
++        _initRipple();
+     }
+ 
+     // ΓöÇΓöÇ Expose ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++    Ripple.refreshBreadcrumbs = function() {
++        _breadcrumbs.forEach(bc => {
++            if (bc.el) bc.el.remove();
++            if (bc.tip) bc.tip.remove();
++        });
++        _breadcrumbs.length = 0;
++        _loadPendingPrompts();
++    };
++
+     global.Ripple = Ripple;
+ 
+ })(window);

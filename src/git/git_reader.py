@@ -194,12 +194,30 @@ def build_deployment_windows(commits: list, sessions: list) -> list:
         after_sessions  = _sessions_in_window(sessions, after_ts=commit_ts,   before_ts=newer_commit_ts)
         before_sessions = _sessions_in_window(sessions, after_ts=older_commit_ts, before_ts=commit_ts)
 
+        # 3-Day Fixed Window Calculations (3 days = 3 * 24 * 3600 = 259200 seconds)
+        sec_3d = 259200
+        after_ts_3d_end = commit_ts + sec_3d
+        before_ts_3d_start = commit_ts - sec_3d
+
+        after_sessions_3d = _sessions_in_window(sessions, after_ts=commit_ts, before_ts=after_ts_3d_end)
+        before_sessions_3d = _sessions_in_window(sessions, after_ts=before_ts_3d_start, before_ts=commit_ts)
+
+        # Determine if window is short
+        before_win_dur = (commit_ts - older_commit_ts) if older_commit_ts else float('inf')
+        after_win_dur = (newer_commit_ts - commit_ts) if newer_commit_ts else float('inf')
+        short_window = (before_win_dur < 6 * 3600) or (after_win_dur < 6 * 3600)
+
         windows.append({
-            "commit":          commit,
-            "sessions_after":  after_sessions,
-            "sessions_before": before_sessions,
-            "after_count":     len(after_sessions),
-            "before_count":    len(before_sessions),
+            "commit":             commit,
+            "sessions_after":     after_sessions,
+            "sessions_before":    before_sessions,
+            "after_count":        len(after_sessions),
+            "before_count":       len(before_sessions),
+            "sessions_after_3d":  after_sessions_3d,
+            "sessions_before_3d": before_sessions_3d,
+            "after_count_3d":     len(after_sessions_3d),
+            "before_count_3d":    len(before_sessions_3d),
+            "short_window":       short_window,
         })
 
     return windows

@@ -1,0 +1,47 @@
+<!-- View Funnel -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">≡ƒôÉ View Funnel ΓÇö where users went</div>
+        <span style="font-size:11px;color:var(--text-3)">click a view to filter paths & sessions below</span>
+      </div>
+      <div class="funnel-grid" id="funnel-grid">
+        <div class="skeleton" style="height:100px;border-radius:8px"></div>
+        <div class="skeleton" style="height:100px;border-radius:8px"></div>
+        <div class="skeleton" style="height:100px;border-radius:8px"></div>
+      </div>
+    </div>
+
+    <!-- Navigation Paths -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">≡ƒù║∩╕Å Navigation Paths</div>
+        <button class="panel-action" onclick="clearViewFilter()">Clear filter</button>
+      </div>
+      <div class="filter-bar">
+        <select class="filter-select" id="path-filter-ref" onchange="renderPaths()">
+          <option value="">All referrers</option>
+        </select>
+        <select class="filter-select" id="path-filter-dev" onchange="renderPaths()">
+          <option value="">All devices</option>
+          <option value="mobile">Mobile</option>
+          <option value="desktop">Desktop</option>
+        </select>
+        <span class="filter-count" id="path-filter-count">ΓÇö</span>
+      </div>
+      <table class="path-table" id="path-table">
+        <thead>
+          <tr>
+            <th>Path</th>
+            <th>Sessions</th>
+            <th>% of real users</th>
+            <th>Avg duration</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="path-tbody">
+          <tr><td colspan="5"><div class="skeleton"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    

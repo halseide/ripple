@@ -1,1569 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ripple — Git-Native Analytics</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-main: #090b0f;
-            --bg-card: #121620;
-            --bg-card-hover: #171c2a;
-            --border-color: #222a3d;
-            --text-main: #f0f3f6;
-            --text-muted: #8b949e;
-            --accent-blue: #388bfd;
-            --accent-green: #3fb950;
-            --accent-amber: #d29922;
-            --accent-red: #f85149;
-            --accent-purple: #bc8cff;
-            --font-main: 'Plus Jakarta Sans', sans-serif;
-        html {
-            /* scroll-behavior: smooth; */
-        }
 
-        .panel-hidden {
-            display: none !important;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            font-family: var(--font-main);
-            line-height: 1.5;
-            padding: 2rem;
-            min-height: 100vh;
-        }
-
-        /* Container Layout */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        /* Header Area */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .logo-section h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .logo-section h1 span {
-            color: var(--accent-blue);
-        }
-
-        .logo-section p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-top: 0.2rem;
-        }
-
-        /* Selector Styling */
-        .project-selector-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-        }
-
-        .project-selector-label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        select.project-selector {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            font-family: var(--font-main);
-            font-weight: 600;
-            padding: 0.6rem 2rem 0.6rem 1rem;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            cursor: pointer;
-            outline: none;
-            transition: border-color 0.2s, background-color 0.2s;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' width='12' fill='none' viewBox='0 0 24 24' stroke='%238b949e' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-        }
-
-        select.project-selector:hover {
-            border-color: var(--accent-blue);
-            background-color: var(--bg-card-hover);
-        }
-
-        /* Dashboard Grid Layout */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 2rem;
-        }
-
-        @media (max-width: 1024px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Sidebar Panels */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: border-color 0.2s;
-        }
-
-        .card:hover {
-            border-color: #2e3b56;
-        }
-
-        .card-title {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* Metric Grid */
-        .metric-row {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .metric-block {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            padding-bottom: 0.8rem;
-            border-bottom: 1px solid rgba(34, 42, 61, 0.5);
-        }
-
-        .metric-block:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .metric-label {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
-        .metric-value {
-            font-size: 1.4rem;
-            font-weight: 700;
-            font-family: var(--font-mono);
-        }
-
-        .metric-value.engaged { color: var(--accent-green); }
-        .metric-value.duration { color: var(--accent-blue); }
-
-        /* Goals Checklist */
-        .goals-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-        }
-
-        .goal-item {
-            display: flex;
-            gap: 0.6rem;
-            align-items: flex-start;
-            font-size: 0.85rem;
-        }
-
-        .goal-checkbox {
-            color: var(--accent-blue);
-            font-size: 1rem;
-            line-height: 1;
-        }
-
-        .goal-text {
-            color: var(--text-main);
-        }
-
-        /* Main Workspace Panels */
-        .workspace {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        /* Suggestions Panel */
-        .suggestion-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-left: 4px solid var(--accent-blue);
-            border-radius: 8px;
-            padding: 1.2rem;
-            margin-bottom: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            transition: transform 0.2s, border-color 0.2s;
-        }
-
-        .suggestion-card:hover {
-            transform: translateX(4px);
-            border-color: #2e3b56;
-        }
-
-        .suggestion-card.high { border-left-color: var(--accent-red); }
-        .suggestion-card.medium { border-left-color: var(--accent-amber); }
-        .suggestion-card.low { border-left-color: var(--accent-blue); }
-
-        .suggestion-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        .suggestion-title {
-            font-size: 1.05rem;
-            font-weight: 600;
-        }
-
-        .suggestion-tags {
-            display: flex;
-            gap: 0.5rem;
-            font-size: 0.75rem;
-            font-family: var(--font-mono);
-        }
-
-        .tag {
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-
-        .tag.priority-high { background-color: rgba(248, 81, 73, 0.15); color: var(--accent-red); }
-        .tag.priority-medium { background-color: rgba(210, 153, 34, 0.15); color: var(--accent-amber); }
-        .tag.priority-low { background-color: rgba(56, 139, 253, 0.15); color: var(--accent-blue); }
-        
-        .tag.type-tag {
-            background-color: rgba(188, 140, 255, 0.1);
-            color: var(--accent-purple);
-            border: 1px solid rgba(188, 140, 255, 0.15);
-        }
-
-        .suggestion-evidence {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            background-color: rgba(0, 0, 0, 0.2);
-            padding: 0.6rem 0.8rem;
-            border-radius: 6px;
-            font-family: var(--font-mono);
-            border-left: 2px solid var(--border-color);
-        }
-
-        .suggestion-rec {
-            font-size: 0.9rem;
-            color: var(--text-main);
-            line-height: 1.4;
-        }
-
-        .suggestion-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            border-top: 1px solid rgba(34, 42, 61, 0.3);
-            padding-top: 0.6rem;
-            margin-top: 0.2rem;
-        }
-
-        /* Action Buttons */
-        .btn-status {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            padding: 0.25rem 0.6rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: var(--font-main);
-            font-size: 0.75rem;
-            transition: all 0.2s;
-        }
-
-        .btn-status:hover {
-            border-color: var(--accent-blue);
-            color: var(--text-main);
-        }
-
-        /* Commits / Windows List */
-        .commit-row {
-            display: grid;
-            grid-template-columns: 90px 1fr 180px;
-            gap: 1.5rem;
-            padding: 1rem 0;
-            border-bottom: 1px solid rgba(34, 42, 61, 0.4);
-            align-items: center;
-        }
-
-        .commit-row:last-child {
-            border-bottom: none;
-        }
-
-        .commit-hash {
-            font-family: var(--font-mono);
-            color: var(--accent-blue);
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .commit-info h4 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-main);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .commit-info p {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 0.15rem;
-        }
-
-        .diff-metric-pill {
-            display: flex;
-            background-color: rgba(34, 42, 61, 0.3);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            overflow: hidden;
-            font-size: 0.8rem;
-            font-family: var(--font-mono);
-            justify-content: space-between;
-        }
-
-        .diff-side {
-            padding: 0.3rem 0.5rem;
-            text-align: center;
-            flex-grow: 1;
-        }
-
-        .diff-side.before {
-            border-right: 1px solid var(--border-color);
-            color: var(--text-muted);
-        }
-
-        .diff-side.after {
-            font-weight: 600;
-        }
-
-        .diff-side.after.up { color: var(--accent-green); background-color: rgba(63, 185, 80, 0.08); }
-        .diff-side.after.down { color: var(--accent-red); background-color: rgba(248, 81, 73, 0.08); }
-        .diff-side.after.none { color: var(--text-muted); }
-
-        /* Loader */
-        .loader-screen {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: var(--bg-main);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 1rem;
-            transition: opacity 0.3s;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--border-color);
-            border-top: 4px solid var(--accent-blue);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .hidden {
-            display: none !important;
-            opacity: 0;
-        }
-
-        /* Session Card Styles */
-        .session-card {
-            background-color: rgba(18, 22, 32, 0.75);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 1.2rem;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            gap: 0.6rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
-        }
-
-        .session-card:hover {
-            border-color: #2e3b56;
-            background-color: var(--bg-card-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-        }
-
-        .session-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.85rem;
-        }
-
-        .session-visitor-id {
-            font-family: var(--font-mono);
-            color: var(--accent-blue);
-            font-weight: 600;
-        }
-
-        .session-card-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.8rem;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .session-detail-path {
-            background: rgba(0, 0, 0, 0.25);
-            border-left: 3px solid var(--accent-blue);
-            padding: 0.6rem 0.8rem;
-            border-radius: 0 6px 6px 0;
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 0.2rem 0;
-        }
-
-        /* User journey timeline styles */
-        .journey-session-row {
-            border-left: 2px dashed var(--border-color);
-            padding-left: 1.2rem;
-            margin-left: 0.6rem;
-            position: relative;
-            padding-bottom: 1rem;
-        }
-
-        .journey-session-row:last-child {
-            padding-bottom: 0.2rem;
-            border-left: none;
-        }
-
-        .journey-session-row::before {
-            content: '';
-            position: absolute;
-            left: -6px;
-            top: 6px;
-            width: 10px;
-            height: 10px;
-            background: var(--border-color);
-            border-radius: 50%;
-            border: 2px solid var(--bg-card);
-        }
-
-        .journey-session-row.deep::before { background: var(--accent-purple); }
-        .journey-session-row.engaged::before { background: var(--accent-green); }
-        .journey-session-row.glancer::before { background: var(--accent-blue); }
-        .journey-session-row.bounce::before { background: var(--text-muted); }
-        .journey-session-row.ghost::before { background: var(--accent-amber); }
-        .journey-session-row.bot::before { background: var(--accent-red); }
-
-        /* Commit row enhancements */
-        .commit-row {
-            transition: all 0.2s;
-            cursor: pointer;
-            padding: 0.8rem;
-            border-radius: 8px;
-            margin: 0.2rem 0;
-            border: 1px solid transparent;
-        }
-
-        .commit-row:hover {
-            background-color: var(--bg-card-hover);
-            border-color: rgba(34, 42, 61, 0.6);
-        }
-
-        .commit-row.selected {
-            background-color: rgba(56, 139, 253, 0.08);
-            border-color: rgba(56, 139, 253, 0.4);
-            border-left: 4px solid var(--accent-blue);
-            padding-left: calc(0.8rem - 4px);
-        }
-
-        /* Tabs styling */
-        .btn-tab {
-            transition: all 0.2s;
-        }
-        .btn-tab:hover {
-            color: var(--text-main) !important;
-        }
-
-        /* ── Settings Panel ───────────────────────────────────── */
-        #settingsOverlay {
-            position: fixed;
-            inset: 0;
-            z-index: 500;
-            display: flex;
-            justify-content: flex-end;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s;
-        }
-        #settingsOverlay.open {
-            opacity: 1;
-            pointer-events: all;
-        }
-        #settingsBackdrop {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.55);
-            backdrop-filter: blur(3px);
-        }
-        #settingsPanel {
-            position: relative;
-            width: 560px;
-            max-width: 100vw;
-            height: 100%;
-            background: var(--bg-card);
-            border-left: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            transform: translateX(40px);
-            transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-            overflow: hidden;
-        }
-        #settingsOverlay.open #settingsPanel {
-            transform: translateX(0);
-        }
-        #settingsPanelHeader {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.2rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            flex-shrink: 0;
-        }
-        #settingsPanelHeader h2 {
-            font-size: 1rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        #settingsBody {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-        .settings-section-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .settings-field {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-            margin-bottom: 0.9rem;
-        }
-        .settings-field label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-        }
-        .settings-field label .field-hint {
-            font-weight: 400;
-            text-transform: none;
-            letter-spacing: 0;
-            color: rgba(139,148,158,0.6);
-            margin-left: 0.4rem;
-        }
-        .settings-input {
-            background: var(--bg-main);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            border-radius: 6px;
-            padding: 0.5rem 0.75rem;
-            font-family: var(--font-main);
-            font-size: 0.875rem;
-            outline: none;
-            transition: border-color 0.2s;
-            width: 100%;
-        }
-        .settings-input:focus {
-            border-color: var(--accent-blue);
-        }
-        .settings-input.mono {
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-        }
-        textarea.settings-input {
-            resize: vertical;
-            min-height: 80px;
-            line-height: 1.5;
-        }
-        .settings-project-tabs {
-            display: flex;
-            gap: 0.3rem;
-            flex-wrap: wrap;
-            margin-bottom: 1.2rem;
-        }
-        .settings-project-tab {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            border-radius: 6px;
-            padding: 0.3rem 0.75rem;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-            font-family: var(--font-main);
-        }
-        .settings-project-tab:hover {
-            border-color: var(--accent-blue);
-            color: var(--text-main);
-        }
-        .settings-project-tab.active {
-            background: rgba(56,139,253,0.12);
-            border-color: var(--accent-blue);
-            color: var(--accent-blue);
-        }
-        #settingsFooter {
-            padding: 1rem 1.5rem;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-            gap: 0.8rem;
-        }
-        .settings-toast {
-            font-size: 0.8rem;
-            padding: 0.35rem 0.75rem;
-            border-radius: 6px;
-            font-weight: 600;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .settings-toast.show { opacity: 1; }
-        .settings-toast.ok  { background: rgba(63,185,80,0.15); color: var(--accent-green); border: 1px solid rgba(63,185,80,0.3); }
-        .settings-toast.err { background: rgba(248,81,73,0.15); color: var(--accent-red); border: 1px solid rgba(248,81,73,0.3); }
-        .btn-settings-save {
-            background: var(--accent-blue);
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 0.5rem 1.2rem;
-            font-size: 0.875rem;
-            font-weight: 700;
-            cursor: pointer;
-            font-family: var(--font-main);
-            transition: opacity 0.2s;
-        }
-        .btn-settings-save:hover { opacity: 0.85; }
-        .btn-gear {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            border-radius: 8px;
-            padding: 0.5rem 0.75rem;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            font-family: var(--font-main);
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        .btn-gear:hover {
-            border-color: var(--accent-blue);
-            color: var(--text-main);
-        }
-        /* Prompt Log Panel */
-        .prompt-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid rgba(34, 42, 61, 0.35);
-            transition: background 0.15s;
-        }
-        .prompt-item:last-child { border-bottom: none; }
-        .prompt-item:hover { background: rgba(255, 255, 255, 0.02); }
-
-        .prompt-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        .prompt-text {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-main);
-            line-height: 1.4;
-            flex: 1;
-        }
-
-        .prompt-badges { display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
-
-        .prompt-status {
-            padding: 0.2rem 0.6rem;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            font-family: var(--font-mono);
-        }
-        .prompt-status.pending  { background: rgba(210, 153, 34, 0.15); color: var(--accent-amber); border: 1px solid rgba(210, 153, 34, 0.3); }
-        .prompt-status.shipped  { background: rgba(63, 185, 80, 0.12); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.25); }
-        .prompt-status.answered { background: rgba(56, 139, 253, 0.12); color: var(--accent-blue); border: 1px solid rgba(56, 139, 253, 0.25); }
-
-        .prompt-cat {
-            padding: 0.15rem 0.5rem;
-            border-radius: 8px;
-            font-size: 0.68rem;
-            font-weight: 600;
-            font-family: var(--font-mono);
-            border: 1px solid;
-        }
-        .prompt-cat-fix     { background: rgba(248, 81, 73, 0.1); color: var(--accent-red); border-color: rgba(248, 81, 73, 0.2); }
-        .prompt-cat-feature { background: rgba(188, 140, 255, 0.1); color: var(--accent-purple); border-color: rgba(188, 140, 255, 0.2); }
-        .prompt-cat-question{ background: rgba(56, 139, 253, 0.1); color: var(--accent-blue); border-color: rgba(56, 139, 253, 0.2); }
-        .prompt-cat-design  { background: rgba(63, 185, 80, 0.1); color: var(--accent-green); border-color: rgba(63, 185, 80, 0.2); }
-
-        .prompt-meta {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .prompt-commit {
-            color: var(--accent-blue);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .prompt-commit:hover { text-decoration: underline; }
-
-        .prompt-selector {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-            background: rgba(0,0,0,0.2);
-            padding: 0.3rem 0.6rem;
-            border-radius: 4px;
-            border-left: 2px solid rgba(56, 139, 253, 0.3);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 500px;
-        }
-
-        .prompt-resolved-by {
-            font-size: 0.75rem;
-            color: var(--accent-green);
-            font-style: italic;
-            line-height: 1.4;
-            background: rgba(63, 185, 80, 0.06);
-            padding: 0.4rem 0.7rem;
-            border-radius: 4px;
-            border-left: 2px solid rgba(63, 185, 80, 0.25);
-        }
-
-        .prompt-stat-cell {
-            flex: 1;
-            text-align: center;
-            padding: 0.6rem 0.5rem;
-            border-right: 1px solid var(--border-color);
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-        .prompt-stat-cell:last-child { border-right: none; }
-        .prompt-stat-num {
-            display: block;
-            font-size: 1.3rem;
-            font-weight: 700;
-            font-family: var(--font-mono);
-            line-height: 1;
-            margin-bottom: 0.15rem;
-        }
-
-        /* ── Prompt Thread Panel ─────────────────────────────── */
-        .prompt-expand-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            cursor: pointer;
-            padding: 0;
-            font-family: var(--font-main);
-            transition: color 0.15s;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        .prompt-expand-btn:hover { color: var(--accent-blue); }
-        .prompt-thread {
-            display: none;
-            flex-direction: column;
-            gap: 0;
-            margin-top: 0.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-            background: rgba(0,0,0,0.12);
-        }
-        .prompt-thread.open { display: flex; }
-        .prompt-thread-answer {
-            padding: 0.9rem 1rem;
-            font-size: 0.85rem;
-            line-height: 1.55;
-            color: var(--text-main);
-            border-bottom: 1px solid var(--border-color);
-            white-space: pre-wrap;
-        }
-        .prompt-thread-answer-label {
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--accent-blue);
-            margin-bottom: 0.4rem;
-        }
-        .prompt-thread-reply {
-            padding: 0.9rem 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.6rem;
-        }
-        .prompt-thread-reply label {
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-        }
-        .prompt-thread-textarea {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            border-radius: 6px;
-            padding: 0.5rem 0.75rem;
-            font-family: var(--font-main);
-            font-size: 0.85rem;
-            resize: vertical;
-            min-height: 60px;
-            line-height: 1.45;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .prompt-thread-textarea:focus { border-color: var(--accent-blue); }
-        .prompt-thread-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        .prompt-thread-actions select {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            border-radius: 6px;
-            padding: 0.35rem 0.6rem;
-            font-size: 0.8rem;
-            cursor: pointer;
-            outline: none;
-            font-family: var(--font-main);
-        }
-        .btn-thread-submit {
-            background: var(--accent-blue);
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 0.35rem 0.9rem;
-            font-size: 0.8rem;
-            font-weight: 700;
-            cursor: pointer;
-            font-family: var(--font-main);
-            transition: opacity 0.2s;
-        }
-        .btn-thread-submit:hover { opacity: 0.85; }
-        .btn-thread-dismiss {
-            background: transparent;
-            border: 1px solid rgba(248,81,73,0.3);
-            color: var(--accent-red);
-            border-radius: 6px;
-            padding: 0.35rem 0.75rem;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: var(--font-main);
-            margin-left: auto;
-            transition: all 0.2s;
-        }
-        .btn-thread-dismiss:hover { background: rgba(248,81,73,0.08); }
-        .prompt-thread-toast {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: 4px;
-            font-weight: 600;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .prompt-thread-toast.show { opacity: 1; }
-        .prompt-thread-toast.ok  { color: var(--accent-green); }
-        .prompt-thread-toast.err { color: var(--accent-red); }
-        .prompt-item.dismissed { opacity: 0.4; }
-        .prompt-item.dismissed .prompt-thread { display: none !important; }
-    
-        
-        /* ── View Funnel ── */
-        .funnel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 1rem; }
-        .funnel-card {
-            background: rgba(255,255,255,.025); border: 1px solid var(--border-color);
-            border-radius: 8px; padding: 12px 14px; cursor: pointer; transition: border-color .2s;
-        }
-        .funnel-card:hover { border-color: rgba(255,255,255,.2); }
-        .funnel-card.active { border-color: var(--accent-purple); }
-        .funnel-view-name { font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; text-transform: capitalize; }
-        .funnel-visits { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--accent-blue); }
-        .funnel-pct { font-size: 11px; color: var(--text-muted); }
-        .funnel-dur { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-        .funnel-exit { font-size: 10px; color: var(--accent-red); margin-top: 3px; }
-        .funnel-bar { height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; margin-top: 8px; }
-        .funnel-bar-fill { height: 100%; border-radius: 2px; background: var(--accent-blue); transition: width .6s; }
-
-        /* ── Navigation Paths table ── */
-        .path-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 1rem; }
-        .path-table th { text-align: left; font-size: 10px; text-transform: uppercase;
-            letter-spacing: .08em; color: var(--text-muted); font-weight: 600;
-            padding: 6px 10px; border-bottom: 1px solid var(--border-color); }
-        .path-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,.03);
-            vertical-align: top; }
-        .path-table tr:last-child td { border-bottom: none; }
-        .path-table tr:hover td { background: rgba(255,255,255,.025); }
-        .path-table tr.expanded td { background: rgba(188, 140, 255, 0.07); }
-
-        .path-str { font-family: var(--font-mono); color: var(--text-main); font-size: 12px;
-            display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .view-chip {
-            padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
-            background: rgba(188, 140, 255, 0.15); border: 1px solid rgba(188, 140, 255, 0.25); color: var(--accent-purple);
-        }
-        .view-arrow { color: var(--text-muted); font-size: 10px; }
-
-        .bar-cell { min-width: 100px; }
-        .inline-bar { height: 4px; background: rgba(255,255,255,.06); border-radius: 2px; margin-top: 4px; }
-        .inline-bar-fill { height: 100%; border-radius: 2px;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); }
-
-        .btn-drill {
-            background: rgba(188, 140, 255, 0.12); border: 1px solid rgba(188, 140, 255, 0.25);
-            color: var(--accent-purple); font-size: 10px; font-family: var(--font-mono);
-            padding: 2px 8px; border-radius: 4px; cursor: pointer; transition: all .2s;
-            white-space: nowrap;
-        }
-        .btn-drill:hover { background: rgba(188, 140, 255, 0.25); }
-        .btn-drill.open { background: rgba(188, 140, 255, 0.3); }
-
-        /* ── Drill-down session list (inline expand) ── */
-        .drill-row td { padding: 0; }
-        .drill-inner {
-            background: rgba(18, 22, 32, 0.7); border-top: 1px solid var(--border-color);
-            padding: 12px 16px; display: none;
-        }
-        .drill-inner.open { display: block; }
-        .drill-sessions { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
-        .drill-sess {
-            display: grid; grid-template-columns: 140px 80px 80px 100px 1fr;
-            gap: 8px; align-items: center;
-            padding: 6px 10px; background: rgba(255,255,255,.02);
-            border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;
-            transition: border-color .2s; font-size: 11px;
-        }
-        .drill-sess:hover { border-color: rgba(255,255,255,.2); }
-        .ds-time { font-family: var(--font-mono); color: var(--text-muted); font-size: 10px; }
-        .ds-dur  { font-family: var(--font-mono); color: var(--accent-blue); }
-        .ds-ref  { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .ds-dev  { color: var(--text-muted); }
-</style>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-</head>
-<body>
-
-    <!-- Loader Screen -->
-    <div id="loader" class="loader-screen">
-        <div class="spinner"></div>
-        <p style="font-size: 0.9rem; color: var(--text-muted);">Parsing git logs and compiling behavioral analytics...</p>
-    </div>
-
-    <div class="container">
-        <!-- Header -->
-        <header>
-            <div class="logo-section">
-                <h1>Ripple <span>•</span> Deployments</h1>
-                <p>Git-Native Behavioral Feedback Loop</p>
-            </div>
-            
-            <div style="display:flex; align-items:center; gap:1rem;">
-                <button class="btn-gear" id="refreshBtn" onclick="triggerAnalyze()" title="Recompile Analytics and Suggestions">
-                    🔄 Refresh Data
-                </button>
-                <button class="btn-gear" id="gearBtn" onclick="openSettings()" title="Project Settings">
-                    ⚙️ Settings
-                </button>
-            </div>
-        </header>
-
-        <!-- ══ SETTINGS PANEL (Slide-in from right) ══ -->
-        <div id="settingsOverlay" role="dialog" aria-modal="true" aria-label="Project Settings">
-            <div id="settingsBackdrop" onclick="closeSettings()"></div>
-            <div id="settingsPanel">
-                <div id="settingsPanelHeader">
-                    <h2>⚙️ Project Settings</h2>
-                    <button onclick="closeSettings()" style="background:transparent;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer;line-height:1;padding:0.2rem 0.4rem;border-radius:4px;" title="Close">×</button>
-                </div>
-                <div id="settingsBody">
-                    <!-- Populated by JS -->
-                </div>
-                <div id="settingsFooter">
-                    <span id="settingsToast" class="settings-toast"></span>
-                    <button class="btn-settings-save" onclick="saveSettings()">💾 Save Changes</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Dashboard Dashboard Grid -->
-        <div class="dashboard-grid">
-            
-            <!-- Left Column (Sidebar) -->
-            <div class="sidebar">
-
-                <!-- Global Filters -->
-                <div class="card" style="padding: 1.1rem; border-color: rgba(188, 140, 255, 0.2); margin-bottom: 1rem;">
-                    <div class="card-title" style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem; color: var(--accent-purple);">
-                        🌍 Global Filters
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Project</label>
-                            <select id="projectSelect" class="project-selector" style="width:100%; border:1px solid var(--border-color); background:rgba(0,0,0,0.2); color:var(--text-main); font-size:0.85rem;">
-                                <option value="">Loading projects...</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Navigation -->
-                <div class="card" style="padding: 1.1rem; border-color: rgba(188, 140, 255, 0.2);">
-                    <div class="card-title" style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem; color: var(--accent-purple);">
-                        🧭 Quick Navigation
-                    </div>
-                    <div id="quick-nav" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
-
-                        <a href="#section-suggestions" id="nav-section-suggestions" onclick="switchPanel('section-suggestions'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">💡 Goal-Aware Suggestions</a>
-                        <a href="#section-commits" id="nav-section-commits" onclick="switchPanel('section-commits'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔁 Deployment Correlation</a>
-                        <a href="#section-traffic" id="nav-section-traffic" onclick="switchPanel('section-traffic'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📈 Traffic &amp; Commit Activity</a>
-                        <a href="#section-explorer" id="nav-section-explorer" onclick="switchPanel('section-explorer'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔍 Session Explorer</a>
-                        <a href="#section-funnel" id="nav-section-funnel" onclick="switchPanel('section-funnel'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📐 View Funnel</a>
-                        <a href="#section-paths" id="nav-section-paths" onclick="switchPanel('section-paths'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🗺️ Navigation Paths</a>
-                        <a href="#section-prompts" id="nav-section-prompts" onclick="switchPanel('section-prompts'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🎯 UI Prompt Log</a>
-                        <a href="#section-audience" id="nav-section-audience" onclick="switchPanel('section-audience'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">👥 Audience Profiles</a>
-                    </div>
-                </div>
-                
-                <!-- Project Info / Vitals -->
-                <div class="card">
-                    <div class="card-title">
-                        <span>Project Vitals</span>
-                        <span id="projectUrl" style="font-size: 0.75rem; text-transform: lowercase; font-family: var(--font-mono); color: var(--accent-blue);"></span>
-                    </div>
-                    <div class="metric-row">
-                        <div class="metric-block">
-                            <span class="metric-label">Real Users</span>
-                            <span id="metricRealUsers" class="metric-value">—</span>
-                        </div>
-                        <div class="metric-block">
-                            <span class="metric-label">Engagement Rate</span>
-                            <span id="metricEngRate" class="metric-value engaged">—</span>
-                        </div>
-                        <div class="metric-block">
-                            <span class="metric-label">Median Duration</span>
-                            <span id="metricMedianDuration" class="metric-value duration">—</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Goals checklist -->
-                <div class="card">
-                    <div class="card-title">Stated Goals</div>
-                    <div id="goalsList" class="goals-list">
-                        <!-- Goals dynamic insertion -->
-                    </div>
-                </div>
-
-                <!-- Raw Session Stats -->
-                <div class="card" id="rawStatsCard">
-                    <div class="card-title">Raw Traffic Classification</div>
-                    <div id="classificationBreakdown" class="metric-row" style="font-size: 0.85rem; gap: 0.8rem;">
-                        <!-- Insertion -->
-                    </div>
-                </div>
-
-                <!-- Referrer & Device Stats -->
-                <div class="card" id="deviceStatsCard">
-                    <div class="card-title">Devices & Referrers</div>
-                    <div id="deviceReferrerStats" style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.8rem;">
-                        <!-- Insertion -->
-                    </div>
-                </div>
-
-                <!-- Settings shortcut card -->
-                <div class="card" style="background-color: rgba(56,139,253,0.04); border-color: rgba(56,139,253,0.15); padding: 1.1rem; cursor: pointer;" onclick="openSettings()">
-                    <div class="card-title" style="margin-bottom: 0.5rem;">⚙️ Project Settings</div>
-                    <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.45;">Configure goals, GitHub links, paths, and interaction events per project — no JSON editing required.</p>
-                </div>
-
-                <!-- Global Stats shortcut card -->
-                <a href="/ripple/stats.php" style="text-decoration:none;">
-                    <div class="card" style="background-color: rgba(0,212,170,0.04); border-color: rgba(0,212,170,0.15); padding: 1.1rem; cursor: pointer; margin-top: 0.5rem; transition: background-color 0.2s;">
-                        <div class="card-title" style="margin-bottom: 0.5rem; color: #00d4aa;">📈 Global Stats</div>
-                        <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.45;">View the Friction Lifecycle and iteration velocity across all tracked projects.</p>
-                    </div>
-                </a>
-
-            </div>
-
-            <!-- Right Column (Workspace) -->
-            <div class="workspace">
-                
-                <!-- Suggestions Section -->
-                <section id="section-suggestions">
-                    <h2 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        💡 Goal-Aware Suggestions <span id="suggestionCount" style="font-size: 0.8rem; padding: 0.1rem 0.5rem; background-color: var(--border-color); border-radius: 12px; color: var(--text-muted);">0</span>
-                    </h2>
-                    <div id="suggestionsContainer">
-                        <!-- Dynamic suggestions cards -->
-                    </div>
-                </section>
-
-                <!-- Commits & Correlation Section -->
-                <section class="card" id="section-commits">
-                    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
-                        Deployment Correlation Loop
-                    </h2>
-                    <div id="commitsContainer">
-                        <!-- Dynamic commits list -->
-                    </div>
-                </section>
-
-                <!-- Traffic & Commit Activity Timeline Chart -->
-                <section class="card" id="section-traffic" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
-                    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>📈 Traffic &amp; Commit Activity</span>
-                        <span style="font-size:0.75rem;font-weight:400;color:var(--text-muted);">Sessions (left) · Commits (right) · Deployments = dashed lines</span>
-                    </div>
-                    <div id="stats-chart" style="width:100%;height:420px;"></div>
-                </section>
-
-                
-                <!-- View Funnel -->
-                <section class="workspace-section panel-hidden" id="section-funnel">
-    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
-        <span>📐 View Funnel</span>
-    </h2>
-
-    <!-- View Funnel -->
-    <div class="dashboard-panel card" style="padding: 1.5rem; border-color: var(--border-color);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <span style="font-size:11px;color:var(--text-muted)">click a view to filter paths & sessions below</span>
-      </div>
-      <div class="funnel-grid" id="funnel-grid">
-         <div style="padding:2rem; text-align:center; color:var(--text-muted); font-style:italic;">Awaiting data...</div>
-      </div>
-    </div>
-</section>
-
-
-                <!-- Navigation Paths -->
-                <section class="workspace-section panel-hidden" id="section-paths">
-    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
-        <span>🗺️ Navigation Paths</span>
-    </h2>
-
-    <!-- Navigation Paths -->
-    <div class="dashboard-panel card" style="padding: 1.5rem; border-color: var(--border-color);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <span style="font-size:11px;color:var(--text-muted)">click a view to filter paths & sessions below</span>
-        <button class="panel-action" style="background: none; border: 1px solid var(--border-color); color: var(--text-muted); padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" onclick="clearViewFilter()">Clear filter</button>
-      </div>
-      <div class="filter-bar" style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-        <select class="filter-select" id="path-filter-ref" onchange="renderPaths()" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
-          <option value="">All referrers</option>
-        </select>
-        <select class="filter-select" id="path-filter-dev" onchange="renderPaths()" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
-          <option value="">All devices</option>
-          <option value="mobile">Mobile</option>
-          <option value="desktop">Desktop</option>
-        </select>
-        <span class="filter-count" id="path-filter-count" style="margin-left: auto; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">—</span>
-      </div>
-      <table class="path-table" id="path-table">
-        <thead>
-          <tr>
-            <th>Path</th>
-            <th>Sessions</th>
-            <th>% of real users</th>
-            <th>Avg duration</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="path-tbody">
-          <tr><td colspan="5"><div style="padding:2rem; text-align:center; color:var(--text-muted); font-style:italic;">Awaiting data...</div></td></tr>
-        </tbody>
-      </table>
-    </div>
-</section>
-
-<!-- Session Explorer & Journey Analyzer -->
-                <section class="card" id="section-explorer">
-                    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
-                        <span>🔍 Session Explorer & Journey Analyzer</span>
-                        <span id="explorerModeLabel" style="font-size: 0.85rem; font-weight: normal; color: var(--accent-blue);">All Cumulative Sessions</span>
-                    </h2>
-
-                    <!-- Drill-down active filter info (hidden by default) -->
-                    <div id="drilldownFilterInfo" class="hidden" style="background: rgba(56, 139, 253, 0.1); border: 1px solid rgba(56, 139, 253, 0.25); border-radius: 8px; padding: 0.8rem 1.2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.85rem; color: var(--text-main);">
-                            Showing sessions for commit: <strong id="drilldownCommitHash" style="font-family: var(--font-mono); color: var(--accent-blue);">—</strong> 
-                            (<span id="drilldownCommitMsg"></span>)
-                        </span>
-                        <button class="btn-status" onclick="clearCommitDrilldown()" style="border-color: var(--accent-red); color: var(--accent-red);">Clear Filter</button>
-                    </div>
-
-                    <!-- Referral Mix Shift Warning (hidden by default) -->
-                    <div id="drilldownReferrerWarning" class="hidden" style="background: rgba(210, 153, 34, 0.12); border: 1px solid rgba(210, 153, 34, 0.25); border-radius: 8px; padding: 0.8rem 1.2rem; margin-bottom: 1.5rem; color: var(--text-main); font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; line-height: 1.4;">
-                        <span style="font-size: 1.1rem; flex-shrink: 0;">⚠️</span>
-                        <span id="drilldownReferrerWarningText"></span>
-                    </div>
-
-                    <!-- Explorer Tabs & Summary Metrics -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                        <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; text-align: center;">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Cumulative Sessions</div>
-                            <div id="statTotalSessions" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); margin-top: 0.2rem; color: var(--accent-blue);">—</div>
-                        </div>
-                        <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; text-align: center;">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Unique Visitors</div>
-                            <div id="statUniqueVisitors" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); margin-top: 0.2rem; color: var(--accent-green);">—</div>
-                        </div>
-                        <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; text-align: center;">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Inferred Journeys</div>
-                            <div id="statInferredJourneys" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); margin-top: 0.2rem; color: var(--accent-purple);">—</div>
-                        </div>
-                        <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; text-align: center;">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Bounce Rate</div>
-                            <div id="statBounceRate" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); margin-top: 0.2rem; color: var(--accent-amber);">—</div>
-                        </div>
-                    </div>
-
-                    <!-- Perspective Tabs & Search -->
-                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(34, 42, 61, 0.2);">
-                        <!-- Perspective Tabs -->
-                        <div style="display: flex; background: rgba(34, 42, 61, 0.4); padding: 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                            <button id="tabCumulative" class="btn-tab active" onclick="setExplorerMode('cumulative')" style="background: var(--bg-card); color: var(--text-main); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 600; font-family: var(--font-main);">📁 Cumulative Sessions</button>
-                            <button id="tabUnique" class="btn-tab" onclick="setExplorerMode('unique')" style="background: transparent; color: var(--text-muted); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 600; font-family: var(--font-main); margin-left: 0.25rem;">👥 Inferred Journeys (Unique Visitors)</button>
-                        </div>
-                        <!-- Search Query -->
-                        <div style="display: flex; flex-grow: 1; max-width: 400px; position: relative;">
-                            <input type="text" id="explorerSearch" placeholder="Search path, visitor, referrer, details..." oninput="applyFilters(); if(this.value && window.Ripple) Ripple.track('explorer_searched', { query_length: this.value.length });" style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
-                        </div>
-                    </div>
-
-                    <!-- Consolidated Filters & Sorting Controls -->
-                    <div style="background: rgba(34, 42, 61, 0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
-                        <!-- Filters Grid -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.8rem;">
-                            <!-- Date Select -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Date</label>
-                                <select id="explorerDateFilter" data-ripple-event="filter_changed" data-ripple-label="date" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Dates</option>
-                                </select>
-                            </div>
-                            <!-- Duration Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Duration</label>
-                                <select id="explorerDurationFilter" data-ripple-event="filter_changed" data-ripple-label="duration" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Durations</option>
-                                    <option value="bounce">&lt; 10s</option>
-                                    <option value="short">10s - 1m</option>
-                                    <option value="medium">1m - 5m</option>
-                                    <option value="long">&gt; 5m</option>
-                                </select>
-                            </div>
-                            <!-- Platform/Device Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Platform</label>
-                                <select id="explorerDeviceFilter" data-ripple-event="filter_changed" data-ripple-label="platform" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Platforms</option>
-                                    <option value="desktop">💻 Desktop</option>
-                                    <option value="mobile">📱 Mobile</option>
-                                </select>
-                            </div>
-                            <!-- Browser Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Browser</label>
-                                <select id="explorerBrowserFilter" data-ripple-event="filter_changed" data-ripple-label="browser" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Browsers</option>
-                                </select>
-                            </div>
-                            <!-- Traffic Source Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Traffic Source</label>
-                                <select id="explorerSourceFilter" data-ripple-event="filter_changed" data-ripple-label="traffic_source" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Sources</option>
-                                </select>
-                            </div>
-                            <!-- User Type Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">User Type</label>
-                                <select id="explorerClassFilter" data-ripple-event="filter_changed" data-ripple-label="user_type" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Types</option>
-                                    <option value="deep">🔥 Deep User</option>
-                                    <option value="engaged">⚡ Engaged User</option>
-                                    <option value="glancer">👀 Glancer</option>
-                                    <option value="bounce">🚪 Bounce</option>
-                                    <option value="ghost">👻 Ghost Tab</option>
-                                    <option value="bot">🤖 Bot / Direct</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Sorting Bar -->
-                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 0.8rem; margin-top: 0.2rem; gap: 0.8rem;">
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center;">
-                                <button data-ripple-event="filters_reset" data-ripple-label="Reset All Filters" onclick="resetAllFilters()" style="background: transparent; border: 1px solid rgba(248, 81, 73, 0.3); color: var(--accent-red); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">🧹 Reset All Filters</button>
-                                <button data-ripple-event="export_names_json" data-ripple-label="Export Names JSON" onclick="exportVisitorNames()" style="background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">💾 Export Names JSON</button>
-                                
-                                <!-- Hide Localhost Filter -->
-                                <label style="display: flex; align-items: center; gap: 0.35rem; color: var(--text-main); font-size: 0.8rem; cursor: pointer; user-select: none;">
-                                    <input type="checkbox" id="hideLocalhostCheckbox" onchange="applyFilters(); renderDeployments();" checked style="cursor: pointer; accent-color: var(--accent-green);">
-                                    <span>🛡️ Hide Localhost/Dev</span>
-                                </label>
-                            </div>
-                            
-                            <!-- Sort & Comparison Controls -->
-                            <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
-                                <!-- Comparison Window -->
-                                <div style="display: flex; align-items: center; gap: 0.4rem;">
-                                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Window</span>
-                                    <select id="comparisonWindowSelect" onchange="applyFilters(); renderDeployments();" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                        <option value="3d">3-Day Fixed Window</option>
-                                        <option value="strict">Strict Neighbor Bounding</option>
-                                    </select>
-                                </div>
-
-                                <div style="display: flex; align-items: center; gap: 0.4rem;">
-                                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Sort By</span>
-                                    <select id="explorerSortBy" data-ripple-event="sort_changed" data-ripple-label="sort_by" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="start">🕒 Start Time</option>
-                                    <option value="duration">⏱️ Session Duration</option>
-                                    <option value="visits" id="sortOptionVisits" class="hidden">👥 Visits Count</option>
-                                </select>
-                                <select id="explorerSortOrder" data-ripple-event="sort_changed" data-ripple-label="sort_order" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="desc">Descending ▾</option>
-                                    <option value="asc">Ascending ▴</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Active Deploy Drilldown Stats Comparison (Visible only in drilldown mode) -->
-                    <div id="drilldownStatsComparison" class="hidden" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.1);">
-                        <div style="padding: 1rem; border-right: 1px solid var(--border-color);">
-                            <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">⏪ Before Deploy (Next Prior Window)</div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Session Count:</span> <strong id="drilldownBeforeCount">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median Duration:</span> <strong id="drilldownBeforeDuration">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Bounce Rate:</span> <strong id="drilldownBeforeBounce">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median TTFA:</span> <strong id="drilldownBeforeTTFA">—</strong></div>
-                            <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">1st-Page Exit Rate:</span> <strong id="drilldownBeforeExitRate">—</strong></div>
-                        </div>
-                        <div style="padding: 1rem; background: rgba(63, 185, 80, 0.03);">
-                            <div style="font-size: 0.8rem; font-weight: 600; color: var(--accent-green); margin-bottom: 0.5rem; text-transform: uppercase;">⏩ After Deploy (Since This Commit)</div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Session Count:</span> <strong id="drilldownAfterCount">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median Duration:</span> <strong id="drilldownAfterDuration">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Bounce Rate:</span> <strong id="drilldownAfterBounce">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median TTFA:</span> <strong id="drilldownAfterTTFA">—</strong></div>
-                            <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">1st-Page Exit Rate:</span> <strong id="drilldownAfterExitRate">—</strong></div>
-                        </div>
-                    </div>
-
-                    <!-- Active Deploy Tab Selector (Before/After) when drilldown is active -->
-                    <div id="drilldownTabWrapper" class="hidden" style="display:flex; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
-                        <button id="drilldownTabBefore" onclick="setDrilldownPerspective('before')" style="background:transparent; border:none; border-bottom: 2px solid transparent; color:var(--text-muted); padding: 0.5rem 1rem; font-weight:600; font-size:0.85rem; cursor:pointer; font-family:var(--font-main);">Sessions Before Deploy (<span id="drilldownBeforeTabCount">0</span>)</button>
-                        <button id="drilldownTabAfter" onclick="setDrilldownPerspective('after')" style="background:transparent; border:none; border-bottom: 2px solid var(--accent-green); color:var(--text-main); padding: 0.5rem 1rem; font-weight:600; font-size:0.85rem; cursor:pointer; font-family:var(--font-main);">Sessions After Deploy (<span id="drilldownAfterTabCount">0</span>)</button>
-                    </div>
-
-                    <!-- Session Cards Container -->
-                    <div id="sessionCardsContainer" style="display: flex; flex-direction: column; gap: 0.8rem; max-height: 500px; overflow-y: auto; padding-right: 0.5rem;">
-                        <!-- Dynamic Session cards -->
-                    </div>
-                </section>
-                <!-- Audience Profiles -->
-                <section class="card panel-hidden" id="section-audience">
-                    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
-                        <span>👥 Audience Profiles</span>
-                        <div style="display:flex; gap:0.5rem;">
-                            <button class="btn-status" onclick="generateAggregateAIAnalysis()" style="border-color: var(--accent-purple); color: var(--accent-purple); display:flex; align-items:center; gap:0.4rem;">
-                                ✨ Aggregate AI Analysis
-                            </button>
-                        </div>
-                    </h2>
-                    
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                        <input type="text" id="audienceSearch" placeholder="Search visitors..." oninput="renderAudience()" style="flex: 1; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
-                        <select id="audienceTypeFilter" onchange="renderAudience()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; outline: none; font-family: var(--font-main);">
-                            <option value="all">All Users</option>
-                            <option value="deep">🔥 Deep User</option>
-                            <option value="engaged">⚡ Engaged User</option>
-                            <option value="glancer">👀 Glancer</option>
-                            <option value="bounce">🚪 Bounce</option>
-                        </select>
-                    </div>
-
-                    <div id="audience-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
-                        <!-- JS injected audience cards -->
-                    </div>
-                </section>
-
-                <!-- ══ PROMPT LOG PANEL (Ripple #4) ══ -->
-                <section class="card" id="section-prompts" style="padding: 0; overflow: hidden;">
-                    <!-- Header -->
-                    <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem;">
-                        <div style="display: flex; align-items: center; gap: 0.8rem;">
-                            <h2 style="font-size: 1.1rem; font-weight: 600;">🎯 UI Prompt Log</h2>
-                            <span id="promptBadgePending" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; background: rgba(210, 153, 34, 0.15); color: var(--accent-amber); border: 1px solid rgba(210, 153, 34, 0.25); border-radius: 12px; font-weight: 700;">0 pending</span>
-                            <span id="promptBadgeShipped" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; background: rgba(63, 185, 80, 0.12); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.2); border-radius: 12px; font-weight: 700;">0 shipped</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <!-- Status filter -->
-                            <select id="promptStatusFilter" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                <option value="all">All Statuses</option>
-                                <option value="pending">⏳ Pending</option>
-                                <option value="answered">💬 Answered</option>
-                                <option value="shipped">✅ Shipped</option>
-                                <option value="dismissed">🚫 Dismissed</option>
-                            </select>
-                            <!-- Category filter -->
-                            <select id="promptCategoryFilter" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                <option value="all">All Categories</option>
-                                <option value="fix">🔧 Fix</option>
-                                <option value="feature">✨ Feature</option>
-                                <option value="design">🎨 Design</option>
-                                <option value="copy">✏️ Copy</option>
-                                <option value="data">📊 Data</option>
-                                <option value="question">❓ Question</option>
-                            </select>
-                            <!-- Sort -->
-                            <select id="promptSort" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                <option value="newest">⬇ Newest</option>
-                                <option value="oldest">⬆ Oldest</option>
-                            </select>
-                            <!-- Search -->
-                            <input type="text" id="promptSearch" placeholder="Search…" oninput="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.8rem; font-size: 0.8rem; outline: none; font-family: var(--font-main); width: 160px;">
-                        </div>
-                    </div>
-
-                    <!-- Summary stats bar -->
-                    <div id="promptStatsBar" style="display: flex; gap: 0; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.1);">
-                        <!-- Injected by JS -->
-                    </div>
-
-                    <!-- Prompt list -->
-                    <div id="prompts-list" style="display: flex; flex-direction: column; max-height: 600px; overflow-y: auto; padding: 0.5rem 0;">
-                        <!-- Injected by JS -->
-                    </div>
-                </section>
-
-            </div>
-
-        </div>
-    </div>
-
-    <!-- JS Logic -->
-    <script>
         let analyticsData = null;
         let suggestionsData = null;
         let rippleConfig = null;   // loaded from api/config.php
@@ -1616,13 +51,17 @@
 
             // Live Reload for Prompt Log
             setInterval(() => {
-                fetch('../../data/prompt_log.json?t=' + Date.now())
+                fetch('api/stats_data.php?t=' + Date.now())
                     .then(res => res.json())
                     .then(data => {
-                        if (Array.isArray(data) && allPrompts && allPrompts.length !== data.length) {
-                            allPrompts = data;
+                        // Check if prompt count changed to avoid unnecessary re-renders of the whole page
+                        if (allPrompts && data.prompts && allPrompts.length !== data.prompts.length) {
+                            allPrompts = data.prompts;
                             renderPrompts();
-                        }
+            if(typeof populateFilters !== "undefined") populateFilters();
+            if(typeof renderFunnel !== "undefined") renderFunnel();
+            if(typeof renderPaths !== "undefined") renderPaths();
+        }
                     })
                     .catch(e => console.error("Live reload fetch failed", e));
             }, 3000);
@@ -1816,9 +255,9 @@
         async function init() {
             try {
                 const [analyticsRes, suggestionsRes, configRes] = await Promise.all([
-                    fetch('../../data/project_analytics.json?t=' + Date.now()),
-                    fetch('../../data/ripple_suggestions.json?t=' + Date.now()),
-                    fetch('../../api/config.php?t=' + Date.now())
+                    fetch('../../data/project_analytics.json'),
+                    fetch('../../data/ripple_suggestions.json'),
+                    fetch('../../api/config.php')
                 ]);
 
                 analyticsData = await analyticsRes.json();
@@ -1948,30 +387,13 @@
             // 2. Render Goals
             const goalsContainer = document.getElementById('goalsList');
             goalsContainer.innerHTML = "";
-            const goalsToRender = project.goals_status || (project.goals || []).map(g => ({ text: g, type: 'milestone', status: 'pending', details: 'No status evaluated yet' }));
-            
-            if (goalsToRender.length > 0) {
-                goalsToRender.forEach(goal => {
+            if (project.goals && project.goals.length > 0) {
+                project.goals.forEach(goal => {
                     const item = document.createElement('div');
                     item.className = "goal-item";
-                    item.style.display = "flex";
-                    item.style.alignItems = "flex-start";
-                    item.style.gap = "0.5rem";
-                    item.style.marginBottom = "0.4rem";
-                    
-                    let icon = "⚬";
-                    let color = "var(--text-muted)";
-                    if (goal.status === "completed" || goal.status === "passed") {
-                        icon = "✅";
-                        color = "var(--accent-green)";
-                    } else if (goal.status === "failing") {
-                        icon = "⚠️";
-                        color = "var(--accent-amber)";
-                    }
-                    
                     item.innerHTML = `
-                        <span style="color: ${color}; line-height: 1.2; font-size: 0.95rem;">${icon}</span>
-                        <span class="goal-text" style="font-size: 0.8rem; line-height: 1.2; cursor: help;" title="${escHtml(goal.details || '')}">${escHtml(goal.text)}</span>
+                        <span class="goal-checkbox">⚬</span>
+                        <span class="goal-text">${goal}</span>
                     `;
                     goalsContainer.appendChild(item);
                 });
@@ -1983,81 +405,39 @@
             const suggestionsContainer = document.getElementById('suggestionsContainer');
             suggestionsContainer.innerHTML = "";
             
-            let dynamicSuggestionsHtml = "";
-            let dynamicCount = 0;
-            
-            // Render failing metrics as high-priority suggestions
-            if (activeProjectKey !== 'all' && project && project.goals_status) {
-                project.goals_status.forEach(goal => {
-                    if (goal.type === "metric" && goal.status === "failing") {
-                        dynamicCount++;
-                        const actionText = goal.metric_type === "duration" 
-                            ? `Reduce average duration on the '${goal.target_name}' view to meet the target of ${goal.operator} ${goal.target_value}s.`
-                            : `Increase the conversion rate for '${goal.target_name}' event to meet the target of ${goal.operator} ${goal.target_value}%.`;
-                        
-                        dynamicSuggestionsHtml += `
-                            <div class="card suggestion-card high" style="border-left: 4px solid var(--accent-amber); background: rgba(210, 153, 34, 0.03); margin-bottom: 1rem; padding: 1rem;">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                                    <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 600; color: var(--accent-amber); letter-spacing: 0.5px;">⚠️ Goal Metric Failure</span>
-                                    <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">${goal.target_name}</span>
-                                </div>
-                                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: var(--text-main); font-weight: 600;">Metric Off-Target: ${goal.text}</h4>
-                                <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.8rem 0; line-height: 1.4;">
-                                    <strong>Status:</strong> ${goal.details}<br>
-                                    <strong>Recommended Action:</strong> ${actionText}
-                                </p>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <button class="btn-status" style="border-color: var(--accent-blue); color: var(--accent-blue); padding: 0.25rem 0.6rem; font-size: 0.75rem;" onclick="switchPanel('section-prompts'); window.location.hash='#section-prompts';">🎯 Resolve via Prompt Capture</button>
-                                </div>
-                            </div>
-                        `;
-                    }
-                });
-            }
-
             // Filter suggestions for active project
             const projectSuggestions = (suggestionsData.suggestions || []).filter(s => {
                 return projectKey === 'all' || s.project_key === projectKey;
             });
             const suggestionCountEl = document.getElementById('suggestionCount');
-            if (suggestionCountEl) suggestionCountEl.textContent = projectSuggestions.length + dynamicCount;
+            if (suggestionCountEl) suggestionCountEl.textContent = projectSuggestions.length;
 
-            if (dynamicCount > 0 || projectSuggestions.length > 0) {
-                if (dynamicSuggestionsHtml) {
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = dynamicSuggestionsHtml;
-                    while (tempDiv.firstChild) {
-                        suggestionsContainer.appendChild(tempDiv.firstChild);
-                    }
-                }
-                
-                if (projectSuggestions.length > 0) {
-                    projectSuggestions.forEach(s => {
-                        const card = document.createElement('div');
-                        card.className = `suggestion-card ${s.priority}`;
-                        card.id = `card-${s.id}`;
-                        
-                        const shortCommit = s.commit ? s.commit.substring(0, 8) : null;
-                        const commitMarkup = shortCommit ? `<span class="tag type-tag">Commit: ${shortCommit}</span>` : '';
+            if (projectSuggestions.length > 0) {
+                projectSuggestions.forEach(s => {
+                    const card = document.createElement('div');
+                    card.className = `suggestion-card ${s.priority}`;
+                    card.id = `card-${s.id}`;
+                    
+                    const shortCommit = s.commit ? s.commit.substring(0, 8) : null;
+                    const commitMarkup = shortCommit ? `<span class="tag type-tag">Commit: ${shortCommit}</span>` : '';
 
-                        card.innerHTML = `
-                            <div class="suggestion-header">
-                                <span class="suggestion-title">${s.title}</span>
-                                <div class="suggestion-tags">
-                                    <span class="tag priority-${s.priority}">${s.priority} priority</span>
-                                    ${commitMarkup}
-                                </div>
+                    card.innerHTML = `
+                        <div class="suggestion-header">
+                            <span class="suggestion-title">${s.title}</span>
+                            <div class="suggestion-tags">
+                                <span class="tag priority-${s.priority}">${s.priority} priority</span>
+                                ${commitMarkup}
                             </div>
-                            <div class="suggestion-evidence"><strong>Evidence:</strong> ${s.evidence}</div>
-                            <div class="suggestion-rec">${s.suggestion}</div>
-                            <div class="suggestion-footer">
-                                <span>Goal: ${s.goal}</span>
-                                <button class="btn-status" onclick="acknowledgeSuggestion('${s.id}')">Acknowledge</button>
-                            </div>
-                        `;
-                        suggestionsContainer.appendChild(card);
-                    });
-                }
+                        </div>
+                        <div class="suggestion-evidence"><strong>Evidence:</strong> ${s.evidence}</div>
+                        <div class="suggestion-rec">${s.suggestion}</div>
+                        <div class="suggestion-footer">
+                            <span>Goal: ${s.goal}</span>
+                            <button class="btn-status" onclick="acknowledgeSuggestion('${s.id}')">Acknowledge</button>
+                        </div>
+                    `;
+                    suggestionsContainer.appendChild(card);
+                });
             } else {
                 suggestionsContainer.innerHTML = `
                     <div style="text-align: center; padding: 3rem 1rem; border: 1px dashed var(--border-color); border-radius: 8px; color: var(--text-muted);">
@@ -2203,7 +583,6 @@
             document.getElementById('drilldownFilterInfo').classList.add('hidden');
             document.getElementById('drilldownStatsComparison').classList.add('hidden');
             document.getElementById('drilldownTabWrapper').classList.add('hidden');
-            document.getElementById('drilldownReferrerWarning').classList.add('hidden');
             
             updateModeLabel();
             applyFilters();
@@ -2330,7 +709,7 @@
 
         function getWindowStats(sessions) {
             if (!sessions || sessions.length === 0) {
-                return { count: 0, medianDuration: "0s", bounceRate: "0.0%", medianTTFA: "—", exitRate: "0.0%" };
+                return { count: 0, medianDuration: "0s", bounceRate: "0.0%" };
             }
             const count = sessions.length;
             
@@ -2349,24 +728,10 @@
             }
             
             // Bounce rate
-            const bots = sessions.filter(s => s.classification === 'bot').length;
-            const realCount = count - bots;
             const bounceCount = sessions.filter(s => s.classification === 'bounce').length;
-            const bounceRate = realCount > 0 ? ((bounceCount / realCount) * 100).toFixed(1) + "%" : "0.0%";
-
-            // Median TTFA
-            const ttfas = sessions
-                .map(s => s.ttfa_s)
-                .filter(t => t !== undefined && t !== null)
-                .sort((a, b) => a - b);
-            const medianTTFA = ttfas.length > 0 ? ttfas[Math.floor(ttfas.length / 2)].toFixed(1) + "s" : "—";
-
-            // Exit rate
-            const realSessions = sessions.filter(s => s.classification !== 'bot');
-            const exits = realSessions.filter(s => !s.views || s.views.length <= 1);
-            const exitRate = realSessions.length > 0 ? ((exits.length / realSessions.length) * 100).toFixed(1) + "%" : "0.0%";
+            const bounceRate = ((bounceCount / count) * 100).toFixed(1) + "%";
             
-            return { count, medianDuration: medianDisplay, bounceRate, medianTTFA, exitRate };
+            return { count, medianDuration: medianDisplay, bounceRate };
         }
 
         function populateFilterDropdowns(project) {
@@ -2456,11 +821,6 @@
 
         // Helper filter matcher to avoid redundant logic
         function matchesFilters(s) {
-            // Localhost filter
-            const localhostCheckbox = document.getElementById('hideLocalhostCheckbox');
-            const hideLocal = localhostCheckbox ? localhostCheckbox.checked : true;
-            if (hideLocal && s.is_localhost) return false;
-
             if (!s.project_key && s.id) {
                 s.project_key = activeProjectKey !== 'all' ? activeProjectKey : 'unknown';
             }
@@ -2508,10 +868,7 @@
             // User type / Classification filter
             const classMatch = classFilter === 'all' || s.classification === classFilter;
 
-            // Funnel View filter
-            const funnelMatch = !activeViewFilter || (s.path || '').includes(activeViewFilter);
-
-            return queryMatch && projMatch && dateMatch && durMatch && deviceMatch && browserMatch && sourceMatch && classMatch && funnelMatch;
+            return queryMatch && projMatch && dateMatch && durMatch && deviceMatch && browserMatch && sourceMatch && classMatch;
         }
 
         
@@ -2534,9 +891,11 @@
 
 function toggleViewFilter(view) {
   activeViewFilter = activeViewFilter === view ? null : view;
-  applyFilters();
+  renderFunnel();
+  renderPaths();
+  renderSessions();
 }
-function clearViewFilter() { activeViewFilter = null; applyFilters(); }
+function clearViewFilter() { activeViewFilter = null; renderFunnel(); renderPaths(); renderSessions(); }
 
 // ── Deployments ────────────────────────────────────────────────────────
 function renderDeployments() {
@@ -2708,8 +1067,8 @@ function renderPaths() {
         <td style="color:var(--text-2)">${Math.round(path.filtered_count/(p.sessions.length||1)*100)}%</td>
         <td style="font-family:var(--font-mono);color:var(--neon-blue)">${path.avg_display}</td>
         <td><button class="btn-drill" id="drill-btn-${i}"
-              onclick="toggleDrill(${i}, '${encodeURIComponent(JSON.stringify(path.filtered_ids))}')">
-              ▸ ${path.filtered_count} sessions
+              onclick="toggleDrill(${i}, ${JSON.stringify(path.filtered_ids)})">
+              Γû╛ ${path.filtered_count} sessions
             </button></td>
       </tr>
       <tr class="drill-row" id="drill-row-${i}">
@@ -2731,18 +1090,11 @@ function renderPaths() {
 
             // 1. Get raw base list of sessions (filtered by commit window if drilldown is active)
             let baseSessions = [];
-            const windowModeSelect = document.getElementById('comparisonWindowSelect');
-            const useStrict = windowModeSelect ? (windowModeSelect.value === 'strict') : false;
-
             if (drilldownCommitHash) {
                 const windows = project.deployment_windows || [];
                 const win = windows.find(w => w.commit.hash === drilldownCommitHash);
                 if (win) {
-                    if (useStrict) {
-                        baseSessions = drilldownPerspective === 'after' ? (win.sessions_after || []) : (win.sessions_before || []);
-                    } else {
-                        baseSessions = drilldownPerspective === 'after' ? (win.sessions_after_3d || []) : (win.sessions_before_3d || []);
-                    }
+                    baseSessions = drilldownPerspective === 'after' ? (win.sessions_after || []) : (win.sessions_before || []);
                 }
             } else {
                 baseSessions = project.sessions || [];
@@ -2903,17 +1255,12 @@ function renderPaths() {
             }
 
             // 5. Recalculate Drilldown Stats Comparison (if active)
-            const warningEl = document.getElementById('drilldownReferrerWarning');
-            if (warningEl) warningEl.classList.add('hidden');
-
             if (drilldownCommitHash) {
                 const windows = project.deployment_windows || [];
                 const win = windows.find(w => w.commit.hash === drilldownCommitHash);
                 if (win) {
-                    const sessionsBefore = useStrict ? (win.sessions_before || []) : (win.sessions_before_3d || []);
-                    const sessionsAfter = useStrict ? (win.sessions_after || []) : (win.sessions_after_3d || []);
-                    const filteredBefore = sessionsBefore.filter(matchesFilters);
-                    const filteredAfter = sessionsAfter.filter(matchesFilters);
+                    const filteredBefore = (win.sessions_before || []).filter(matchesFilters);
+                    const filteredAfter = (win.sessions_after || []).filter(matchesFilters);
 
                     const beforeStats = getWindowStats(filteredBefore);
                     const afterStats = getWindowStats(filteredAfter);
@@ -2921,66 +1268,13 @@ function renderPaths() {
                     document.getElementById('drilldownBeforeCount').textContent = beforeStats.count;
                     document.getElementById('drilldownBeforeDuration').textContent = beforeStats.medianDuration;
                     document.getElementById('drilldownBeforeBounce').textContent = beforeStats.bounceRate;
-                    document.getElementById('drilldownBeforeTTFA').textContent = beforeStats.medianTTFA;
-                    document.getElementById('drilldownBeforeExitRate').textContent = beforeStats.exitRate;
 
                     document.getElementById('drilldownAfterCount').textContent = afterStats.count;
                     document.getElementById('drilldownAfterDuration').textContent = afterStats.medianDuration;
                     document.getElementById('drilldownAfterBounce').textContent = afterStats.bounceRate;
-                    document.getElementById('drilldownAfterTTFA').textContent = afterStats.medianTTFA;
-                    document.getElementById('drilldownAfterExitRate').textContent = afterStats.exitRate;
 
                     document.getElementById('drilldownBeforeTabCount').textContent = beforeStats.count;
                     document.getElementById('drilldownAfterTabCount').textContent = afterStats.count;
-
-                    // Check for significant referrer mix shift
-                    let referrerWarningText = "";
-                    const beforeRefCounts = {};
-                    let beforeRealTotal = 0;
-                    filteredBefore.forEach(s => {
-                        if (s.classification === 'bot') return;
-                        const ref = s.referrer || 'direct';
-                        beforeRefCounts[ref] = (beforeRefCounts[ref] || 0) + 1;
-                        beforeRealTotal++;
-                    });
-
-                    const afterRefCounts = {};
-                    let afterRealTotal = 0;
-                    filteredAfter.forEach(s => {
-                        if (s.classification === 'bot') return;
-                        const ref = s.referrer || 'direct';
-                        afterRefCounts[ref] = (afterRefCounts[ref] || 0) + 1;
-                        afterRealTotal++;
-                    });
-
-                    if (beforeRealTotal > 0 && afterRealTotal > 0) {
-                        for (const ref in beforeRefCounts) {
-                            if (ref === 'direct') continue;
-                            const beforeShare = beforeRefCounts[ref] / beforeRealTotal;
-                            const afterShare = (afterRefCounts[ref] || 0) / afterRealTotal;
-                            const diff = beforeShare - afterShare;
-                            
-                            // Major referrer >= 15% share, absolute drop > 20%
-                            if (beforeShare >= 0.15 && diff > 0.20) {
-                                const sortedAfterRefs = Object.entries(afterRefCounts)
-                                    .map(([r, c]) => ({ referrer: r, share: c / afterRealTotal }))
-                                    .sort((a, b) => b.share - a.share);
-                                
-                                const topAfterStr = sortedAfterRefs.length > 0 
-                                    ? `mostly ${sortedAfterRefs[0].referrer} (${Math.round(sortedAfterRefs[0].share * 100)}%)` 
-                                    : "mostly direct/organic";
-
-                                referrerWarningText = `<strong>Referral Mix Shift</strong>: 'Before' period was driven by viral ${ref} traffic (${Math.round(beforeShare * 100)}%). 'After' is ${topAfterStr}. Behavior changes may be due to visitor demographic shifts rather than UX changes.`;
-                                break;
-                            }
-                        }
-                    }
-
-                    const warningTextEl = document.getElementById('drilldownReferrerWarningText');
-                    if (warningEl && warningTextEl && referrerWarningText) {
-                        warningTextEl.innerHTML = referrerWarningText;
-                        warningEl.classList.remove('hidden');
-                    }
                 }
             }
 
@@ -2999,10 +1293,8 @@ function renderPaths() {
                         return; // Skip this commit if it doesn't match selected project
                     }
 
-                    const sessionsBefore = useStrict ? (w.sessions_before || []) : (w.sessions_before_3d || []);
-                    const sessionsAfter = useStrict ? (w.sessions_after || []) : (w.sessions_after_3d || []);
-                    const filteredBefore = sessionsBefore.filter(matchesFilters);
-                    const filteredAfter = sessionsAfter.filter(matchesFilters);
+                    const filteredBefore = (w.sessions_before || []).filter(matchesFilters);
+                    const filteredAfter = (w.sessions_after || []).filter(matchesFilters);
                     
                     let diffClass = "none";
                     let diffSymbol = "";
@@ -3021,7 +1313,6 @@ function renderPaths() {
                     }
 
                     // Calculate A/B metrics dynamically
-                    // Calculate A/B metrics dynamically
                     const getMetrics = (sessions) => {
                         let bots = 0, engaged = 0, bounce = 0;
                         sessions.forEach(s => {
@@ -3035,22 +1326,6 @@ function renderPaths() {
                             engPct: real > 0 ? (engaged / real * 100) : 0,
                             bouncePct: real > 0 ? (bounce / real * 100) : 0
                         };
-                    };
-
-                    const getMedianTTFA = (sessions) => {
-                        const ttfas = sessions
-                            .map(s => s.ttfa_s)
-                            .filter(t => t !== undefined && t !== null)
-                            .sort((a, b) => a - b);
-                        if (!ttfas.length) return null;
-                        return ttfas[Math.floor(ttfas.length / 2)];
-                    };
-
-                    const getFirstPageExitRate = (sessions) => {
-                        const realSessions = sessions.filter(s => s.classification !== 'bot');
-                        if (!realSessions.length) return 0;
-                        const exits = realSessions.filter(s => !s.views || s.views.length <= 1);
-                        return (exits.length / realSessions.length * 100);
                     };
 
                     const bMetrics = getMetrics(filteredBefore);
@@ -3072,24 +1347,6 @@ function renderPaths() {
                         bounceClass = bounceDelta > 2 ? "var(--accent-red)" : (bounceDelta < -2 ? "var(--accent-green)" : "var(--text-muted)");
                     }
 
-                    const bTTFA = getMedianTTFA(filteredBefore);
-                    const aTTFA = getMedianTTFA(filteredAfter);
-                    let ttfaDeltaStr = "";
-                    let ttfaClass = "var(--text-muted)";
-                    if (bTTFA !== null && aTTFA !== null) {
-                        const delta = aTTFA - bTTFA;
-                        ttfaDeltaStr = delta > 0 ? `(+${delta.toFixed(1)}s)` : (delta < 0 ? `(${delta.toFixed(1)}s)` : '');
-                        ttfaClass = delta < -1 ? "var(--accent-green)" : (delta > 1 ? "var(--accent-red)" : "var(--text-muted)");
-                    }
-
-                    const bExit = getFirstPageExitRate(filteredBefore);
-                    const aExit = getFirstPageExitRate(filteredAfter);
-                    let exitDeltaStr = "";
-                    let exitClass = "var(--text-muted)";
-                    const exitDelta = aExit - bExit;
-                    exitDeltaStr = exitDelta > 0 ? `(+${exitDelta.toFixed(1)}%)` : (exitDelta < 0 ? `(${exitDelta.toFixed(1)}%)` : '');
-                    exitClass = exitDelta < -2 ? "var(--accent-green)" : (exitDelta > 2 ? "var(--accent-red)" : "var(--text-muted)");
-
                     const row = document.createElement('div');
                     row.className = "commit-row";
                     if (commit.hash === drilldownCommitHash) {
@@ -3103,23 +1360,16 @@ function renderPaths() {
                         <span style="font-size:0.65rem; color:var(--accent-purple); text-transform:uppercase; font-weight:700; display:block; margin-bottom:0.15rem;">${w.project_name}</span>
                     ` : '';
 
-                    const shortWindowBadge = w.short_window ? `
-                        <span class="tag priority-high" style="background:rgba(239,68,68,0.15); color:var(--accent-red); font-size:10px; padding:1px 4px; border-radius:2px; cursor:help;" title="Strict evaluation window is short (< 6 hours). Metrics may be noisy; use Fixed Window mode.">⚠️ Short Window</span>
-                    ` : '';
-
                     row.innerHTML = `
                         <div class="commit-hash" style="display:flex; flex-direction:column; justify-content:center;">
                             ${projectBadge}
                             <span>${hashShort}</span>
                         </div>
                         <div class="commit-info">
-                            <h4 style="display:flex; align-items:center; gap:0.4rem; margin:0 0 0.25rem 0;">
-                                ${commit.message_short}
-                                ${shortWindowBadge}
-                            </h4>
+                            <h4>${commit.message_short}</h4>
                             <p>${commit.date_display} • by ${commit.author_name}</p>
                             
-                            <div style="display:flex; flex-wrap:wrap; gap: 1rem; margin-top: 0.5rem; font-size: 0.75rem;">
+                            <div style="display:flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.75rem;">
                                 <div style="display:flex; flex-direction:column; align-items:flex-start;">
                                     <span style="color:var(--text-muted); font-size:0.65rem; text-transform:uppercase;">Engagement</span>
                                     <span>${bMetrics.engPct.toFixed(1)}% → <span style="color:${engClass}; font-weight:600;">${aMetrics.engPct.toFixed(1)}% ${engDeltaStr}</span></span>
@@ -3127,14 +1377,6 @@ function renderPaths() {
                                 <div style="display:flex; flex-direction:column; align-items:flex-start;">
                                     <span style="color:var(--text-muted); font-size:0.65rem; text-transform:uppercase;">Bounce Rate</span>
                                     <span>${bMetrics.bouncePct.toFixed(1)}% → <span style="color:${bounceClass}; font-weight:600;">${aMetrics.bouncePct.toFixed(1)}% ${bounceDeltaStr}</span></span>
-                                </div>
-                                <div style="display:flex; flex-direction:column; align-items:flex-start;">
-                                    <span style="color:var(--text-muted); font-size:0.65rem; text-transform:uppercase;">TTFA</span>
-                                    <span>${bTTFA !== null ? bTTFA.toFixed(1) + 's' : '—'} → <span style="color:${ttfaClass}; font-weight:600;">${aTTFA !== null ? aTTFA.toFixed(1) + 's' : '—'} ${ttfaDeltaStr}</span></span>
-                                </div>
-                                <div style="display:flex; flex-direction:column; align-items:flex-start;">
-                                    <span style="color:var(--text-muted); font-size:0.65rem; text-transform:uppercase;">1st-Page Exit</span>
-                                    <span>${bExit.toFixed(1)}% → <span style="color:${exitClass}; font-weight:600;">${aExit.toFixed(1)}% ${exitDeltaStr}</span></span>
                                 </div>
                             </div>
                         </div>
@@ -3516,68 +1758,6 @@ function renderPaths() {
             if (window.Ripple) Ripple.track('suggestion_acknowledged', { id });
         }
 
-        // ── Trigger Recompile (ETL Run) ───────────────────────────────────────
-        async function triggerAnalyze() {
-            const btn = document.getElementById('refreshBtn');
-            if (!btn) return;
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '🔄 Refreshing...';
-            btn.style.opacity = '0.7';
-
-            try {
-                // Show loader with custom text
-                const loader = document.getElementById('loader');
-                if (loader) {
-                    const loaderText = loader.querySelector('p');
-                    if (loaderText) {
-                        loader._originalText = loaderText.textContent;
-                        loaderText.textContent = 'Recompiling analytics and suggestions...';
-                    }
-                    loader.style.display = 'flex';
-                    // force layout reflow
-                    void loader.offsetWidth;
-                    loader.style.opacity = '1';
-                }
-
-                // Call the API endpoint relative to the dashboard
-                const response = await fetch('../../api/analyze.php?_=' + Date.now());
-                const result = await response.json();
-                
-                if (result.success) {
-                    if (typeof init === 'function') {
-                        await init();
-                    } else {
-                        location.reload();
-                    }
-                    showSettingsToast(' Recompiled!', 'ok');
-                } else {
-                    alert('Recompilation failed:\n' + (result.error || result.script_output || 'Unknown error'));
-                    showSettingsToast(' Compile failed', 'err');
-                }
-            } catch (err) {
-                console.error('Error triggering analytics run:', err);
-                showSettingsToast(' Network error', 'err');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-                btn.style.opacity = '1';
-                
-                // Hide loader and restore original text
-                const loader = document.getElementById('loader');
-                if (loader) {
-                    loader.style.opacity = '0';
-                    setTimeout(() => {
-                        loader.style.display = 'none';
-                        const loaderText = loader.querySelector('p');
-                        if (loaderText && loader._originalText) {
-                            loaderText.textContent = loader._originalText;
-                        }
-                    }, 300);
-                }
-            }
-        }
-
         // ── Settings Panel ─────────────────────────────────────────────────────
 
         let settingsActiveProjectKey = null; // which project is shown in the settings editor
@@ -3585,11 +1765,6 @@ function renderPaths() {
         function openSettings() {
             const overlay = document.getElementById('settingsOverlay');
             overlay.classList.add('open');
-            if (activeProjectKey && activeProjectKey !== 'all') {
-                settingsActiveProjectKey = activeProjectKey;
-            } else {
-                settingsActiveProjectKey = null;
-            }
             renderSettingsPanel();
             if (window.Ripple) Ripple.track('settings_opened');
         }
@@ -3650,10 +1825,6 @@ function renderPaths() {
                         <textarea class="settings-input" id="sField_goals" rows="5">${escHtml((proj.goals || []).join('\n'))}</textarea>
                     </div>
                     <div class="settings-field">
-                        <label>Goal Lookback Window <span class="field-hint">— days</span></label>
-                        <input class="settings-input mono" id="sField_lookback_days" type="number" value="${proj.lookback_days ?? 7}" min="1">
-                    </div>
-                    <div class="settings-field">
                         <label>Tracked Interaction Events <span class="field-hint">— one per line</span></label>
                         <textarea class="settings-input mono" id="sField_events" rows="5">${escHtml((proj.interaction_events || []).join('\n'))}</textarea>
                     </div>
@@ -3702,7 +1873,6 @@ function renderPaths() {
                     git_repo:           document.getElementById('sField_git_repo')?.value.trim() || p.git_repo,
                     sessions_dir:       document.getElementById('sField_sessions_dir')?.value.trim() || p.sessions_dir,
                     goals:              (document.getElementById('sField_goals')?.value || '').split('\n').map(s => s.trim()).filter(Boolean),
-                    lookback_days:      parseInt(document.getElementById('sField_lookback_days')?.value || '7', 10),
                     interaction_events: (document.getElementById('sField_events')?.value || '').split('\n').map(s => s.trim()).filter(Boolean),
                 };
             });
@@ -3834,12 +2004,9 @@ function renderPaths() {
                 return true;
             });
 
-            // Update summary badges (context aware of project selection)
-            const projectPrompts = projectFilter === 'all'
-                ? allPrompts
-                : allPrompts.filter(p => p.projectKey === projectFilter);
-            const pending  = projectPrompts.filter(p => p.status === 'pending').length;
-            const shipped  = projectPrompts.filter(p => p.status === 'shipped' || p.status === 'answered').length;
+            // Update summary badges
+            const pending  = allPrompts.filter(p => p.status === 'pending').length;
+            const shipped  = allPrompts.filter(p => p.status === 'shipped' || p.status === 'answered').length;
             const badgeP = document.getElementById('promptBadgePending');
             const badgeS = document.getElementById('promptBadgeShipped');
             if (badgeP) badgeP.textContent = pending + ' pending';
@@ -3895,9 +2062,11 @@ function renderPaths() {
 
                 const projectTag = `<span style="font-size:0.65rem;color:var(--accent-purple);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;font-family:var(--font-mono)">${p.projectKey}</span>`;
 
-                // Thread expand button — always show for all prompts to allow replying, re-submit (changing category), and dismissing/archiving
-                const showThread = true;
-                const expandBtn = `<button class="prompt-expand-btn" onclick="togglePromptThread('${p.promptId}')" id="expand-btn-${p.promptId}">▶ Thread</button>`;
+                // Thread expand button — shown for answered prompts and any question
+                const showThread = isAnswered || p.category === 'question' || p.reply;
+                const expandBtn = showThread && !isDismissed
+                    ? `<button class="prompt-expand-btn" onclick="togglePromptThread('${p.promptId}')" id="expand-btn-${p.promptId}">▶ Thread</button>`
+                    : '';
 
                 // Answer block
                 const answerBlock = p.answer
@@ -3918,7 +2087,7 @@ function renderPaths() {
                        </div>`
                     : '';
 
-                const threadPanel = `
+                const threadPanel = showThread && !isDismissed ? `
                     <div class="prompt-thread" id="thread-${p.promptId}">
                         ${answerBlock}
                         ${replyBlock}
@@ -3927,7 +2096,7 @@ function renderPaths() {
                             <textarea class="prompt-thread-textarea" id="reply-${p.promptId}" placeholder="Follow-up, clarification, or new direction…">${escHtml(p.reply || '')}</textarea>
                             <div class="prompt-thread-actions">
                                 <select id="recat-${p.promptId}">
-                                    <option value="">Re-submit/Change Category…</option>
+                                    <option value="">Re-submit as…</option>
                                     <option value="fix">🔧 fix</option>
                                     <option value="feature">✨ feature</option>
                                     <option value="design">🎨 design</option>
@@ -3937,10 +2106,10 @@ function renderPaths() {
                                 </select>
                                 <button class="btn-thread-submit" onclick="resubmitPrompt('${p.promptId}')">↺ Re-submit</button>
                                 <span class="prompt-thread-toast" id="toast-${p.promptId}"></span>
-                                ${!isDismissed ? `<button class="btn-thread-dismiss" onclick="dismissPrompt('${p.promptId}')">📥 Archive</button>` : ''}
+                                <button class="btn-thread-dismiss" onclick="dismissPrompt('${p.promptId}')">✕ Dismiss</button>
                             </div>
                         </div>
-                    </div>`;
+                    </div>` : '';
 
                 return `<div class="prompt-item ${isDismissed ? 'dismissed' : (p.status === 'shipped' ? 'shipped' : '')}" id="pitem-${p.promptId}">
                     <div class="prompt-item-header">
@@ -4014,7 +2183,7 @@ function renderPaths() {
         }
 
         async function dismissPrompt(promptId) {
-            if (!confirm('Archive and dismiss this prompt? The markdown file will be moved to the Archive directory.')) return;
+            if (!confirm('Dismiss this prompt? It will be greyed out and eligible for archiving.')) return;
             try {
                 const res = await fetch('../../api/update_prompt.php', {
                     method: 'POST',
@@ -4047,17 +2216,4 @@ function renderPaths() {
 
         // Boot
         window.addEventListener('DOMContentLoaded', () => { init(); loadPromptLog(); });
-    </script>
-
-    <!--
-        Ripple self-tracking — the dashboard monitors itself.
-        Debug overlay: add ?ripple_debug=1 to the URL, or run Ripple.debug.enable() in the console.
-    -->
-    <script
-        src="../../src/tracker/ripple-tracker.js"
-        data-ripple-key="ripple"
-        data-ripple-endpoint="/ripple/api/session.php">
-    </script>
-    <script src="audience.js?v=2"></script>
-</body>
-</html>
+    

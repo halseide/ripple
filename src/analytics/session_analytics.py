@@ -70,6 +70,49 @@ def is_real_user(cls: str) -> bool:
     return cls in ("glancer", "engaged", "deep")
 
 
+def is_localhost_session(sess: dict) -> bool:
+    """Check if the session originated from localhost / local testing."""
+    ref = sess.get("referrer", "") or ""
+    if any(local in ref for local in ("localhost", "127.0.0.1", "::1")):
+        return True
+    for e in sess.get("events", []):
+        if e.get("name") == "page_loaded" and "details" in e:
+            href = e["details"].get("href", "") or ""
+            if any(local in href for local in ("localhost", "127.0.0.1", "::1")):
+                return True
+    geo = sess.get("geo")
+    if geo and isinstance(geo, dict):
+        if geo.get("country") == "Localhost" or geo.get("regionName") == "Local":
+            return True
+    return False
+
+
+def calculate_ttfa(sess: dict, interaction_events: list) -> float | None:
+    """
+    Calculate the time (in seconds) between session startTime and the first
+    registered interaction event. Returns None if no interaction occurred.
+    """
+    start_str = sess.get("startTime", "")
+    if not start_str:
+        return None
+    try:
+        start_dt = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+        first_interaction_ts = None
+        for e in sess.get("events", []):
+            if e.get("name") in interaction_events:
+                e_ts_str = e.get("timestamp", "")
+                if e_ts_str:
+                    e_dt = datetime.fromisoformat(e_ts_str.replace("Z", "+00:00"))
+                    e_ts = e_dt.timestamp()
+                    if first_interaction_ts is None or e_ts < first_interaction_ts:
+                        first_interaction_ts = e_ts
+        if first_interaction_ts is not None:
+            return max(0.0, first_interaction_ts - start_dt.timestamp())
+    except Exception:
+        pass
+    return None
+
+
 # ── Path / device / browser helpers ───────────────────────────────────────────
 
 def session_path(sess: dict) -> str:
@@ -340,12 +383,16 @@ def parse_sessions(
     ]
     total_raw = len(classified)
     counts    = defaultdict(int)
-    for c, _ in classified:
-        counts[c] += 1
+    localhost_count = 0
+    for c, s in classified:
+        if is_localhost_session(s):
+            localhost_count += 1
+        else:
+            counts[c] += 1
 
-    real_sessions    = [s for c, s in classified if is_real_user(c)]
-    human_sessions   = [s for c, s in classified if c != "bot"]
-    engaged_sessions = [s for c, s in classified if c in ("engaged", "deep")]
+    real_sessions    = [s for c, s in classified if is_real_user(c) and not is_localhost_session(s)]
+    human_sessions   = [s for c, s in classified if c != "bot" and not is_localhost_session(s)]
+    engaged_sessions = [s for c, s in classified if c in ("engaged", "deep") and not is_localhost_session(s)]
     real_count       = len(real_sessions)
     engagement_rate  = (len(engaged_sessions) / len(human_sessions) * 100) if human_sessions else 0
 
@@ -375,6 +422,11 @@ def parse_sessions(
     mobile_count  = sum(1 for s in real_sessions if device_type(s.get("userAgent", "")) == "mobile")
     desktop_count = real_count - mobile_count
 
+    # ── Time-to-First-Action (TTFA) ──────────────────────────────────────────
+    ttfas = [calculate_ttfa(s, interaction_events) for s in real_sessions]
+    ttfas = sorted(t for t in ttfas if t is not None)
+    median_ttfa = ttfas[len(ttfas) // 2] if ttfas else None
+
     # ── Hourly chart ──────────────────────────────────────────────────────────
     hourly = defaultdict(int)
     for s in real_sessions:
@@ -392,7 +444,7 @@ def parse_sessions(
     daily_glancers = defaultdict(int)
     
     for c, s in classified:
-        if c == "bot": continue
+        if c == "bot" or is_localhost_session(s): continue
         try:
             dt = datetime.fromisoformat(s["startTime"].replace("Z", "+00:00"))
             d_str = dt.strftime("%Y-%m-%d")
@@ -486,12 +538,15 @@ def parse_sessions(
         country = geo.get("country", "Unknown") if isinstance(geo, dict) else "Unknown"
         city = geo.get("city", "Unknown") if isinstance(geo, dict) else "Unknown"
         
+        ttfa = calculate_ttfa(s, interaction_events)
         session_records.append({
             "id":             sid,
             "start":          s.get("startTime", ""),
             "duration_s":     round(s.get("totalDurationSeconds", 0), 1),
             "duration":       fmt_duration(s.get("totalDurationSeconds", 0)),
             "classification": cls_map.get(sid, "?"),
+            "is_localhost":   is_localhost_session(s),
+            "ttfa_s":         round(ttfa, 1) if ttfa is not None else None,
             "referrer":       referrer_label(s.get("referrer", "") or "direct"),
             "device":         device_type(ua),
             "browser":        parse_browser(ua),
@@ -525,6 +580,8 @@ def parse_sessions(
         "generated_at":             datetime.now(timezone.utc).isoformat(),
         "total_raw":                total_raw,
         "real_user_count":          real_count,
+        "localhost_count":          localhost_count,
+        "median_ttfa_seconds":      round(median_ttfa, 1) if median_ttfa is not None else None,
         "classification_breakdown": dict(counts),
         "bot_rate_pct":             round(counts["bot"] / total_raw * 100, 1) if total_raw else 0,
         "ghost_rate_pct":           round(counts["ghost"] / total_raw * 100, 1) if total_raw else 0,
