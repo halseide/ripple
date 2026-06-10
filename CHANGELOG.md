@@ -4,6 +4,22 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.10.1] 2026-06-10 — Referrer Details in Visitor Profile & Session Timeline
+
+### Changes
+- `ef8fb7e` — [Vibe] fix: display referrer information in visitor profile modal and session timeline - Resolves Prompt: prompt_1781120905_ripple
+- `20735f5` — docs: add Ripple project roadmap and design advisory board verdict
+- `e874968` — [Vibe] fix: scrub private path and project names from user guide and docs
+- `d30aa3e` — chore: bump version to v0.10.0
+- `602a732` — [Vibe] fix: set GitHub remote for ripple project and auto-select active project tab in Settings - Resolves Prompt: prompt_1781043445_ripple
+- `592aa2f` — [Vibe] fix: complete geo parsing in session analytics and redirect dashboard
+- `67541f6` — [Vibe] design: update visitor modal header instantly upon renaming user - Resolves Prompt: prompt_1781042939_ripple
+- `0147db7` — feat: capture all available geo fields from ip-api.com
+- `a1fa8c1` — feat: implement native geographic IP tracking via ip-api.com
+- `3fb2ce1` — [Vibe] data: group sessions by day instead of minute in daily trend chart - Resolves Prompt: prompt_1780972783_ripple
+
+---
+
 ## [v0.10.0] 2026-06-09 — Geographic IP Tracking, Speech-to-Text Prompts, and Dashboard Settings Upgrades
 
 ### Changes
