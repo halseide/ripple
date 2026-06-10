@@ -4099,6 +4099,9 @@ function renderPaths() {
         // Auto-refresh prompt log when a new prompt is captured by the Ripple tracker
         window.addEventListener('ripple-prompt-captured', () => loadPromptLog());
 
+        // Poll for agent answers every 30s so the loop closes without manual refresh
+        setInterval(() => loadPromptLog(), 30000);
+
         // Boot
         window.addEventListener('DOMContentLoaded', () => { init(); loadPromptLog(); });
     </script>
