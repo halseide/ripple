@@ -59,7 +59,10 @@ Open `ripple.config.json` and append a new project object to the `"projects"` ar
 ```
 
 ### 2. How to Edit / Configure a Project
-*   **Modify Goals:** Edit the `"goals"` array. The intelligence layer dynamically matches its data findings to these exact phrases to keep recommendations goal-aware.
+*   **Modify Goals:** Edit the `"goals"` array. Ripple supports two types of goals:
+    *   *Milestone Goals*: Simple plain-text checklist tasks (e.g., `"Add warning dismiss audio trigger"`). Ripple's backend evaluates these by searching recent git commit messages.
+    *   *Metric Goals*: Structured rule-based thresholds with the prefix `[Metric]` (e.g., `[Metric] view:swag-store duration < 15s` or `[Metric] event:order_clicked conversion > 10%`). Ripple calculates actual sessional telemetry values (view durations and event conversion rates) within a configurable lookback window (default 7 days) and automatically checks them off or raises alerts.
+*   **Modify Lookback Window**: Edit `lookback_days` (per project or globally) to configure the moving average evaluation window for metrics.
 *   **Update Interaction Events:** Edit the `"interaction_events"` array to capture custom event triggers sent by `ripple.js` (e.g. tracking registration, play, purchase).
 
 ### 3. How to Select & Load Projects in the Dashboard

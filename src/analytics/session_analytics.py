@@ -253,7 +253,9 @@ def build_visitors(session_records: list) -> list:
         if "deep" in classes: user_type = "deep"
         elif "engaged" in classes: user_type = "engaged"
         elif "glancer" in classes: user_type = "glancer"
-        else: user_type = "bounce"
+        elif "ghost" in classes: user_type = "ghost"
+        elif "bounce" in classes: user_type = "bounce"
+        else: user_type = "bot"
         
         # Narrative
         try:
@@ -477,7 +479,7 @@ def parse_sessions(
     # ── Individual session records ────────────────────────────────────────────
     cls_map = {s.get("sessionId"): c for c, s in classified}
     session_records = []
-    for s in sorted(real_sessions, key=lambda x: x.get("startTime", ""), reverse=True)[:max_sessions_stored]:
+    for s in sorted(raw_sessions, key=lambda x: x.get("startTime", ""), reverse=True)[:max_sessions_stored]:
         sid = s.get("sessionId", "?")
         ua  = s.get("userAgent", "")
         geo = s.get("geo", {})

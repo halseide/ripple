@@ -4,6 +4,16 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.11.0] 2026-06-10 — Telemetry-Driven Metric Goals & Auto-Checked Milestones
+
+### Added
+- **feature** — **Telemetry-Driven Metric Goals.** Automatically evaluates view duration and event conversion goals against user sessions.
+- **feature** — **Auto-Checked Milestones.** Automatically checks off plain-text checklist goals by parsing recent git commit messages.
+- **feature** — **Failing Metric Suggestion Alerts.** Prepends high-priority alert cards to the dashboard's Suggestions panel when metrics fail their targets.
+- **feature** — **Configurable Lookback Window.** Added settings to configure the moving evaluation window for sessional metrics (defaults to 7 days).
+
+---
+
 ## [v0.10.1] 2026-06-10 — Referrer Details in Visitor Profile & Session Timeline
 
 ### Changes

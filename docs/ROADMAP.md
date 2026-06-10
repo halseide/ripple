@@ -52,6 +52,7 @@ Ripple is designed as a zero-config, low-overhead session analytics and UI promp
 ### Phase 2: Telemetry dashboard panel
 *   [ ] Add the "Prompt Log" dashboard panel in `src/dashboard/index.html` (reading from `data/prompt_log.json`) to visualize captured prompts across all projects, showing status badges (`pending`, `shipped`, `wont_fix`), element context, and target commit hashes.
 *   [ ] Upgraded session timeline visualizer.
+*   [x] Telemetry-Driven Metric Goals (v0.11.0) - auto-checks view duration and event conversion goals against a configurable lookback window, raising alerts in the Suggestions panel.
 
 ### Phase 3: Developer Integration & Distribution
 *   [ ] Safe configuration ignore decoupling (`ripple.config.json`) to prevent private paths from committing to public remotes.

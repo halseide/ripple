@@ -49,6 +49,150 @@ def load_config(config_path: str) -> dict:
     return config
 
 
+def evaluate_goals(proj: dict, sessions: list, commits: list, config: dict) -> list:
+    """
+    Evaluates project goals.
+    - Milestones: checks if a recent commit message contains the goal text (case-insensitive fuzzy match).
+    - Metrics: parses '[Metric] view:X duration < Ys' or '[Metric] event:X conversion > Y%'
+    """
+    import re
+    from datetime import datetime, timedelta, timezone
+
+    # Resolve lookback window parameter
+    # 1. Project level override, 2. Global config level, 3. Default to 7
+    lookback_days = proj.get("lookback_days") or config.get("lookback_days", 7)
+    
+    # Filter sessions based on lookback window
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=float(lookback_days))
+    
+    recent_sessions = []
+    for s in sessions:
+        try:
+            start_str = s.get("start", "") or s.get("startTime", "")
+            if not start_str:
+                continue
+            if start_str.endswith("Z"):
+                start_str = start_str[:-1] + "+00:00"
+            dt = datetime.fromisoformat(start_str)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            if dt >= cutoff:
+                recent_sessions.append(s)
+        except Exception:
+            pass
+
+    evaluated = []
+    
+    for goal in proj.get("goals", []):
+        goal_str = goal.strip()
+        if not goal_str:
+            continue
+            
+        if goal_str.lower().startswith("[metric]"):
+            # It's a metric goal!
+            # Example: [Metric] view:swag-store duration < 15s
+            # Example: [Metric] event:order_clicked conversion > 10%
+            metric_match = re.match(
+                r"\[metric\]\s+(view|event):(\S+)\s+(duration|conversion)\s+([<>])\s+([\d.]+)(s|%)?",
+                goal_str, re.IGNORECASE
+            )
+            if metric_match:
+                target_type = metric_match.group(1).lower() # "view" or "event"
+                target_name = metric_match.group(2)         # e.g., "swag-store"
+                metric_type = metric_match.group(3).lower() # "duration" or "conversion"
+                operator = metric_match.group(4)            # "<" or ">"
+                target_val = float(metric_match.group(5))   # target value
+                
+                actual_val = None
+                status = "pending"
+                details = "No data found within the lookback window."
+                
+                if target_type == "view" and metric_type == "duration":
+                    durations = []
+                    for s in recent_sessions:
+                        for v in s.get("views", []):
+                            if v.get("view") == target_name:
+                                durations.append(v.get("duration_s", 0))
+                    
+                    if durations:
+                        actual_val = sum(durations) / len(durations)
+                        passed = (actual_val < target_val) if operator == "<" else (actual_val > target_val)
+                        status = "passed" if passed else "failing"
+                        details = f"Average duration is {actual_val:.1f}s (Target: {operator} {target_val:.1f}s, based on {len(durations)} view visits over last {lookback_days} days)"
+                    else:
+                        details = f"No visits to view '{target_name}' in the last {lookback_days} days."
+                        
+                elif target_type == "event" and metric_type == "conversion":
+                    total_sessions_count = len(recent_sessions)
+                    matching_sessions_count = 0
+                    for s in recent_sessions:
+                        has_event = any(e.get("name") == target_name for e in s.get("events", []))
+                        if has_event:
+                            matching_sessions_count += 1
+                            
+                    if total_sessions_count > 0:
+                        actual_val = (matching_sessions_count / total_sessions_count) * 100
+                        passed = (actual_val < target_val) if operator == "<" else (actual_val > target_val)
+                        status = "passed" if passed else "failing"
+                        details = f"Conversion rate is {actual_val:.1f}% (Target: {operator} {target_val:.1f}%, based on {matching_sessions_count}/{total_sessions_count} sessions over last {lookback_days} days)"
+                    else:
+                        details = f"No sessions recorded in the last {lookback_days} days."
+                else:
+                    details = f"Unsupported metric syntax or type combination."
+                
+                evaluated.append({
+                    "text": goal_str,
+                    "type": "metric",
+                    "status": status,
+                    "details": details,
+                    "target_type": target_type,
+                    "target_name": target_name,
+                    "metric_type": metric_type,
+                    "operator": operator,
+                    "target_value": target_val,
+                    "actual_value": round(actual_val, 1) if actual_val is not None else None
+                })
+            else:
+                evaluated.append({
+                    "text": goal_str,
+                    "type": "metric",
+                    "status": "pending",
+                    "details": "Invalid metric syntax. Expected format: [Metric] view:view_name duration < 15s or [Metric] event:event_name conversion > 10%"
+                })
+        else:
+            # Milestone goal
+            found_commit = None
+            goal_words = set(re.findall(r"\w+", goal_str.lower()))
+            
+            for commit in commits:
+                msg = commit.get("message", "").lower()
+                if goal_str.lower() in msg:
+                    found_commit = commit
+                    break
+                msg_words = set(re.findall(r"\w+", msg))
+                if len(goal_words) >= 2 and goal_words.issubset(msg_words):
+                    found_commit = commit
+                    break
+            
+            if found_commit:
+                evaluated.append({
+                    "text": goal_str,
+                    "type": "milestone",
+                    "status": "completed",
+                    "details": f"Resolved by commit {found_commit['hash']} ('{found_commit['message_short']}')"
+                })
+            else:
+                evaluated.append({
+                    "text": goal_str,
+                    "type": "milestone",
+                    "status": "pending",
+                    "details": "No matching commit message found in git history."
+                })
+                
+    return evaluated
+
+
 def main():
     parser = argparse.ArgumentParser(description="Ripple — analytics + deployment correlation")
     parser.add_argument("--config", default="ripple.config.json",
@@ -74,6 +218,7 @@ def main():
             "git_repo":           p.get("git_repo", ""),
             "interaction_events": p.get("interaction_events", []),
             "goals":              p.get("goals", []),
+            "lookback_days":      p.get("lookback_days"),
         })
 
     thresholds = config.get("thresholds", {})
@@ -179,6 +324,9 @@ def main():
                     }
                 else:
                     w[f"{side}_metrics"] = {"bounce_pct": 0.0, "engaged_pct": 0.0, "real_users": 0}
+
+        # 4.5 Evaluate goals
+        analytics["goals_status"]        = evaluate_goals(proj, real_sessions, commits, config)
 
         # 5. Attach to result
         analytics["commits"]             = commits

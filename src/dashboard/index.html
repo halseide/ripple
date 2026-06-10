@@ -1135,7 +1135,7 @@
                         <a href="#section-suggestions" id="nav-section-suggestions" onclick="switchPanel('section-suggestions'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">💡 Goal-Aware Suggestions</a>
                         <a href="#section-commits" id="nav-section-commits" onclick="switchPanel('section-commits'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔁 Deployment Correlation</a>
                         <a href="#section-traffic" id="nav-section-traffic" onclick="switchPanel('section-traffic'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📈 Traffic &amp; Commit Activity</a>
-                        <a href="#sessionExplorerSection" id="nav-sessionExplorerSection" onclick="switchPanel('sessionExplorerSection'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔍 Session Explorer</a>
+                        <a href="#section-explorer" id="nav-section-explorer" onclick="switchPanel('section-explorer'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔍 Session Explorer</a>
                         <a href="#section-funnel" id="nav-section-funnel" onclick="switchPanel('section-funnel'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📐 View Funnel</a>
                         <a href="#section-paths" id="nav-section-paths" onclick="switchPanel('section-paths'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🗺️ Navigation Paths</a>
                         <a href="#section-prompts" id="nav-section-prompts" onclick="switchPanel('section-prompts'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🎯 UI Prompt Log</a>
@@ -1297,7 +1297,7 @@
 </section>
 
 <!-- Session Explorer & Journey Analyzer -->
-                <section class="card" id="sessionExplorerSection">
+                <section class="card" id="section-explorer">
                     <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
                         <span>🔍 Session Explorer & Journey Analyzer</span>
                         <span id="explorerModeLabel" style="font-size: 0.85rem; font-weight: normal; color: var(--accent-blue);">All Cumulative Sessions</span>
@@ -1922,13 +1922,30 @@
             // 2. Render Goals
             const goalsContainer = document.getElementById('goalsList');
             goalsContainer.innerHTML = "";
-            if (project.goals && project.goals.length > 0) {
-                project.goals.forEach(goal => {
+            const goalsToRender = project.goals_status || (project.goals || []).map(g => ({ text: g, type: 'milestone', status: 'pending', details: 'No status evaluated yet' }));
+            
+            if (goalsToRender.length > 0) {
+                goalsToRender.forEach(goal => {
                     const item = document.createElement('div');
                     item.className = "goal-item";
+                    item.style.display = "flex";
+                    item.style.alignItems = "flex-start";
+                    item.style.gap = "0.5rem";
+                    item.style.marginBottom = "0.4rem";
+                    
+                    let icon = "⚬";
+                    let color = "var(--text-muted)";
+                    if (goal.status === "completed" || goal.status === "passed") {
+                        icon = "✅";
+                        color = "var(--accent-green)";
+                    } else if (goal.status === "failing") {
+                        icon = "⚠️";
+                        color = "var(--accent-amber)";
+                    }
+                    
                     item.innerHTML = `
-                        <span class="goal-checkbox">⚬</span>
-                        <span class="goal-text">${goal}</span>
+                        <span style="color: ${color}; line-height: 1.2; font-size: 0.95rem;">${icon}</span>
+                        <span class="goal-text" style="font-size: 0.8rem; line-height: 1.2; cursor: help;" title="${escHtml(goal.details || '')}">${escHtml(goal.text)}</span>
                     `;
                     goalsContainer.appendChild(item);
                 });
@@ -1940,39 +1957,81 @@
             const suggestionsContainer = document.getElementById('suggestionsContainer');
             suggestionsContainer.innerHTML = "";
             
+            let dynamicSuggestionsHtml = "";
+            let dynamicCount = 0;
+            
+            // Render failing metrics as high-priority suggestions
+            if (activeProjectKey !== 'all' && project && project.goals_status) {
+                project.goals_status.forEach(goal => {
+                    if (goal.type === "metric" && goal.status === "failing") {
+                        dynamicCount++;
+                        const actionText = goal.metric_type === "duration" 
+                            ? `Reduce average duration on the '${goal.target_name}' view to meet the target of ${goal.operator} ${goal.target_value}s.`
+                            : `Increase the conversion rate for '${goal.target_name}' event to meet the target of ${goal.operator} ${goal.target_value}%.`;
+                        
+                        dynamicSuggestionsHtml += `
+                            <div class="card suggestion-card high" style="border-left: 4px solid var(--accent-amber); background: rgba(210, 153, 34, 0.03); margin-bottom: 1rem; padding: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                    <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 600; color: var(--accent-amber); letter-spacing: 0.5px;">⚠️ Goal Metric Failure</span>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">${goal.target_name}</span>
+                                </div>
+                                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: var(--text-main); font-weight: 600;">Metric Off-Target: ${goal.text}</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.8rem 0; line-height: 1.4;">
+                                    <strong>Status:</strong> ${goal.details}<br>
+                                    <strong>Recommended Action:</strong> ${actionText}
+                                </p>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button class="btn-status" style="border-color: var(--accent-blue); color: var(--accent-blue); padding: 0.25rem 0.6rem; font-size: 0.75rem;" onclick="switchPanel('section-prompts'); window.location.hash='#section-prompts';">🎯 Resolve via Prompt Capture</button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+
             // Filter suggestions for active project
             const projectSuggestions = (suggestionsData.suggestions || []).filter(s => {
                 return projectKey === 'all' || s.project_key === projectKey;
             });
             const suggestionCountEl = document.getElementById('suggestionCount');
-            if (suggestionCountEl) suggestionCountEl.textContent = projectSuggestions.length;
+            if (suggestionCountEl) suggestionCountEl.textContent = projectSuggestions.length + dynamicCount;
 
-            if (projectSuggestions.length > 0) {
-                projectSuggestions.forEach(s => {
-                    const card = document.createElement('div');
-                    card.className = `suggestion-card ${s.priority}`;
-                    card.id = `card-${s.id}`;
-                    
-                    const shortCommit = s.commit ? s.commit.substring(0, 8) : null;
-                    const commitMarkup = shortCommit ? `<span class="tag type-tag">Commit: ${shortCommit}</span>` : '';
+            if (dynamicCount > 0 || projectSuggestions.length > 0) {
+                if (dynamicSuggestionsHtml) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = dynamicSuggestionsHtml;
+                    while (tempDiv.firstChild) {
+                        suggestionsContainer.appendChild(tempDiv.firstChild);
+                    }
+                }
+                
+                if (projectSuggestions.length > 0) {
+                    projectSuggestions.forEach(s => {
+                        const card = document.createElement('div');
+                        card.className = `suggestion-card ${s.priority}`;
+                        card.id = `card-${s.id}`;
+                        
+                        const shortCommit = s.commit ? s.commit.substring(0, 8) : null;
+                        const commitMarkup = shortCommit ? `<span class="tag type-tag">Commit: ${shortCommit}</span>` : '';
 
-                    card.innerHTML = `
-                        <div class="suggestion-header">
-                            <span class="suggestion-title">${s.title}</span>
-                            <div class="suggestion-tags">
-                                <span class="tag priority-${s.priority}">${s.priority} priority</span>
-                                ${commitMarkup}
+                        card.innerHTML = `
+                            <div class="suggestion-header">
+                                <span class="suggestion-title">${s.title}</span>
+                                <div class="suggestion-tags">
+                                    <span class="tag priority-${s.priority}">${s.priority} priority</span>
+                                    ${commitMarkup}
+                                </div>
                             </div>
-                        </div>
-                        <div class="suggestion-evidence"><strong>Evidence:</strong> ${s.evidence}</div>
-                        <div class="suggestion-rec">${s.suggestion}</div>
-                        <div class="suggestion-footer">
-                            <span>Goal: ${s.goal}</span>
-                            <button class="btn-status" onclick="acknowledgeSuggestion('${s.id}')">Acknowledge</button>
-                        </div>
-                    `;
-                    suggestionsContainer.appendChild(card);
-                });
+                            <div class="suggestion-evidence"><strong>Evidence:</strong> ${s.evidence}</div>
+                            <div class="suggestion-rec">${s.suggestion}</div>
+                            <div class="suggestion-footer">
+                                <span>Goal: ${s.goal}</span>
+                                <button class="btn-status" onclick="acknowledgeSuggestion('${s.id}')">Acknowledge</button>
+                            </div>
+                        `;
+                        suggestionsContainer.appendChild(card);
+                    });
+                }
             } else {
                 suggestionsContainer.innerHTML = `
                     <div style="text-align: center; padding: 3rem 1rem; border: 1px dashed var(--border-color); border-radius: 8px; color: var(--text-muted);">
@@ -3428,6 +3487,10 @@ function renderPaths() {
                         <textarea class="settings-input" id="sField_goals" rows="5">${escHtml((proj.goals || []).join('\n'))}</textarea>
                     </div>
                     <div class="settings-field">
+                        <label>Goal Lookback Window <span class="field-hint">— days</span></label>
+                        <input class="settings-input mono" id="sField_lookback_days" type="number" value="${proj.lookback_days ?? 7}" min="1">
+                    </div>
+                    <div class="settings-field">
                         <label>Tracked Interaction Events <span class="field-hint">— one per line</span></label>
                         <textarea class="settings-input mono" id="sField_events" rows="5">${escHtml((proj.interaction_events || []).join('\n'))}</textarea>
                     </div>
@@ -3476,6 +3539,7 @@ function renderPaths() {
                     git_repo:           document.getElementById('sField_git_repo')?.value.trim() || p.git_repo,
                     sessions_dir:       document.getElementById('sField_sessions_dir')?.value.trim() || p.sessions_dir,
                     goals:              (document.getElementById('sField_goals')?.value || '').split('\n').map(s => s.trim()).filter(Boolean),
+                    lookback_days:      parseInt(document.getElementById('sField_lookback_days')?.value || '7', 10),
                     interaction_events: (document.getElementById('sField_events')?.value || '').split('\n').map(s => s.trim()).filter(Boolean),
                 };
             });
