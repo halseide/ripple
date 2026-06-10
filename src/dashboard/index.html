@@ -2144,7 +2144,9 @@
                             project_key: p.project_key,
                             project_name: p.project,
                             sessions_before: (w.sessions_before || []).map(s => ({ ...s, project_key: p.project_key, project_name: p.project })),
-                            sessions_after: (w.sessions_after || []).map(s => ({ ...s, project_key: p.project_key, project_name: p.project }))
+                            sessions_after: (w.sessions_after || []).map(s => ({ ...s, project_key: p.project_key, project_name: p.project })),
+                            sessions_before_3d: (w.sessions_before_3d || []).map(s => ({ ...s, project_key: p.project_key, project_name: p.project })),
+                            sessions_after_3d: (w.sessions_after_3d || []).map(s => ({ ...s, project_key: p.project_key, project_name: p.project }))
                         };
                         project.deployment_windows.push(winCopy);
                     });
