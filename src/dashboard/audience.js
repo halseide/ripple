@@ -239,6 +239,10 @@ function openVisitorModal(visitorId) {
 
     const name = getVisitorDisplayName(visitorId);
 
+    // Get unique referrers
+    const referrers = [...new Set(sessions.map(s => s.referrer || 'direct'))].filter(Boolean);
+    const referrerDisplay = referrers.join(', ') || 'direct';
+
     // Create modal if it doesn't exist
     let modal = document.getElementById('visitorModal');
     if (!modal) {
@@ -273,6 +277,7 @@ function openVisitorModal(visitorId) {
                             <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">Total Time:</span> <strong>${formatDuration(totalDuration)}</strong></div>
                             <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">Browser:</span> <strong>${(baseV.browsers || baseV.devices || []).join(', ')}</strong></div>
                             <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">Location:</span> <strong>${userLocation}</strong></div>
+                            <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">Referrer:</span> <strong>${referrerDisplay}</strong></div>
                         </div>
                     </div>
                     
@@ -322,6 +327,9 @@ async function generateSingleAIAnalysis(visitorId) {
     promptText += `- Type: ${baseV.user_type || 'unknown'}\n`;
     promptText += `- Sessions: ${sessionCount}, Total Duration: ${formatDuration(totalDuration)}\n`;
     promptText += `- Location: ${baseV.locations ? baseV.locations.join(', ') : (baseV.location || 'Unknown')}, Devices: ${(baseV.browsers || baseV.devices || []).join(', ')}\n`;
+    const referrers = [...new Set(sessions.map(s => s.referrer || 'direct'))].filter(Boolean);
+    const referrerDisplay = referrers.join(', ') || 'direct';
+    promptText += `- Referrer: ${referrerDisplay}\n`;
     promptText += `- Generated Narrative: ${(baseV.narrative || "").replace(/\n/g, ' ')}\n\n`;
     
     promptText += `## Session Timeline\n`;
@@ -381,6 +389,7 @@ function renderSessionTimeline(sessions) {
                     <strong style="color: var(--accent-blue); font-size: 0.85rem;">${date.toLocaleString()}</strong>
                     <span style="font-size: 0.75rem; color: var(--text-muted); background: rgba(0,0,0,0.3); padding: 0.1rem 0.4rem; border-radius: 4px;">⏱️ ${duration}</span>
                 </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">Referrer: <strong style="color: var(--text-main);">${s.referrer || 'direct'}</strong></div>
                 ${paths}
             </div>
         `;
