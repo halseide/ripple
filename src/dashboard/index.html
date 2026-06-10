@@ -2213,9 +2213,10 @@
             allProjects.forEach(p => {
                 if (p.view_funnel) {
                     p.view_funnel.forEach(v => {
-                        if(!funnelMap[v.view]) funnelMap[v.view] = { view: v.view, visits: 0, exit_count: 0, avg_duration: 0 };
+                        if(!funnelMap[v.view]) funnelMap[v.view] = { view: v.view, visits: 0, exit_count: 0, entry_count: 0, avg_duration: 0 };
                         funnelMap[v.view].visits += v.visits;
                         funnelMap[v.view].exit_count += (v.exit_count || 0);
+                        funnelMap[v.view].entry_count += (v.entry_count || 0);
                         funnelMap[v.view].avg_duration = Math.max(funnelMap[v.view].avg_duration, v.avg_duration || 0);
                     });
                 }
@@ -2302,6 +2303,7 @@
             project.view_funnel.forEach(v => {
                 v.visit_pct = project.sessions.length ? (v.visits / project.sessions.length * 100).toFixed(1) : 0;
                 v.exit_pct = v.visits ? (v.exit_count / v.visits * 100).toFixed(1) : 0;
+                v.entry_pct = project.sessions.length ? (v.entry_count / project.sessions.length * 100).toFixed(1) : 0;
                 v.avg_display = v.avg_duration + 's';
             });
             project.navigation_paths = Object.values(pathsMap).sort((a,b) => b.session_ids.length - a.session_ids.length);
@@ -2743,6 +2745,7 @@
       <div class="funnel-visits">${v.visits}</div>
       <div class="funnel-pct">${v.visit_pct}% of users</div>
       <div class="funnel-dur">avg ${v.avg_display}</div>
+      <div class="funnel-entry" style="color:var(--accent-blue);font-size:0.75rem">${v.entry_pct || 0}% start here</div>
       <div class="funnel-exit">${v.exit_pct}% exit here</div>
       <div class="funnel-bar"><div class="funnel-bar-fill" style="width:${Math.round(v.visits/maxVisits*100)}%"></div></div>
     </div>

@@ -38,6 +38,7 @@ DEFAULT_BOT_MAX_S    = 2.0    # sessions shorter than this = bot
 DEFAULT_GHOST_MIN_S  = 300.0  # sessions longer than this with no interaction = ghost tab
 DEFAULT_DEEP_MIN_S   = 60.0   # sessions longer than this with interaction = deep
 DEFAULT_MAX_STORED   = 300    # max individual session records in output
+DEFAULT_VIEW_DUR_CAP = 300.0  # cap per-view duration at 5 min to filter idle inflation
 
 
 # ── Classification ────────────────────────────────────────────────────────────
@@ -515,9 +516,12 @@ def parse_sessions(
     view_funnel = []
     for vname in sorted(view_visit_counts, key=lambda v: -view_visit_counts[v]):
         durs   = view_durations[vname]
-        avg_d  = sum(durs) / len(durs) if durs else 0
+        # Cap each individual view duration to filter idle/abandoned tabs
+        capped = [min(d, DEFAULT_VIEW_DUR_CAP) for d in durs]
+        avg_d  = sum(capped) / len(capped) if capped else 0
         visits = view_visit_counts[vname]
         exits  = view_exit_counts.get(vname, 0)
+        entries = first_view_counts.get(vname, 0)
         view_funnel.append({
             "view":         vname,
             "visits":       visits,
@@ -526,6 +530,8 @@ def parse_sessions(
             "avg_display":  fmt_duration(avg_d),
             "exit_count":   exits,
             "exit_pct":     round(exits / visits * 100, 1) if visits else 0,
+            "entry_count":  entries,
+            "entry_pct":    round(entries / real_count * 100, 1) if real_count else 0,
         })
 
     # ── Individual session records ────────────────────────────────────────────
