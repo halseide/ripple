@@ -1057,6 +1057,98 @@
         .ds-dur  { font-family: var(--font-mono); color: var(--accent-blue); }
         .ds-ref  { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .ds-dev  { color: var(--text-muted); }
+
+        /* ── Deploy Detail View ─────────────────────────────── */
+        .deploy-detail-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 768px) {
+            .deploy-detail-metrics { grid-template-columns: 1fr; }
+        }
+        .deploy-detail-col {
+            background: rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+        .deploy-detail-col.before {
+            background: rgba(56,139,253,0.06);
+            border-color: rgba(56,139,253,0.18);
+        }
+        .deploy-detail-col.after {
+            background: rgba(63,185,80,0.06);
+            border-color: rgba(63,185,80,0.18);
+        }
+        .deploy-detail-col.delta {
+            background: rgba(188,140,255,0.05);
+            border-color: rgba(188,140,255,0.15);
+        }
+        .deploy-detail-col-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+            margin-bottom: 0.2rem;
+        }
+        .deploy-detail-col.before .deploy-detail-col-title { color: var(--accent-blue); }
+        .deploy-detail-col.after  .deploy-detail-col-title { color: var(--accent-green); }
+        .deploy-detail-col.delta  .deploy-detail-col-title { color: var(--accent-purple); }
+        .deploy-detail-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 1px solid rgba(34,42,61,0.3);
+        }
+        .deploy-detail-stat:last-child { border-bottom: none; padding-bottom: 0; }
+        .deploy-detail-stat .label { color: var(--text-muted); font-size: 0.8rem; }
+        .deploy-detail-stat .value { font-weight: 700; font-family: var(--font-mono); font-size: 0.9rem; }
+        .delta-positive { color: var(--accent-green); }
+        .delta-negative { color: var(--accent-red); }
+        .delta-neutral  { color: var(--text-muted); }
+
+        #deployDetailTabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+        #deployDetailTabs button {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-family: var(--font-main);
+            transition: all 0.2s;
+        }
+        #deployDetailTabs button:hover { color: var(--text-main); }
+        #deployDetailTabs button.active {
+            color: var(--text-main);
+            border-bottom-color: var(--accent-blue);
+        }
+        .commit-hash-badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            background: rgba(56,139,253,0.12);
+            border: 1px solid rgba(56,139,253,0.25);
+            padding: 0.15rem 0.55rem;
+            border-radius: 12px;
+            letter-spacing: 0.02em;
+        }
 </style>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 </head>
@@ -1228,6 +1320,47 @@
                     </div>
                 </section>
 
+                <!-- Deployment Detail View -->
+                <section class="card panel-hidden" id="section-deploy-detail">
+                  <div style="margin-bottom: 1rem;">
+                    <a href="#" onclick="exitDeployDetail(); return false;" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">← Back to Deployment Correlation</a>
+                  </div>
+
+                  <!-- Header -->
+                  <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.4rem;">
+                      <span class="commit-hash-badge" id="ddHash"></span>
+                      <span id="ddShortWindowBadge" class="hidden" style="background:rgba(239,68,68,0.15); color:var(--accent-red); font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700; cursor:help;" title="Strict evaluation window is short (< 6 hours). Metrics may be noisy; use Fixed Window mode.">⚠️ Short Window</span>
+                    </div>
+                    <h2 id="ddMessage" style="font-size: 1.15rem; font-weight: 600; margin: 0.3rem 0;"></h2>
+                    <p id="ddMeta" style="font-size: 0.8rem; color: var(--text-muted);"></p>
+                  </div>
+
+                  <!-- Window mode selector -->
+                  <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.2rem;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Window</span>
+                    <select id="ddWindowSelect" onchange="renderDeployDetail(deployDetailHash)" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                      <option value="3d">3-Day Fixed Window</option>
+                      <option value="strict">Strict Neighbor Bounding</option>
+                    </select>
+                  </div>
+
+                  <!-- Metrics Comparison Grid -->
+                  <div class="deploy-detail-metrics" id="ddMetricsGrid">
+                    <!-- Populated by renderDeployDetail() -->
+                  </div>
+
+                  <!-- Session Tabs -->
+                  <div id="deployDetailTabs">
+                    <button id="ddTabBefore" onclick="setDeployDetailTab('before')">Sessions Before Deploy (<span id="ddTabBeforeCount">0</span>)</button>
+                    <button id="ddTabAfter" class="active" onclick="setDeployDetailTab('after')">Sessions After Deploy (<span id="ddTabAfterCount">0</span>)</button>
+                  </div>
+
+                  <!-- Session Cards -->
+                  <div id="deployDetailSessions" style="display: flex; flex-direction: column; gap: 0.8rem; max-height: 500px; overflow-y: auto; padding-right: 0.5rem;">
+                  </div>
+                </section>
+
                 <!-- Traffic & Commit Activity Timeline Chart -->
                 <section class="card" id="section-traffic" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
                     <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
@@ -1247,7 +1380,7 @@
     <!-- View Funnel -->
     <div class="dashboard-panel card" style="padding: 1.5rem; border-color: var(--border-color);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <span style="font-size:11px;color:var(--text-muted)">click a view to filter paths & sessions below</span>
+        <span style="font-size:11px;color:var(--text-muted)">click a view to filter & jump to matching paths</span>
       </div>
       <div class="funnel-grid" id="funnel-grid">
          <div style="padding:2rem; text-align:center; color:var(--text-muted); font-style:italic;">Awaiting data...</div>
@@ -1302,21 +1435,6 @@
                         <span>🔍 Session Explorer & Journey Analyzer</span>
                         <span id="explorerModeLabel" style="font-size: 0.85rem; font-weight: normal; color: var(--accent-blue);">All Cumulative Sessions</span>
                     </h2>
-
-                    <!-- Drill-down active filter info (hidden by default) -->
-                    <div id="drilldownFilterInfo" class="hidden" style="background: rgba(56, 139, 253, 0.1); border: 1px solid rgba(56, 139, 253, 0.25); border-radius: 8px; padding: 0.8rem 1.2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.85rem; color: var(--text-main);">
-                            Showing sessions for commit: <strong id="drilldownCommitHash" style="font-family: var(--font-mono); color: var(--accent-blue);">—</strong> 
-                            (<span id="drilldownCommitMsg"></span>)
-                        </span>
-                        <button class="btn-status" onclick="clearCommitDrilldown()" style="border-color: var(--accent-red); color: var(--accent-red);">Clear Filter</button>
-                    </div>
-
-                    <!-- Referral Mix Shift Warning (hidden by default) -->
-                    <div id="drilldownReferrerWarning" class="hidden" style="background: rgba(210, 153, 34, 0.12); border: 1px solid rgba(210, 153, 34, 0.25); border-radius: 8px; padding: 0.8rem 1.2rem; margin-bottom: 1.5rem; color: var(--text-main); font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; line-height: 1.4;">
-                        <span style="font-size: 1.1rem; flex-shrink: 0;">⚠️</span>
-                        <span id="drilldownReferrerWarningText"></span>
-                    </div>
 
                     <!-- Explorer Tabs & Summary Metrics -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
@@ -1419,7 +1537,7 @@
                                 
                                 <!-- Hide Localhost Filter -->
                                 <label style="display: flex; align-items: center; gap: 0.35rem; color: var(--text-main); font-size: 0.8rem; cursor: pointer; user-select: none;">
-                                    <input type="checkbox" id="hideLocalhostCheckbox" onchange="applyFilters(); renderDeployments();" checked style="cursor: pointer; accent-color: var(--accent-green);">
+                                    <input type="checkbox" id="hideLocalhostCheckbox" onchange="applyFilters()" checked style="cursor: pointer; accent-color: var(--accent-green);">
                                     <span>🛡️ Hide Localhost/Dev</span>
                                 </label>
                             </div>
@@ -1429,7 +1547,7 @@
                                 <!-- Comparison Window -->
                                 <div style="display: flex; align-items: center; gap: 0.4rem;">
                                     <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Window</span>
-                                    <select id="comparisonWindowSelect" onchange="applyFilters(); renderDeployments();" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
+                                    <select id="comparisonWindowSelect" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
                                         <option value="3d">3-Day Fixed Window</option>
                                         <option value="strict">Strict Neighbor Bounding</option>
                                     </select>
@@ -1450,31 +1568,6 @@
                         </div>
                     </div>
 
-                    <!-- Active Deploy Drilldown Stats Comparison (Visible only in drilldown mode) -->
-                    <div id="drilldownStatsComparison" class="hidden" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.1);">
-                        <div style="padding: 1rem; border-right: 1px solid var(--border-color);">
-                            <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">⏪ Before Deploy (Next Prior Window)</div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Session Count:</span> <strong id="drilldownBeforeCount">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median Duration:</span> <strong id="drilldownBeforeDuration">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Bounce Rate:</span> <strong id="drilldownBeforeBounce">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median TTFA:</span> <strong id="drilldownBeforeTTFA">—</strong></div>
-                            <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">1st-Page Exit Rate:</span> <strong id="drilldownBeforeExitRate">—</strong></div>
-                        </div>
-                        <div style="padding: 1rem; background: rgba(63, 185, 80, 0.03);">
-                            <div style="font-size: 0.8rem; font-weight: 600; color: var(--accent-green); margin-bottom: 0.5rem; text-transform: uppercase;">⏩ After Deploy (Since This Commit)</div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Session Count:</span> <strong id="drilldownAfterCount">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median Duration:</span> <strong id="drilldownAfterDuration">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Bounce Rate:</span> <strong id="drilldownAfterBounce">—</strong></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;"><span style="color:var(--text-muted);">Median TTFA:</span> <strong id="drilldownAfterTTFA">—</strong></div>
-                            <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">1st-Page Exit Rate:</span> <strong id="drilldownAfterExitRate">—</strong></div>
-                        </div>
-                    </div>
-
-                    <!-- Active Deploy Tab Selector (Before/After) when drilldown is active -->
-                    <div id="drilldownTabWrapper" class="hidden" style="display:flex; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
-                        <button id="drilldownTabBefore" onclick="setDrilldownPerspective('before')" style="background:transparent; border:none; border-bottom: 2px solid transparent; color:var(--text-muted); padding: 0.5rem 1rem; font-weight:600; font-size:0.85rem; cursor:pointer; font-family:var(--font-main);">Sessions Before Deploy (<span id="drilldownBeforeTabCount">0</span>)</button>
-                        <button id="drilldownTabAfter" onclick="setDrilldownPerspective('after')" style="background:transparent; border:none; border-bottom: 2px solid var(--accent-green); color:var(--text-main); padding: 0.5rem 1rem; font-weight:600; font-size:0.85rem; cursor:pointer; font-family:var(--font-main);">Sessions After Deploy (<span id="drilldownAfterTabCount">0</span>)</button>
-                    </div>
 
                     <!-- Session Cards Container -->
                     <div id="sessionCardsContainer" style="display: flex; flex-direction: column; gap: 0.8rem; max-height: 500px; overflow-y: auto; padding-right: 0.5rem;">
@@ -1574,6 +1667,9 @@
         let drilldownCommitMsgText = "";
         let drilldownPerspective = "after"; // "before" or "after"
         let visitorAliases = {}; // Map of visitor IDs to custom names
+        let deployDetailHash = null;
+        let deployDetailTab = 'after';
+        let pendingDeployDeepLink = null; // deferred deep-link hash
 
         // --- Panel Navigation Logic ---
         function switchPanel(panelId) {
@@ -1586,12 +1682,17 @@
             if (target) target.classList.remove('panel-hidden');
             
             // Update URL hash
-            window.history.replaceState(null, null, '#' + panelId);
+            if (panelId === 'section-deploy-detail' && deployDetailHash) {
+                window.history.replaceState(null, null, '#deploy/' + deployDetailHash);
+            } else {
+                window.history.replaceState(null, null, '#' + panelId);
+            }
             
             // Highlight nav link
             const links = document.querySelectorAll('#quick-nav a');
+            const navHighlight = panelId === 'section-deploy-detail' ? 'nav-section-commits' : 'nav-' + panelId;
             links.forEach(a => {
-                if (a.id === 'nav-' + panelId) {
+                if (a.id === navHighlight) {
                     a.style.background = 'rgba(188, 140, 255, 0.15)';
                     a.style.borderLeft = '3px solid var(--accent-purple)';
                 } else {
@@ -1608,7 +1709,11 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             const hash = window.location.hash.replace('#', '');
-            if (hash && document.getElementById(hash)) {
+            if (hash.startsWith('deploy/')) {
+                // Defer deploy deep-link until init() loads data
+                pendingDeployDeepLink = hash.split('/')[1];
+                switchPanel('section-deploy-detail');
+            } else if (hash && document.getElementById(hash)) {
                 switchPanel(hash);
             } else {
                 switchPanel('section-suggestions'); // default
@@ -1835,6 +1940,14 @@
 
                 populateProjectSelector();
                 hideLoader();
+
+                // Handle deferred deploy deep-link (hash was parsed before data loaded)
+                if (pendingDeployDeepLink) {
+                    const linkHash = pendingDeployDeepLink;
+                    pendingDeployDeepLink = null;
+                    renderDeployDetail(linkHash);
+                    switchPanel('section-deploy-detail');
+                }
             } catch (err) {
                 console.error("Error loading Ripple data files:", err);
                 document.getElementById('loader').innerHTML = `
@@ -2202,18 +2315,9 @@
             drilldownCommitHash = null;
             drilldownCommitMsgText = "";
             document.querySelectorAll('.commit-row').forEach(r => r.classList.remove('selected'));
-            document.getElementById('drilldownFilterInfo').classList.add('hidden');
-            document.getElementById('drilldownStatsComparison').classList.add('hidden');
-            document.getElementById('drilldownTabWrapper').classList.add('hidden');
-            document.getElementById('drilldownReferrerWarning').classList.add('hidden');
-            
             updateModeLabel();
             applyFilters();
-
-            const commitsSection = document.getElementById('section-commits');
-            if (commitsSection) {
-                commitsSection.scrollIntoView({ behavior: 'smooth' });
-            }
+            switchPanel('section-commits');
         }
 
         function drilldownToCommit(commitHash, commitMsg, rowElement) {
@@ -2224,18 +2328,15 @@
             const win = windows.find(w => w.commit.hash === commitHash);
             if (!win) return;
 
-            drilldownCommitHash = commitHash;
-            drilldownCommitMsgText = commitMsg;
-
             // ── Ripple self-tracking ───────────────────────────────────────
             if (window.Ripple) {
                 Ripple.track('commit_drilldown', {
                     commit:  commitHash.slice(0, 8),
-                    message: commitMsg.slice(0, 60),
+                    message: (commitMsg || '').slice(0, 60),
                     project: activeProjectKey,
                 });
             }
-            
+
             // Highlight selected commit row
             document.querySelectorAll('.commit-row').forEach(r => r.classList.remove('selected'));
             if (rowElement) {
@@ -2249,23 +2350,150 @@
                 });
             }
 
-            // Fill commit details
-            document.getElementById('drilldownCommitHash').textContent = commitHash.substring(0, 8);
-            document.getElementById('drilldownCommitMsg').textContent = commitMsg;
-            document.getElementById('drilldownFilterInfo').classList.remove('hidden');
+            // Navigate to Deploy Detail View
+            renderDeployDetail(commitHash);
+            switchPanel('section-deploy-detail');
 
-            // Dynamic comparison stats calculation is handled inside applyFilters()
-            // Show panels
-            document.getElementById('drilldownStatsComparison').classList.remove('hidden');
-            document.getElementById('drilldownTabWrapper').classList.remove('hidden');
-
-            updateModeLabel();
-            applyFilters();
-
-            const explorerSection = document.getElementById('section-explorer');
-            if (explorerSection) {
-                explorerSection.scrollIntoView({ behavior: 'smooth' });
+            const detailSection = document.getElementById('section-deploy-detail');
+            if (detailSection) {
+                detailSection.scrollIntoView({ behavior: 'smooth' });
             }
+        }
+
+        // ── Deploy Detail View Functions ────────────────────────────────────
+
+        function renderDeployDetail(commitHash) {
+            const project = activeProjectKey === 'all' ? getCombinedProjectVirtual() : analyticsData.projects.find(p => p.project_key === activeProjectKey);
+            if (!project) return;
+
+            const windows = project.deployment_windows || [];
+            const win = windows.find(w => w.commit.hash === commitHash);
+            if (!win) return;
+
+            deployDetailHash = commitHash;
+
+            const ddWindowSelect = document.getElementById('ddWindowSelect');
+            const useStrict = ddWindowSelect ? (ddWindowSelect.value === 'strict') : false;
+            const suffix = useStrict ? '' : '_3d';
+            const beforeSessions = win['sessions_before' + suffix] || [];
+            const afterSessions = win['sessions_after' + suffix] || [];
+            const beforeMetrics = win['before' + suffix + '_metrics'] || {};
+            const afterMetrics = win['after' + suffix + '_metrics'] || {};
+            const commit = win.commit;
+
+            // ── Header ──
+            document.getElementById('ddHash').textContent = commit.hash.substring(0, 8);
+            document.getElementById('ddMessage').textContent = commit.message_short;
+            document.getElementById('ddMeta').textContent = (commit.date_display || '') + ' • by ' + (commit.author_name || commit.author || 'unknown');
+            const swBadge = document.getElementById('ddShortWindowBadge');
+            if (win.short_window) { swBadge.classList.remove('hidden'); } else { swBadge.classList.add('hidden'); }
+
+            // ── Metrics Grid ──
+            const getFirstPageExitRate = (sessions) => {
+                const realSessions = sessions.filter(s => s.classification !== 'bot');
+                if (!realSessions.length) return 0;
+                const exits = realSessions.filter(s => !s.views || s.views.length <= 1);
+                return (exits.length / realSessions.length * 100);
+            };
+
+            const bExit = getFirstPageExitRate(beforeSessions);
+            const aExit = getFirstPageExitRate(afterSessions);
+
+            const metrics = [
+                { label: 'Session Count', before: beforeSessions.length, after: afterSessions.length, fmt: v => v, higherIsBetter: true },
+                { label: 'Engagement %', before: beforeMetrics.engaged_pct, after: afterMetrics.engaged_pct, fmt: v => v != null ? v.toFixed(1) + '%' : '—', higherIsBetter: true },
+                { label: 'Bounce Rate %', before: beforeMetrics.bounce_pct, after: afterMetrics.bounce_pct, fmt: v => v != null ? v.toFixed(1) + '%' : '—', higherIsBetter: false },
+                { label: 'Median TTFA', before: beforeMetrics.median_ttfa, after: afterMetrics.median_ttfa, fmt: v => v != null ? v.toFixed(1) + 's' : '—', higherIsBetter: false },
+                { label: '1st-Page Exit %', before: bExit, after: aExit, fmt: v => v != null ? v.toFixed(1) + '%' : '—', higherIsBetter: false }
+            ];
+
+            const grid = document.getElementById('ddMetricsGrid');
+            const beforeCol = document.createElement('div');
+            beforeCol.className = 'deploy-detail-col before';
+            beforeCol.innerHTML = '<div class="deploy-detail-col-title">⏪ Before Deploy</div>';
+
+            const afterCol = document.createElement('div');
+            afterCol.className = 'deploy-detail-col after';
+            afterCol.innerHTML = '<div class="deploy-detail-col-title">⏩ After Deploy</div>';
+
+            const deltaCol = document.createElement('div');
+            deltaCol.className = 'deploy-detail-col delta';
+            deltaCol.innerHTML = '<div class="deploy-detail-col-title">Δ Delta</div>';
+
+            metrics.forEach(m => {
+                const bVal = m.before;
+                const aVal = m.after;
+                beforeCol.innerHTML += `<div class="deploy-detail-stat"><span class="label">${m.label}</span><span class="value">${m.fmt(bVal)}</span></div>`;
+                afterCol.innerHTML += `<div class="deploy-detail-stat"><span class="label">${m.label}</span><span class="value">${m.fmt(aVal)}</span></div>`;
+
+                let deltaStr = '—';
+                let deltaClass = 'delta-neutral';
+                if (bVal != null && aVal != null) {
+                    const delta = aVal - bVal;
+                    const absDelta = Math.abs(delta);
+                    if (m.label === 'Session Count') {
+                        deltaStr = (delta >= 0 ? '+' : '') + delta;
+                    } else {
+                        deltaStr = (delta >= 0 ? '+' : '') + delta.toFixed(1);
+                    }
+                    if (absDelta > 0.5) {
+                        const improving = m.higherIsBetter ? (delta > 0) : (delta < 0);
+                        deltaClass = improving ? 'delta-positive' : 'delta-negative';
+                    }
+                }
+                deltaCol.innerHTML += `<div class="deploy-detail-stat"><span class="label">${m.label}</span><span class="value ${deltaClass}">${deltaStr}</span></div>`;
+            });
+
+            grid.innerHTML = '';
+            grid.appendChild(beforeCol);
+            grid.appendChild(afterCol);
+            grid.appendChild(deltaCol);
+
+            // ── Tab counts ──
+            document.getElementById('ddTabBeforeCount').textContent = beforeSessions.length;
+            document.getElementById('ddTabAfterCount').textContent = afterSessions.length;
+
+            // ── Render sessions ──
+            renderDeployDetailSessions();
+        }
+
+        function renderDeployDetailSessions() {
+            const project = activeProjectKey === 'all' ? getCombinedProjectVirtual() : analyticsData.projects.find(p => p.project_key === activeProjectKey);
+            if (!project) return;
+            const windows = project.deployment_windows || [];
+            const win = windows.find(w => w.commit.hash === deployDetailHash);
+            if (!win) return;
+
+            const ddWindowSelect = document.getElementById('ddWindowSelect');
+            const useStrict = ddWindowSelect ? (ddWindowSelect.value === 'strict') : false;
+            const suffix = useStrict ? '' : '_3d';
+            const tab = deployDetailTab || 'after';
+            const sessions = win['sessions_' + tab + suffix] || [];
+
+            const sorted = [...sessions].sort((a, b) => new Date(b.start) - new Date(a.start));
+
+            const container = document.getElementById('deployDetailSessions');
+            container.innerHTML = '';
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);">No sessions in this window</div>';
+                return;
+            }
+
+            sorted.forEach((s, i) => container.appendChild(createSessionCard(s, i)));
+        }
+
+        function setDeployDetailTab(tab) {
+            deployDetailTab = tab;
+            document.getElementById('ddTabBefore').classList.toggle('active', tab === 'before');
+            document.getElementById('ddTabAfter').classList.toggle('active', tab === 'after');
+            renderDeployDetailSessions();
+        }
+
+        function exitDeployDetail() {
+            deployDetailHash = null;
+            deployDetailTab = 'after';
+            switchPanel('section-commits');
         }
 
         function setExplorerMode(mode) {
@@ -2312,33 +2540,10 @@
         function updateModeLabel() {
             const label = document.getElementById('explorerModeLabel');
             let txt = explorerMode === 'cumulative' ? 'All Cumulative Sessions' : 'Inferred Journeys';
-            if (drilldownCommitHash) {
-                txt += ` (Drilldown: Commit ${drilldownCommitHash.substring(0,8)})`;
-            }
             label.textContent = txt;
         }
 
-        function setDrilldownPerspective(perspective) {
-            drilldownPerspective = perspective;
-
-            // Toggle active tab styles
-            const btnBefore = document.getElementById('drilldownTabBefore');
-            const btnAfter = document.getElementById('drilldownTabAfter');
-
-            if (perspective === 'before') {
-                btnBefore.style.borderBottomColor = 'var(--accent-blue)';
-                btnBefore.style.color = 'var(--text-main)';
-                btnAfter.style.borderBottomColor = 'transparent';
-                btnAfter.style.color = 'var(--text-muted)';
-            } else {
-                btnAfter.style.borderBottomColor = 'var(--accent-green)';
-                btnAfter.style.color = 'var(--text-main)';
-                btnBefore.style.borderBottomColor = 'transparent';
-                btnBefore.style.color = 'var(--text-muted)';
-            }
-
-            applyFilters();
-        }
+        // setDrilldownPerspective removed — replaced by Deploy Detail View tabs
 
         function getWindowStats(sessions) {
             if (!sessions || sessions.length === 0) {
@@ -2547,79 +2752,10 @@
 function toggleViewFilter(view) {
   activeViewFilter = activeViewFilter === view ? null : view;
   applyFilters();
+  if (activeViewFilter) switchPanel('section-paths');
 }
 function clearViewFilter() { activeViewFilter = null; applyFilters(); }
 
-// ── Deployments ────────────────────────────────────────────────────────
-function renderDeployments() {
-  const p = activeProjectKey === 'all' ? getCombinedProjectVirtual() : (analyticsData.projects.find(proj => proj.project_key === activeProjectKey) || {});
-  const panel = document.getElementById('panel-deployments');
-  const list  = document.getElementById('deploy-list');
-  const deps  = p.deployments || [];
-
-  if (!deps.length) { panel.style.display = 'none'; return; }
-  panel.style.display = '';
-
-  list.innerHTML = deps.map((d, i) => {
-    const after  = d.sessions_after  || {};
-    const before = d.sessions_before || {};
-
-    const deltaCount = after.count - (before.count || 0);
-    const deltaLabel = before.count
-      ? `<span class="deploy-delta ${deltaCount >= 0 ? 'delta-up' : 'delta-down'}">${deltaCount >= 0 ? '+' : ''}${deltaCount}</span>`
-      : '';
-
-    const afterPaths  = (after.top_paths  || []).slice(0, 3);
-    const beforePaths = (before.top_paths || []).slice(0, 3);
-
-    return `
-      <div class="deploy-card">
-        <div class="deploy-header" onclick="toggleDeploy(${i})">
-          <span class="deploy-hash">${d.hash}</span>
-          <span class="deploy-date">${d.date_display}</span>
-          <span class="deploy-msg">${esc(d.message)}</span>
-          <span class="deploy-toggle" id="dep-toggle-${i}">▾</span>
-        </div>
-        <div class="deploy-body collapsed" id="dep-body-${i}">
-          <div>
-            <div class="deploy-window-title">After this commit</div>
-            ${after.count
-              ? `<div class="deploy-stat"><span class="deploy-stat-label">Sessions</span>
-                  <span class="deploy-stat-val">${after.count}${deltaLabel}</span></div>
-                 <div class="deploy-stat"><span class="deploy-stat-label">Median duration</span>
-                  <span class="deploy-stat-val">${after.median_display || '—'}</span></div>
-                 ${afterPaths.map(pt =>
-                   `<div class="deploy-stat"><span class="deploy-stat-label" style="font-family:var(--font-mono);font-size:10px">${esc(pt.path)}</span>
-                    <span class="deploy-stat-val">${pt.count}</span></div>`
-                 ).join('')}`
-              : '<div class="no-data">No sessions recorded after this commit yet</div>'}
-          </div>
-          <div>
-            <div class="deploy-window-title">Before this commit</div>
-            ${before.count
-              ? `<div class="deploy-stat"><span class="deploy-stat-label">Sessions</span>
-                  <span class="deploy-stat-val">${before.count}</span></div>
-                 <div class="deploy-stat"><span class="deploy-stat-label">Median duration</span>
-                  <span class="deploy-stat-val">${before.median_display || '—'}</span></div>
-                 ${beforePaths.map(pt =>
-                   `<div class="deploy-stat"><span class="deploy-stat-label" style="font-family:var(--font-mono);font-size:10px">${esc(pt.path)}</span>
-                    <span class="deploy-stat-val">${pt.count}</span></div>`
-                 ).join('')}`
-              : '<div class="no-data">No prior sessions in window</div>'}
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function toggleDeploy(i) {
-  const body   = document.getElementById(`dep-body-${i}`);
-  const toggle = document.getElementById(`dep-toggle-${i}`);
-  const open   = !body.classList.contains('collapsed');
-  body.classList.toggle('collapsed', !open);
-  toggle.textContent = open ? '▾' : '▸';
-}
 
 // ── Populate filter dropdowns ────────────────────────────────────────────────
 function populateFilters() {
@@ -2741,24 +2877,10 @@ function renderPaths() {
             const project = activeProjectKey === 'all' ? getCombinedProjectVirtual() : analyticsData.projects.find(p => p.project_key === activeProjectKey);
             if (!project) return;
 
-            // 1. Get raw base list of sessions (filtered by commit window if drilldown is active)
-            let baseSessions = [];
+            // 1. Get raw base list of sessions
+            let baseSessions = project.sessions || [];
             const windowModeSelect = document.getElementById('comparisonWindowSelect');
             const useStrict = windowModeSelect ? (windowModeSelect.value === 'strict') : false;
-
-            if (drilldownCommitHash) {
-                const windows = project.deployment_windows || [];
-                const win = windows.find(w => w.commit.hash === drilldownCommitHash);
-                if (win) {
-                    if (useStrict) {
-                        baseSessions = drilldownPerspective === 'after' ? (win.sessions_after || []) : (win.sessions_before || []);
-                    } else {
-                        baseSessions = drilldownPerspective === 'after' ? (win.sessions_after_3d || []) : (win.sessions_before_3d || []);
-                    }
-                }
-            } else {
-                baseSessions = project.sessions || [];
-            }
 
             baseSessions.forEach(s => {
                 if (!s.project_key) {
@@ -2914,87 +3036,6 @@ function renderPaths() {
                 devRefContainer.appendChild(refDiv);
             }
 
-            // 5. Recalculate Drilldown Stats Comparison (if active)
-            const warningEl = document.getElementById('drilldownReferrerWarning');
-            if (warningEl) warningEl.classList.add('hidden');
-
-            if (drilldownCommitHash) {
-                const windows = project.deployment_windows || [];
-                const win = windows.find(w => w.commit.hash === drilldownCommitHash);
-                if (win) {
-                    const sessionsBefore = useStrict ? (win.sessions_before || []) : (win.sessions_before_3d || []);
-                    const sessionsAfter = useStrict ? (win.sessions_after || []) : (win.sessions_after_3d || []);
-                    const filteredBefore = sessionsBefore.filter(matchesFilters);
-                    const filteredAfter = sessionsAfter.filter(matchesFilters);
-
-                    const beforeStats = getWindowStats(filteredBefore);
-                    const afterStats = getWindowStats(filteredAfter);
-
-                    document.getElementById('drilldownBeforeCount').textContent = beforeStats.count;
-                    document.getElementById('drilldownBeforeDuration').textContent = beforeStats.medianDuration;
-                    document.getElementById('drilldownBeforeBounce').textContent = beforeStats.bounceRate;
-                    document.getElementById('drilldownBeforeTTFA').textContent = beforeStats.medianTTFA;
-                    document.getElementById('drilldownBeforeExitRate').textContent = beforeStats.exitRate;
-
-                    document.getElementById('drilldownAfterCount').textContent = afterStats.count;
-                    document.getElementById('drilldownAfterDuration').textContent = afterStats.medianDuration;
-                    document.getElementById('drilldownAfterBounce').textContent = afterStats.bounceRate;
-                    document.getElementById('drilldownAfterTTFA').textContent = afterStats.medianTTFA;
-                    document.getElementById('drilldownAfterExitRate').textContent = afterStats.exitRate;
-
-                    document.getElementById('drilldownBeforeTabCount').textContent = beforeStats.count;
-                    document.getElementById('drilldownAfterTabCount').textContent = afterStats.count;
-
-                    // Check for significant referrer mix shift
-                    let referrerWarningText = "";
-                    const beforeRefCounts = {};
-                    let beforeRealTotal = 0;
-                    filteredBefore.forEach(s => {
-                        if (s.classification === 'bot') return;
-                        const ref = s.referrer || 'direct';
-                        beforeRefCounts[ref] = (beforeRefCounts[ref] || 0) + 1;
-                        beforeRealTotal++;
-                    });
-
-                    const afterRefCounts = {};
-                    let afterRealTotal = 0;
-                    filteredAfter.forEach(s => {
-                        if (s.classification === 'bot') return;
-                        const ref = s.referrer || 'direct';
-                        afterRefCounts[ref] = (afterRefCounts[ref] || 0) + 1;
-                        afterRealTotal++;
-                    });
-
-                    if (beforeRealTotal > 0 && afterRealTotal > 0) {
-                        for (const ref in beforeRefCounts) {
-                            if (ref === 'direct') continue;
-                            const beforeShare = beforeRefCounts[ref] / beforeRealTotal;
-                            const afterShare = (afterRefCounts[ref] || 0) / afterRealTotal;
-                            const diff = beforeShare - afterShare;
-                            
-                            // Major referrer >= 15% share, absolute drop > 20%
-                            if (beforeShare >= 0.15 && diff > 0.20) {
-                                const sortedAfterRefs = Object.entries(afterRefCounts)
-                                    .map(([r, c]) => ({ referrer: r, share: c / afterRealTotal }))
-                                    .sort((a, b) => b.share - a.share);
-                                
-                                const topAfterStr = sortedAfterRefs.length > 0 
-                                    ? `mostly ${sortedAfterRefs[0].referrer} (${Math.round(sortedAfterRefs[0].share * 100)}%)` 
-                                    : "mostly direct/organic";
-
-                                referrerWarningText = `<strong>Referral Mix Shift</strong>: 'Before' period was driven by viral ${ref} traffic (${Math.round(beforeShare * 100)}%). 'After' is ${topAfterStr}. Behavior changes may be due to visitor demographic shifts rather than UX changes.`;
-                                break;
-                            }
-                        }
-                    }
-
-                    const warningTextEl = document.getElementById('drilldownReferrerWarningText');
-                    if (warningEl && warningTextEl && referrerWarningText) {
-                        warningTextEl.innerHTML = referrerWarningText;
-                        warningEl.classList.remove('hidden');
-                    }
-                }
-            }
 
             // 6. Render Commits Loop dynamically
             const commitsContainer = document.getElementById('commitsContainer');
@@ -3104,7 +3145,7 @@ function renderPaths() {
 
                     const row = document.createElement('div');
                     row.className = "commit-row";
-                    if (commit.hash === drilldownCommitHash) {
+                    if (commit.hash === deployDetailHash) {
                         row.classList.add('selected');
                     }
                     row.onclick = () => {
