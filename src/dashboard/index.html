@@ -2207,6 +2207,11 @@
             
             updateModeLabel();
             applyFilters();
+
+            const commitsSection = document.getElementById('section-commits');
+            if (commitsSection) {
+                commitsSection.scrollIntoView({ behavior: 'smooth' });
+            }
         }
 
         function drilldownToCommit(commitHash, commitMsg, rowElement) {
@@ -2254,6 +2259,11 @@
 
             updateModeLabel();
             applyFilters();
+
+            const explorerSection = document.getElementById('section-explorer');
+            if (explorerSection) {
+                explorerSection.scrollIntoView({ behavior: 'smooth' });
+            }
         }
 
         function setExplorerMode(mode) {
