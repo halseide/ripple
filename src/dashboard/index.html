@@ -3493,10 +3493,12 @@ function renderPaths() {
                         ${v.sessions.length} visit${v.sessions.length > 1 ? 's' : ''}
                     </span>
                 </div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; gap: 0.8rem;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; gap: 0.8rem; flex-wrap: wrap;">
                     <span>📱 Device: ${deviceIcon} (${latestSess.browser})</span>
                     <span>•</span>
-                    <span>⏱️ Total visits span: ${v.sessions.length > 1 ? 'Multi-session' : 'Single session'}</span>
+                    <span>📍 ${latestSess.city && latestSess.city !== 'Unknown' ? latestSess.city + ', ' + latestSess.country : (latestSess.country && latestSess.country !== 'Unknown' ? latestSess.country : 'Location unknown')}</span>
+                    <span>•</span>
+                    <span>⏱️ ${v.sessions.length > 1 ? 'Multi-session' : 'Single session'}</span>
                 </div>
                 
                 <div style="display: flex; flex-direction: column;">
