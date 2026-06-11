@@ -193,6 +193,83 @@ def evaluate_goals(proj: dict, sessions: list, commits: list, config: dict) -> l
     return evaluated
 
 
+def _sync_sessions_from_ftp(proj: dict):
+    """Checks if a project has FTP credentials in its .env and syncs new sessions."""
+    import ftplib
+    import os
+    repo_path = proj.get("git_repo")
+    if not repo_path:
+        return
+        
+    env_path = Path(repo_path) / ".env"
+    if not env_path.exists():
+        return
+        
+    # Load .env
+    env = {}
+    try:
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, _, value = line.partition("=")
+                env[key.strip()] = value.strip()
+    except Exception as e:
+        print(f"  [{proj['name']}] Warning: Failed to read .env at {env_path}: {e}")
+        return
+        
+    host = env.get("FTP_HOST")
+    user = env.get("FTP_USER")
+    password = env.get("FTP_PASS")
+    remote_dir = env.get("FTP_REMOTE_DIR", "/public_html")
+    
+    if not host or not user or not password:
+        return
+        
+    print(f"\n  [{proj['name']}] Found FTP credentials in .env. Checking for new sessions on production...")
+    try:
+        ftp = ftplib.FTP(host)
+        ftp.login(user, password)
+        
+        remote_sess_dir = f"{remote_dir}/sessions"
+        try:
+            ftp.cwd(remote_sess_dir)
+        except ftplib.error_perm as e:
+            print(f"    Notice: Could not cwd to remote sessions folder '{remote_sess_dir}'. Skipping FTP sync.")
+            ftp.quit()
+            return
+            
+        remote_files = []
+        try:
+            remote_files = ftp.nlst()
+        except Exception:
+            pass
+            
+        session_files = [f for f in remote_files if f.startswith("sess_") and f.endswith(".json")]
+        if not session_files:
+            ftp.quit()
+            return
+            
+        local_sess_dir = Path(proj["sessions_dir"])
+        local_sess_dir.mkdir(parents=True, exist_ok=True)
+        local_files = set(os.listdir(local_sess_dir))
+        
+        new_sessions = [f for f in session_files if f not in local_files]
+        if new_sessions:
+            print(f"    Downloading {len(new_sessions)} new session(s) from production...")
+            for idx, filename in enumerate(new_sessions, 1):
+                local_path = local_sess_dir / filename
+                with open(local_path, "wb") as f:
+                    ftp.retrbinary(f"RETR {filename}", f.write)
+            print(f"    Sync complete.")
+        else:
+            print("    Local sessions are up to date.")
+        ftp.quit()
+    except Exception as e:
+        print(f"    Warning: FTP session sync failed: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Ripple — analytics + deployment correlation")
     parser.add_argument("--config", default="ripple.config.json",
@@ -226,6 +303,9 @@ def main():
     # ── Run analytics + git correlation for each project ──────────────────────
     results = []
     for proj in projects_cfg:
+        # Sync sessions from FTP if configured
+        _sync_sessions_from_ftp(proj)
+
         print(f"\n  [{proj['name']}] Analysing sessions ...")
 
         # 1. Session analytics
