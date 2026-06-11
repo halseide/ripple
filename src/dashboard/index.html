@@ -209,16 +209,63 @@
             gap: 0.6rem;
             align-items: flex-start;
             font-size: 0.85rem;
+            transition: background 0.15s;
+            padding: 0.3rem 0.4rem;
+            border-radius: 6px;
+            cursor: pointer;
         }
+        .goal-item:hover { background: rgba(255,255,255,0.04); }
 
         .goal-checkbox {
             color: var(--accent-blue);
             font-size: 1rem;
             line-height: 1;
+            flex-shrink: 0;
         }
 
         .goal-text {
             color: var(--text-main);
+        }
+
+        /* North Star Banner */
+        .north-star-banner {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 1rem;
+            background: linear-gradient(135deg, rgba(218,165,32,0.06), rgba(218,165,32,0.02));
+            border: 1px solid rgba(218,165,32,0.12);
+            border-radius: 8px;
+            margin-bottom: 0.3rem;
+        }
+        .north-star-icon { font-size: 1rem; opacity: 0.8; }
+        .north-star-text {
+            font-size: 0.78rem;
+            color: rgba(218,165,32,0.85);
+            font-style: italic;
+            letter-spacing: 0.01em;
+            line-height: 1.4;
+        }
+
+        /* Add Goal Button */
+        .add-goal-btn {
+            display: block;
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.6rem;
+            background: rgba(218,165,32,0.06);
+            border: 1px dashed rgba(218,165,32,0.25);
+            border-radius: 6px;
+            color: rgba(218,165,32,0.7);
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .add-goal-btn:hover {
+            background: rgba(218,165,32,0.12);
+            color: #daa520;
+            border-color: rgba(218,165,32,0.4);
         }
 
         /* Main Workspace Panels */
@@ -793,7 +840,10 @@
             font-family: var(--font-mono);
             border: 1px solid;
         }
-        .prompt-cat-fix     { background: rgba(248, 81, 73, 0.1); color: var(--accent-red); border-color: rgba(248, 81, 73, 0.2); }
+        .prompt-cat-fix     { background: rgba(248, 81, 73, 0.1); color: var(--accent-red); border-color: rgba(248, 81, 73, 0.3); }
+        .prompt-cat-copy    { background: rgba(56, 139, 253, 0.1); color: var(--accent-blue); border-color: rgba(56, 139, 253, 0.3); }
+        .prompt-cat-data    { background: rgba(0, 212, 170, 0.1); color: #00d4aa; border-color: rgba(0, 212, 170, 0.3); }
+        .prompt-cat-goal    { background: rgba(218, 165, 32, 0.12); color: #daa520; border-color: rgba(218, 165, 32, 0.35); font-weight: 600; }
         .prompt-cat-feature { background: rgba(188, 140, 255, 0.1); color: var(--accent-purple); border-color: rgba(188, 140, 255, 0.2); }
         .prompt-cat-question{ background: rgba(56, 139, 253, 0.1); color: var(--accent-blue); border-color: rgba(56, 139, 253, 0.2); }
         .prompt-cat-design  { background: rgba(63, 185, 80, 0.1); color: var(--accent-green); border-color: rgba(63, 185, 80, 0.2); }
@@ -1257,12 +1307,19 @@
                     </div>
                 </div>
 
+                <!-- North Star -->
+                <div id="northStarBanner" class="north-star-banner" style="display:none">
+                    <span class="north-star-icon">⭐</span>
+                    <span id="northStarText" class="north-star-text"></span>
+                </div>
+
                 <!-- Goals checklist -->
                 <div class="card">
                     <div class="card-title">Stated Goals</div>
                     <div id="goalsList" class="goals-list">
-                        <!-- Goals dynamic insertion -->
+                        <!-- Goals from prompt log -->
                     </div>
+                    <button class="add-goal-btn" onclick="openGoalCapture()">+ New Goal</button>
                 </div>
 
                 <!-- Raw Session Stats -->
@@ -2058,38 +2115,55 @@
                 document.getElementById('projectUrl').innerText = "All Configured Repositories";
             }
 
-            // 2. Render Goals
+            // 2. Render North Star
+            const nsBanner = document.getElementById('northStarBanner');
+            const nsText = document.getElementById('northStarText');
+            const northStar = (allPrompts || []).find(p =>
+                p.category === 'goal' && p.subtype === 'north_star'
+                && p.projectKey === activeProjectKey
+                && p.status !== 'dismissed' && p.status !== 'canceled'
+            );
+            if (northStar) {
+                nsText.textContent = northStar.prompt;
+                nsBanner.style.display = 'flex';
+            } else {
+                nsBanner.style.display = 'none';
+            }
+
+            // 3. Render Goals (from prompt log)
             const goalsContainer = document.getElementById('goalsList');
             goalsContainer.innerHTML = "";
-            const goalsToRender = project.goals_status || (project.goals || []).map(g => ({ text: g, type: 'milestone', status: 'pending', details: 'No status evaluated yet' }));
-            
-            if (goalsToRender.length > 0) {
-                goalsToRender.forEach(goal => {
+            const projKey = activeProjectKey;
+            const goalPrompts = (allPrompts || []).filter(p =>
+                p.category === 'goal'
+                && p.projectKey === projKey
+                && p.subtype !== 'north_star'
+                && p.status !== 'dismissed' && p.status !== 'canceled'
+            );
+
+            if (goalPrompts.length > 0) {
+                goalPrompts.forEach(g => {
                     const item = document.createElement('div');
-                    item.className = "goal-item";
-                    item.style.display = "flex";
-                    item.style.alignItems = "flex-start";
-                    item.style.gap = "0.5rem";
-                    item.style.marginBottom = "0.4rem";
-                    
-                    let icon = "⚬";
-                    let color = "var(--text-muted)";
-                    if (goal.status === "completed" || goal.status === "passed") {
-                        icon = "✅";
-                        color = "var(--accent-green)";
-                    } else if (goal.status === "failing") {
-                        icon = "⚠️";
-                        color = "var(--accent-amber)";
-                    }
-                    
+                    item.className = 'goal-item';
+                    const isResolved = g.status === 'shipped';
+                    const isAnswered = g.status === 'answered';
+                    const icon = isResolved ? '✅' : (isAnswered ? '💬' : '🎯');
+                    const style = isResolved ? 'text-decoration:line-through;opacity:0.6' : '';
                     item.innerHTML = `
-                        <span style="color: ${color}; line-height: 1.2; font-size: 0.95rem;">${icon}</span>
-                        <span class="goal-text" style="font-size: 0.8rem; line-height: 1.2; cursor: help;" title="${escHtml(goal.details || '')}">${escHtml(goal.text)}</span>
+                        <span class="goal-checkbox">${icon}</span>
+                        <span class="goal-text" style="font-size:0.8rem;line-height:1.2;${style}" title="${escHtml(g.answer || g.prompt)}">${escHtml(g.prompt)}</span>
                     `;
+                    item.onclick = () => {
+                        switchPanel('section-prompts');
+                        setTimeout(() => {
+                            const el = document.getElementById('expand-btn-' + g.promptId);
+                            if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                        }, 300);
+                    };
                     goalsContainer.appendChild(item);
                 });
             } else {
-                goalsContainer.innerHTML = '<p style="font-size: 0.8rem; color: var(--text-muted);">No goals defined for this project.</p>';
+                goalsContainer.innerHTML = '<p style="font-size:0.8rem;color:var(--text-muted);">No goals set. Use the button below to add one.</p>';
             }
 
             // 3. Render Suggestions
@@ -3634,6 +3708,93 @@ function renderPaths() {
             }
         }
 
+        // ── Goal Capture (from dashboard) ──────────────────────────────────────
+
+        function openGoalCapture() {
+            // Build a lightweight modal for goal capture
+            const existing = document.getElementById('goalCaptureOverlay');
+            if (existing) existing.remove();
+
+            const projKey = activeProjectKey === 'all' ? (rippleConfig?.projects?.[0]?.key || 'unknown') : activeProjectKey;
+
+            const overlay = document.createElement('div');
+            overlay.id = 'goalCaptureOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);';
+            overlay.innerHTML = `
+                <div style="background:var(--bg-card);border:1px solid rgba(218,165,32,0.25);border-radius:12px;padding:1.5rem;width:90%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                        <h3 style="margin:0;font-size:1rem;color:#daa520;">🎯 New Goal — ${escHtml(projKey)}</h3>
+                        <button onclick="document.getElementById('goalCaptureOverlay').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;">&times;</button>
+                    </div>
+                    <textarea id="goalCaptureText" rows="3" placeholder="Describe your goal... e.g. 'Grow the active user base month over month'" style="width:100%;box-sizing:border-box;background:var(--bg-main);border:1px solid var(--border-color);border-radius:8px;padding:0.75rem;color:var(--text-main);font-family:inherit;font-size:0.9rem;resize:vertical;"></textarea>
+                    <div style="display:flex;align-items:center;gap:0.8rem;margin-top:0.8rem;">
+                        <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;">
+                            <input type="checkbox" id="goalIsNorthStar" style="accent-color:#daa520;">
+                            <span>⭐ Set as North Star (overarching project mission)</span>
+                        </label>
+                    </div>
+                    <div style="display:flex;gap:0.6rem;margin-top:1rem;justify-content:flex-end;">
+                        <button onclick="document.getElementById('goalCaptureOverlay').remove()" style="padding:0.5rem 1rem;background:transparent;border:1px solid var(--border-color);border-radius:6px;color:var(--text-muted);cursor:pointer;font-family:inherit;">Cancel</button>
+                        <button onclick="submitGoalCapture()" style="padding:0.5rem 1.2rem;background:rgba(218,165,32,0.15);border:1px solid rgba(218,165,32,0.4);border-radius:6px;color:#daa520;cursor:pointer;font-weight:600;font-family:inherit;transition:all 0.2s;" onmouseover="this.style.background='rgba(218,165,32,0.25)'" onmouseout="this.style.background='rgba(218,165,32,0.15)'">Capture Goal</button>
+                    </div>
+                    <div id="goalCaptureStatus" style="margin-top:0.6rem;font-size:0.8rem;"></div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+            document.getElementById('goalCaptureText').focus();
+            if (window.Ripple) Ripple.track('goal_capture_opened', { project: projKey });
+        }
+
+        async function submitGoalCapture() {
+            const text = document.getElementById('goalCaptureText')?.value?.trim();
+            if (!text || text.length < 3) {
+                document.getElementById('goalCaptureStatus').innerHTML = '<span style="color:var(--accent-red)">Please enter a goal (at least 3 characters).</span>';
+                return;
+            }
+
+            const projKey = activeProjectKey === 'all' ? (rippleConfig?.projects?.[0]?.key || 'unknown') : activeProjectKey;
+            const isNorthStar = document.getElementById('goalIsNorthStar')?.checked || false;
+
+            const payload = {
+                projectKey: projKey,
+                pageUrl: window.location.href,
+                elementSelector: 'project-level',
+                elementContext: 'project-level',
+                category: 'goal',
+                subtype: isNorthStar ? 'north_star' : null,
+                prompt: text,
+                sessionId: 'dashboard_' + Date.now(),
+                timestamp: new Date().toISOString(),
+            };
+
+            const statusEl = document.getElementById('goalCaptureStatus');
+            statusEl.innerHTML = '<span style="color:var(--text-muted)">Saving...</span>';
+
+            try {
+                const res = await fetch('../../api/capture_prompt.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const result = await res.json();
+                if (result.ok) {
+                    statusEl.innerHTML = '<span style="color:var(--accent-green)">✅ Goal captured!</span>';
+                    if (window.Ripple) Ripple.track('goal_captured', { project: projKey, northStar: isNorthStar });
+                    // Reload prompt log and refresh UI
+                    setTimeout(async () => {
+                        document.getElementById('goalCaptureOverlay')?.remove();
+                        await loadPromptLog();
+                        renderProjectDashboard();
+                    }, 800);
+                } else {
+                    statusEl.innerHTML = `<span style="color:var(--accent-red)">❌ ${result.error || 'Save failed'}</span>`;
+                }
+            } catch (e) {
+                statusEl.innerHTML = '<span style="color:var(--accent-red)">❌ Network error</span>';
+            }
+        }
+
         // ── Settings Panel ─────────────────────────────────────────────────────
 
         let settingsActiveProjectKey = null; // which project is shown in the settings editor
@@ -3702,8 +3863,11 @@ function renderPaths() {
                         <input class="settings-input mono" id="sField_sessions_dir" type="text" value="${escHtml(proj.sessions_dir || '')}">
                     </div>
                     <div class="settings-field">
-                        <label>Goals <span class="field-hint">— one per line</span></label>
-                        <textarea class="settings-input" id="sField_goals" rows="5">${escHtml((proj.goals || []).join('\n'))}</textarea>
+                        <label>Goals <span class="field-hint">— managed via the Prompt system</span></label>
+                        <div style="font-size:0.8rem;color:var(--text-muted);padding:0.5rem 0.7rem;background:rgba(218,165,32,0.04);border:1px solid rgba(218,165,32,0.12);border-radius:6px;line-height:1.5;">
+                            🎯 Goals are now captured as prompts. Use the <strong>"+ New Goal"</strong> button on the Stated Goals card, or select <strong>"Goal"</strong> from the Ripple tracker on any page.<br>
+                            <span style="opacity:0.7;">To set a North Star (overarching purpose), capture a goal and it will be designated as your project's guiding mission.</span>
+                        </div>
                     </div>
                     <div class="settings-field">
                         <label>Goal Lookback Window <span class="field-hint">— days</span></label>
@@ -3757,7 +3921,6 @@ function renderPaths() {
                     github_url:         document.getElementById('sField_github_url')?.value.trim() || '',
                     git_repo:           document.getElementById('sField_git_repo')?.value.trim() || p.git_repo,
                     sessions_dir:       document.getElementById('sField_sessions_dir')?.value.trim() || p.sessions_dir,
-                    goals:              (document.getElementById('sField_goals')?.value || '').split('\n').map(s => s.trim()).filter(Boolean),
                     lookback_days:      parseInt(document.getElementById('sField_lookback_days')?.value || '7', 10),
                     interaction_events: (document.getElementById('sField_events')?.value || '').split('\n').map(s => s.trim()).filter(Boolean),
                 };
@@ -3834,6 +3997,9 @@ function renderPaths() {
                 feature:  { label: '✨ feature', cls: 'prompt-cat-feature' },
                 question: { label: '❓ question',cls: 'prompt-cat-question' },
                 design:   { label: '🎨 design',  cls: 'prompt-cat-design' },
+                copy:     { label: '✏️ copy',    cls: 'prompt-cat-copy' },
+                data:     { label: '📊 data',    cls: 'prompt-cat-data' },
+                goal:     { label: '🎯 goal',    cls: 'prompt-cat-goal' },
             };
             return m[c] || { label: c, cls: 'prompt-cat-question' };
         }
@@ -3842,6 +4008,7 @@ function renderPaths() {
             if (s === 'shipped')  return '✅ shipped';
             if (s === 'answered') return '💬 answered';
             if (s === 'dismissed') return '📥 archived';
+            if (s === 'canceled') return '🚫 canceled';
             return '⏳ pending';
         }
 
@@ -3905,7 +4072,7 @@ function renderPaths() {
             // Stats bar by category
             const cats = {};
             filtered.forEach(p => { cats[p.category] = (cats[p.category] || 0) + 1; });
-            const catOrder = ['fix', 'feature', 'design', 'copy', 'data', 'question'];
+            const catOrder = ['fix', 'feature', 'design', 'copy', 'data', 'question', 'goal'];
             statsBar.innerHTML = catOrder.map(c => {
                 const n = cats[c] || 0;
                 const m = catMeta(c);

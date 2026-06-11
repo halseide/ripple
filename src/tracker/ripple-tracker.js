@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Ripple Tracker  v0.11.0
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
@@ -785,7 +785,7 @@
     }
 
     // ── UI Capture: Modal ─────────────────────────────────────────────────────
-    const CATEGORIES = ['fix', 'feature', 'design', 'copy', 'data', 'question'];
+    const CATEGORIES = ['fix', 'feature', 'design', 'copy', 'data', 'question', 'goal'];
     const MODAL_ID   = '_rpl_capture_modal';
 
     function _openModal(targetEl, captureX, captureY) {
@@ -1186,6 +1186,12 @@
                 captureX:        _clickX,
                 captureY:        _clickY,
             };
+
+            // Goal prompts are project-level — override element targeting
+            if (category === 'goal') {
+                capturePayload.elementSelector = 'project-level';
+                capturePayload.elementContext  = 'project-level';
+            }
 
             fetch(CAPTURE_EP, {
                 method:  'POST',

@@ -61,7 +61,7 @@ if (!is_array($data)) {
 }
 
 // ── Validate required fields ──────────────────────────────────────────────────
-$required = ['projectKey', 'pageUrl', 'elementSelector', 'elementContext', 'category', 'prompt'];
+$required = ['projectKey', 'pageUrl', 'category', 'prompt'];
 foreach ($required as $field) {
     if (empty($data[$field])) {
         http_response_code(400);
@@ -80,6 +80,11 @@ if (strlen($prompt) < 3) {
 // ── Sanitise inputs ───────────────────────────────────────────────────────────
 $projectKey      = preg_replace('/[^a-zA-Z0-9_\-]/', '', $data['projectKey']);
 $pageUrl         = $data['pageUrl'];   // keep raw for JSON storage
+
+// Default element fields for project-level prompts (goals)
+if (empty($data['elementSelector'])) $data['elementSelector'] = 'project-level';
+if (empty($data['elementContext']))  $data['elementContext']  = 'project-level';
+
 $elementSelector = $data['elementSelector'];
 $elementContext  = $data['elementContext'];
 $category        = preg_replace('/[^a-zA-Z0-9_]/', '', $data['category']);
@@ -160,6 +165,29 @@ status: pending
 
 MD;
 
+// Inject subtype into frontmatter if present
+if (!empty($data['subtype'])) {
+    $markdown = str_replace(
+        "category: {$category}\n",
+        "category: {$category}\nsubtype: {$data['subtype']}\n",
+        $markdown
+    );
+}
+
+// For goal prompts, simplify the markdown template
+if ($category === 'goal') {
+    $markdown = str_replace(
+        "## Element Context\n\n**Target:** `{$contextEsc}`\n**Selector Path:** `{$selectorEsc}`\n\n## Prompt",
+        "## Goal",
+        $markdown
+    );
+    $markdown = str_replace(
+        "> [!NOTE] AI Processing Instructions\n> The element selector path above pinpoints the exact DOM node the user Shift+Right-Clicked.\n> Map `{$pageUrlEsc}` to the physical file in the `{$projectKey}` repository (see `ripple.config.json` for the `git_repo` path),\n> then search the file for the selector's tag/class/ID to locate the relevant lines of code.",
+        "> [!NOTE] AI Processing Instructions\n> This is a project-level goal. Evaluate progress against analytics data on each analysis run.\n> Do NOT commit code for this prompt. Write a data-backed assessment into the answer field.",
+        $markdown
+    );
+}
+
 // ── Write Atlas raw inbox markdown ────────────────────────────────────────────
 $filename = $rawInbox . DIRECTORY_SEPARATOR . $promptId . '.md';
 $written  = file_put_contents($filename, $markdown);
@@ -186,6 +214,7 @@ array_unshift($logData, [
     'elementSelector' => $elementSelector,
     'elementContext'  => $elementContext,
     'category'        => $category,
+    'subtype'         => $data['subtype'] ?? null,
     'prompt'          => $prompt,
     'sessionId'       => $sessionId,
     'status'          => 'pending',

@@ -81,7 +81,7 @@ $promptId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $data['promptId']);
 $allowedFields = [
     'status', 'answer', 'answeredAt',
     'reply', 'repliedAt',
-    'category',
+    'category', 'subtype',
     'commitHash', 'commitMessage', 'resolvedAt',
 ];
 

@@ -331,7 +331,8 @@ def main():
                     else:
                         w[metric_key] = {"bounce_pct": 0.0, "engaged_pct": 0.0, "real_users": 0, "median_ttfa": None}
 
-        # 4.5 Evaluate goals
+        # 4.5 Evaluate goals (DEPRECATED — goals now live in prompt_log.json)
+        # Kept for backward compat until dashboard migration is complete
         analytics["goals_status"]        = evaluate_goals(proj, real_sessions, commits, config)
 
         # 5. Attach to result
@@ -369,7 +370,9 @@ def main():
 
     # ── Intelligence layer ───────────────────────────────────────────────────
     from intelligence import agent
-    suggestions = agent.run(output, output_dir)
+    prompt_log_path = output_dir / "prompt_log.json"
+    prompt_log = json.loads(prompt_log_path.read_text(encoding="utf-8")) if prompt_log_path.exists() else []
+    suggestions = agent.run(output, output_dir, prompt_log=prompt_log)
     print(f"[Ripple] {len(suggestions)} suggestions written to {output_dir / 'ripple_suggestions.json'}")
 
     print("[Ripple] Done.")

@@ -48,7 +48,7 @@ RECENT_COMMIT_HOURS    = 72     # commits newer than this are "too new to measur
 
 # ── Main entry point ─────────────────────────────────────────────────────────
 
-def run(analytics_data: dict, output_dir: Path) -> list:
+def run(analytics_data: dict, output_dir: Path, *, prompt_log: list = None) -> list:
     """
     Generate suggestions for all projects in analytics_data.
     Writes data/ripple_suggestions.json and returns the suggestion list.
@@ -58,7 +58,7 @@ def run(analytics_data: dict, output_dir: Path) -> list:
     for project in analytics_data.get("projects", []):
         if "error" in project:
             continue
-        suggestions = _analyze_project(project)
+        suggestions = _analyze_project(project, prompt_log=prompt_log or [])
         all_suggestions.extend(suggestions)
 
     # Write output
@@ -81,7 +81,7 @@ def run(analytics_data: dict, output_dir: Path) -> list:
 
 # ── Project-level analysis ───────────────────────────────────────────────────
 
-def _analyze_project(project: dict) -> list:
+def _analyze_project(project: dict, *, prompt_log: list = None) -> list:
     suggestions = []
     key         = project["project_key"]
     name        = project["project"]
@@ -335,6 +335,65 @@ def _analyze_project(project: dict) -> list:
                 ),
                 commit=None,
             ))
+
+    # ── 7. Goal waypoint evaluation ───────────────────────────────────────────
+    if prompt_log:
+        goal_prompts = [p for p in prompt_log
+                        if p.get('category') == 'goal'
+                        and p.get('projectKey') == key
+                        and p.get('status') in ('pending', 'open', 'answered')]
+
+        for gp in goal_prompts:
+            prompt_text = gp.get('prompt', '')
+            prompt_id = gp.get('promptId', '')
+
+            # Try to match goal text against current data
+            evidence_parts = []
+            priority = "medium"
+
+            # Check if it mentions engagement
+            if any(kw in prompt_text.lower() for kw in ['engag', 'interact', 'session duration', 'duration']):
+                evidence_parts.append(f"Current engagement: {eng_rate}%, median session: {median_s:.0f}s")
+                if eng_rate < ENGAGED_GOAL_PCT:
+                    priority = "high"
+
+            # Check if it mentions users/growth/traffic
+            if any(kw in prompt_text.lower() for kw in ['user', 'grow', 'traffic', 'audience', 'active']):
+                evidence_parts.append(f"Current real users in dataset: {real_count}")
+                if real_count < 20:
+                    priority = "high"
+
+            # Check if it mentions specific views
+            for vf in view_funnel:
+                if vf['view'].lower() in prompt_text.lower():
+                    evidence_parts.append(
+                        f"'{vf['view']}' view: {vf['visit_pct']}% reach, "
+                        f"{vf.get('entry_pct', 0)}% start here, "
+                        f"{vf['exit_pct']}% exit, avg {vf['avg_display']}"
+                    )
+
+            # Check if it mentions events/conversion
+            for te in top_events:
+                if te['event'].lower() in prompt_text.lower():
+                    evidence_parts.append(f"'{te['event']}' event: {te['count']} occurrences")
+
+            if evidence_parts:
+                suggestions.append(_suggestion(
+                    id_=make_id(),
+                    project_key=key,
+                    project_name=name,
+                    goal=prompt_text,
+                    priority=priority,
+                    type_="goal_gap",
+                    title=f"Goal: {prompt_text[:60]}{'...' if len(prompt_text) > 60 else ''}",
+                    evidence="Current state: " + "; ".join(evidence_parts),
+                    suggestion=(
+                        f"This is an active goal (prompt {prompt_id}). "
+                        f"Review the evidence above to assess progress. "
+                        f"The intelligence agent will continue tracking this on each analysis run."
+                    ),
+                    commit=None,
+                ))
 
     return suggestions
 
