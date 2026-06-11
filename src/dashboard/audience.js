@@ -291,7 +291,7 @@ function openVisitorModal(visitorId) {
                 </div>
                 
                 <h4 style="margin: 0 0 1rem 0; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Session Timeline</h4>
-                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; flex-direction: column; padding-left: 0.5rem;">
                     ${renderSessionTimeline(sessions)}
                 </div>
             </div>
@@ -367,30 +367,93 @@ async function generateSingleAIAnalysis(visitorId) {
     }
 }
 
+function toggleModalSessionDetails(sessionId) {
+    const detailsDiv = document.getElementById(`modal-details-${sessionId}`);
+    if (!detailsDiv) return;
+    detailsDiv.classList.toggle('hidden');
+}
+
 function renderSessionTimeline(sessions) {
     if (sessions.length === 0) return `<div style="color:var(--text-muted); font-style:italic;">No detailed sessions available.</div>`;
 
     return sessions.map(s => {
-        const date = new Date(s.start);
-        const duration = s.duration;
+        const sDate = new Date(s.start).toLocaleString();
         
-        let paths = "";
-        if (s.events && s.events.length > 0) {
-            const pageViews = s.events.filter(e => e.type === 'page_view' || e.type === 'view_changed').map(e => e.data.path || e.data.url || e.data.view).filter(Boolean);
-            const uniqueViews = [...new Set(pageViews)];
-            if(uniqueViews.length > 0) {
-                paths = `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem; font-family: var(--font-mono);">Paths: ${uniqueViews.join(' ➔ ')}</div>`;
+        const pathStr = s.path || '(no path)';
+        const pathParts = pathStr === '(no path)' ? ['(no path)'] : pathStr.split(' → ');
+        const pathChips = pathParts.map((pPart, j) => {
+            const escaped = pPart.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            return `${j > 0 ? '<span class="view-arrow">→</span>' : ''}<span class="view-chip" style="font-size: 10px; padding: 1px 6px;">${escaped}</span>`;
+        }).join('');
+
+        const classBadges = {
+            deep: { label: "deep", color: "var(--accent-purple)", bg: "rgba(188, 140, 255, 0.1)" },
+            engaged: { label: "engaged", color: "var(--accent-green)", bg: "rgba(63, 185, 80, 0.1)" },
+            glancer: { label: "glancer", color: "var(--accent-blue)", bg: "rgba(56, 139, 253, 0.1)" },
+            bounce: { label: "bounce", color: "var(--text-muted)", bg: "rgba(139, 148, 158, 0.1)" },
+            ghost: { label: "ghost", color: "var(--accent-amber)", bg: "rgba(210, 153, 34, 0.1)" },
+            bot: { label: "bot", color: "var(--accent-red)", bg: "rgba(248, 81, 73, 0.1)" }
+        };
+        const badge = classBadges[s.classification] || { label: s.classification, color: "var(--text-muted)", bg: "rgba(255,255,255,0.05)" };
+
+        const viewsMarkup = (s.views || []).map(v => `
+            <span style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-family: var(--font-mono); color: var(--text-muted);">
+                ${v.view}: <strong>${v.duration}</strong>
+            </span>
+        `).join('');
+
+        const eventsMarkup = (s.events || []).map(e => {
+            const t = new Date(e.timestamp);
+            const timeOnly = t.toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            let detailsStr = "";
+            if (e.details) {
+                if (e.details.conclusion) detailsStr = `<span style="color: var(--accent-green);">[conclusion: ${e.details.conclusion}]</span>`;
+                else if (e.details.to) detailsStr = `<span style="color: var(--text-muted);">→ ${e.details.to}</span>`;
+                else if (e.details.title) detailsStr = `<span style="color: var(--accent-amber); font-weight: 500;">"${e.details.title}"</span>`;
+                else if (e.details.modal) detailsStr = `<span style="color: var(--accent-purple);">[modal: ${e.details.modal}]</span>`;
+                else if (e.details.timeOnPage) detailsStr = `<span style="color: var(--text-muted);">(stayed ${parseFloat(e.details.timeOnPage).toFixed(1)}s)</span>`;
             }
-        }
+            return `
+                <div style="font-size: 0.7rem; font-family: var(--font-mono); display: flex; gap: 0.5rem; color: var(--text-muted); line-height: 1.4;">
+                    <span style="color: var(--accent-blue);">${timeOnly}</span>
+                    <span style="color: var(--text-main); font-weight: 600;">${e.name}</span>
+                    <span>${detailsStr}</span>
+                </div>
+            `;
+        }).join('');
 
         return `
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.8rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="color: var(--accent-blue); font-size: 0.85rem;">${date.toLocaleString()}</strong>
-                    <span style="font-size: 0.75rem; color: var(--text-muted); background: rgba(0,0,0,0.3); padding: 0.1rem 0.4rem; border-radius: 4px;">⏱️ ${duration}</span>
+            <div class="journey-session-row ${s.classification}" style="margin-bottom: 0.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; cursor:pointer;" onclick="toggleModalSessionDetails('${s.id}')">
+                    <div>
+                        <span style="font-weight:600; color:var(--text-main);">${sDate}</span>
+                        <span style="color:var(--text-muted); margin-left:0.5rem;">⏱️ ${s.duration}</span>
+                        <span style="color:var(--text-muted); margin-left:0.5rem;">🔗 ${s.referrer === 'direct' ? 'direct' : s.referrer}</span>
+                    </div>
+                    <span style="background:${badge.bg}; color:${badge.color}; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.65rem; font-weight:700; text-transform:uppercase; border: 1px solid ${badge.color}22;">${badge.label}</span>
                 </div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">Referrer: <strong style="color: var(--text-main);">${s.referrer || 'direct'}</strong></div>
-                ${paths}
+                <div style="margin-top:0.25rem; font-family:var(--font-mono); display:flex; justify-content:space-between; align-items:center; gap: 0.5rem; cursor:pointer;" onclick="toggleModalSessionDetails('${s.id}')">
+                    <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; font-size:0.75rem; color:var(--text-muted);">
+                        <span>Path:</span>
+                        <div class="path-str" style="display:inline-flex; gap: 4px;">${pathChips}</div>
+                    </div>
+                    <span style="font-size: 0.7rem; color: var(--accent-blue); white-space: nowrap;">Inspect ▾</span>
+                </div>
+                
+                <div id="modal-details-${s.id}" class="session-expanded-details hidden" style="margin-top: 0.6rem; border-top: 1px solid rgba(34, 42, 61, 0.3); padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                    <div>
+                        <div style="font-size: 0.68rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase;">View Durations</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">
+                            ${viewsMarkup || '<span style="color:var(--text-muted); font-style:italic; font-size:0.7rem;">None</span>'}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.68rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase;">Behavior Timeline</div>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; background: rgba(0,0,0,0.18); padding: 0.5rem 0.7rem; border-radius: 6px; border: 1px solid rgba(34,42,61,0.2);">
+                            ${eventsMarkup || '<div style="color:var(--text-muted); font-style:italic; font-size:0.7rem;">None</div>'}
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }).join('');
