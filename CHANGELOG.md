@@ -4,6 +4,22 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.12.0] 2026-06-11 — Goal-Prompt Unification, Geographic Profiles & UX Upgrades
+
+### Added
+- **feature** — **Goal-Prompt Unification.** Integrated project goals directly into the prompt log as a new `goal` prompt category with project-level badges.
+- **feature** — **North Star Support.** Added `north_star` prompt subtype banners to serve as dynamic, overarching project anchors.
+- **feature** — **Geographic visitor profiles.** Visitor profile cards now parse and display geographic IP tracking data (country, city, ISP) from session logs.
+- **feature** — **Geo backfilling script.** Added `backfill_geo.py` to retroactively populate geo stubs for older sessions.
+- **feature** — **Auto-Polling Prompt Logs.** The dashboard now auto-polls the prompt log every 30 seconds to show agent responses without manual refresh.
+
+### Fixed
+- **fix** — **Funnel navigation.** Funnel clicks now route users directly to the paths panel with active filters.
+- **fix** — **Session explorer scroll anchoring.** Added smooth auto-scrolling to session explorer when a commit is selected, and back to the timeline when cleared.
+- **fix** — **Cleaned absolute paths.** Standardized internal scripts and local paths to use relative directory markers.
+
+---
+
 ## [v0.11.0] 2026-06-10 — Telemetry-Driven Metric Goals & Auto-Checked Milestones
 
 ### Added
