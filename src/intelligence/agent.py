@@ -2,11 +2,11 @@
 """
 Ripple -- Intelligence Agent
 ==============================
-Reads project analytics (sessions + deployment windows + goals) and generates
-specific, grounded, goal-aware suggestions.
+Reads project analytics (sessions + deployment windows + goals) and evaluates
+the project state, writing observations directly into prompt_log.json.
 
 This is NOT a generic AI assistant. It does not hallucinate advice.
-Every suggestion references a specific data point from the analytics:
+Every observation references a specific data point from the analytics:
   - a named commit hash
   - a measured engagement rate
   - a real navigation path
@@ -14,23 +14,16 @@ Every suggestion references a specific data point from the analytics:
   - a before/after behavioral diff
 
 Public API:
-    run(analytics_data, output_dir) -> list[Suggestion]
+    run(analytics_data, output_dir, *, prompt_log) -> list[PromptLogEntry]
 
-Suggestion shape:
-    {
-        "id":           str   # unique slug, e.g. "example-project-2026-06-03-001"
-        "project_key":  str
-        "project_name": str
-        "goal":         str   # the goal this suggestion addresses
-        "priority":     str   # "high" | "medium" | "low"
-        "type":         str   # "deployment_impact" | "engagement_gap" | "funnel_drop" | "goal_gap"
-        "title":        str   # one-line headline
-        "evidence":     str   # the specific data point that triggered this
-        "suggestion":   str   # the actionable recommendation
-        "commit":       str | None  # hash if deployment-related
-        "generated_at": str
-        "status":       str   # "open" | "acknowledged" | "acted_on" | "dismissed"
-    }
+The agent does TWO things:
+  1. For each open `category: "goal"` prompt, evaluates progress and updates
+     the `answer` and `answeredAt` fields IN PLACE on the existing entry.
+  2. For anomaly observations (engagement drops, funnel issues, etc.), creates
+     NEW entries in prompt_log with `category: "data"` and
+     `subtype: "agent_observation"`.
+
+Returns the updated prompt_log array. Does NOT write ripple_suggestions.json.
 """
 
 import json
@@ -50,61 +43,148 @@ RECENT_COMMIT_HOURS    = 72     # commits newer than this are "too new to measur
 
 def run(analytics_data: dict, output_dir: Path, *, prompt_log: list = None) -> list:
     """
-    Generate suggestions for all projects in analytics_data.
-    Writes data/ripple_suggestions.json and returns the suggestion list.
+    Evaluate all projects in analytics_data. Updates prompt_log in-place:
+      - Goal entries: updates `answer` and `answeredAt` with data-backed assessment
+      - Anomaly observations: creates new `category: "data"` entries
+
+    Returns the updated prompt_log array.
     """
-    all_suggestions = []
+    if prompt_log is None:
+        prompt_log = []
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Collect existing agent observation IDs to avoid duplicates within a single run
+    existing_obs_ids = {p.get("promptId") for p in prompt_log
+                        if p.get("subtype") == "agent_observation"}
 
     for project in analytics_data.get("projects", []):
         if "error" in project:
             continue
-        suggestions = _analyze_project(project, prompt_log=prompt_log or [])
-        all_suggestions.extend(suggestions)
 
-    # Write output
-    output = {
-        "generated_at":      datetime.now(timezone.utc).isoformat(),
-        "ripple_version":    "0.1.0",
-        "total_suggestions": len(all_suggestions),
-        "open":              sum(1 for s in all_suggestions if s["status"] == "open"),
-        "suggestions":       all_suggestions,
-    }
+        key = project["project_key"]
 
-    out_path = Path(output_dir) / "ripple_suggestions.json"
-    out_path.write_text(
-        json.dumps(output, indent=2, ensure_ascii=False),
-        encoding="utf-8"
-    )
+        # 1. Evaluate open goals in prompt_log
+        _evaluate_goals(prompt_log, project, now_iso)
 
-    return all_suggestions
+        # 2. Generate anomaly observations
+        observations = _detect_anomalies(project)
+        for obs in observations:
+            if obs["promptId"] not in existing_obs_ids:
+                prompt_log.append(obs)
+                existing_obs_ids.add(obs["promptId"])
+
+    return prompt_log
 
 
-# ── Project-level analysis ───────────────────────────────────────────────────
+# ── Goal evaluation (updates entries in-place) ───────────────────────────────
 
-def _analyze_project(project: dict, *, prompt_log: list = None) -> list:
-    suggestions = []
-    key         = project["project_key"]
-    name        = project["project"]
-    goals       = project.get("goals", [])
-    windows     = project.get("deployment_windows", [])
-    now_ts      = datetime.now(timezone.utc).timestamp()
+def _evaluate_goals(prompt_log: list, project: dict, now_iso: str):
+    """Find open goal prompts for this project and update their answer fields."""
+    key = project["project_key"]
 
     eng_rate    = project.get("engagement_rate_pct", 0)
     median_s    = project.get("duration", {}).get("median_seconds", 0)
     real_count  = project.get("real_user_count", 0)
-    nav_paths   = project.get("navigation_paths", [])
     view_funnel = project.get("view_funnel", [])
     top_events  = project.get("top_events", [])
+
+    for entry in prompt_log:
+        if (entry.get("category") != "goal"
+                or entry.get("projectKey") != key
+                or entry.get("status") not in ("pending", "open", "answered")):
+            continue
+
+        prompt_text = entry.get("prompt", "")
+        evidence_parts = []
+
+        # Check engagement-related keywords
+        if any(kw in prompt_text.lower() for kw in ['engag', 'interact', 'session duration', 'duration']):
+            evidence_parts.append(f"Current engagement: {eng_rate}%, median session: {median_s:.0f}s")
+            if eng_rate < ENGAGED_GOAL_PCT:
+                evidence_parts.append(f"Gap to {ENGAGED_GOAL_PCT:.0f}% target: {ENGAGED_GOAL_PCT - eng_rate:.1f} points")
+
+        # Check user/growth keywords
+        if any(kw in prompt_text.lower() for kw in ['user', 'grow', 'traffic', 'audience', 'active']):
+            evidence_parts.append(f"Current real users in dataset: {real_count}")
+
+        # Check specific views
+        for vf in view_funnel:
+            if vf['view'].lower() in prompt_text.lower():
+                evidence_parts.append(
+                    f"'{vf['view']}' view: {vf['visit_pct']}% reach, "
+                    f"{vf.get('entry_pct', 0)}% start here, "
+                    f"{vf['exit_pct']}% exit, avg {vf['avg_display']}"
+                )
+
+        # Check specific events
+        for te in top_events:
+            if te['event'].lower() in prompt_text.lower():
+                evidence_parts.append(f"'{te['event']}' event: {te['count']} occurrences")
+
+        # Write assessment
+        if evidence_parts:
+            assessment = "Agent evaluation: " + "; ".join(evidence_parts) + "."
+        else:
+            assessment = (
+                f"Agent evaluation: No specific metrics matched for this goal. "
+                f"General state — {real_count} real users, {eng_rate}% engaged, "
+                f"median session {median_s:.0f}s."
+            )
+
+        entry["answer"] = assessment
+        entry["answeredAt"] = now_iso
+        if entry.get("status") == "pending":
+            entry["status"] = "answered"
+
+
+# ── Anomaly detection (creates new entries) ──────────────────────────────────
+
+def _detect_anomalies(project: dict) -> list:
+    """Detect anomalies and return new prompt_log entries for them."""
+    observations = []
+    key         = project["project_key"]
+    name        = project.get("project", key)
+    now_ts      = datetime.now(timezone.utc).timestamp()
+    now_iso     = datetime.now(timezone.utc).isoformat()
+    today       = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    eng_rate    = project.get("engagement_rate_pct", 0)
+    median_s    = project.get("duration", {}).get("median_seconds", 0)
+    real_count  = project.get("real_user_count", 0)
+    view_funnel = project.get("view_funnel", [])
+    windows     = project.get("deployment_windows", [])
     breakdown   = project.get("classification_breakdown", {})
 
     counter = [0]
 
     def make_id():
         counter[0] += 1
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        return f"{key}-{today}-{counter[0]:03d}"
+        return f"agent_obs_{key}_{today}_{counter[0]:03d}"
 
-    # ── 1. Deployment impact analysis ────────────────────────────────────────
+    def make_entry(prompt_id, title, evidence):
+        return {
+            "promptId":        prompt_id,
+            "projectKey":      key,
+            "pageUrl":         project.get("url", ""),
+            "elementSelector": "project-level",
+            "elementContext":  f"Agent observation for {name}",
+            "category":        "data",
+            "subtype":         "agent_observation",
+            "prompt":          title,
+            "sessionId":       "agent",
+            "timestamp":       now_iso,
+            "capturedAt":      now_iso,
+            "status":          "answered",
+            "commitHash":      "",
+            "commitMessage":   "",
+            "answer":          evidence,
+            "answeredAt":      now_iso,
+            "reply":           "",
+            "repliedAt":       "",
+        }
+
+    # ── 1. Deployment impact ──────────────────────────────────────────────────
     for window in windows:
         commit      = window["commit"]
         before      = window["before_count"]
@@ -112,141 +192,67 @@ def _analyze_project(project: dict, *, prompt_log: list = None) -> list:
         commit_ts   = commit.get("date_ts", 0)
         age_hours   = (now_ts - commit_ts) / 3600
 
-        # Too new to measure — flag it
+        # No sessions after recent deploy
         if after == 0 and age_hours < RECENT_COMMIT_HOURS:
-            suggestions.append(_suggestion(
-                id_=make_id(),
-                project_key=key,
-                project_name=name,
-                goal=_match_goal(goals, ["users", "user base", "grow", "audience"]),
-                priority="medium",
-                type_="deployment_impact",
-                title=f"No sessions yet after '{commit['message_short'][:50]}'",
-                evidence=(
-                    f"Commit {commit['hash']} was deployed {age_hours:.0f}h ago "
-                    f"({commit['date_display']}) with {commit['files_changed']} files changed "
-                    f"(+{commit['insertions']}/-{commit['deletions']} lines). "
-                    f"Zero sessions recorded since deployment."
-                ),
-                suggestion=(
-                    "Share the link in your distribution channels to get real users onto "
-                    "the new build. You need at least 10 sessions before before/after "
-                    "behavioral diff is meaningful."
-                ),
-                commit=commit["hash"],
+            observations.append(make_entry(
+                make_id(),
+                f"No sessions yet after '{commit['message_short'][:50]}'",
+                f"Commit {commit['hash']} was deployed {age_hours:.0f}h ago "
+                f"({commit['date_display']}) with {commit['files_changed']} files changed "
+                f"(+{commit['insertions']}/-{commit['deletions']} lines). "
+                f"Zero sessions recorded since deployment. Share the link to get real users."
             ))
 
-        # Before/after diff — enough data to compare
+        # Significant before/after diff
         elif before >= MIN_SESSIONS_FOR_DIFF and after >= MIN_SESSIONS_FOR_DIFF:
             delta = after - before
             direction = "up" if delta >= 0 else "down"
             pct_change = abs(delta / before * 100) if before > 0 else 0
 
-            if pct_change >= 20:   # meaningful movement
-                priority = "high" if pct_change >= 50 else "medium"
-                suggestions.append(_suggestion(
-                    id_=make_id(),
-                    project_key=key,
-                    project_name=name,
-                    goal=_match_goal(goals, ["users", "user base", "grow"]),
-                    priority=priority,
-                    type_="deployment_impact",
-                    title=(
-                        f"Sessions went {direction} {pct_change:.0f}% after "
-                        f"'{commit['message_short'][:45]}'"
-                    ),
-                    evidence=(
-                        f"Commit {commit['hash']} ({commit['date_display']}): "
-                        f"{before} sessions before vs {after} sessions after. "
-                        f"{pct_change:.0f}% {'increase' if direction == 'up' else 'drop'}."
-                    ),
-                    suggestion=(
-                        f"This commit had a measurable {'positive' if direction == 'up' else 'negative'} "
-                        f"effect on traffic. "
-                        + ("Investigate what in this commit drove the increase and double down."
-                           if direction == "up" else
-                           "Review what changed and consider reverting or patching the regression.")
-                    ),
-                    commit=commit["hash"],
+            if pct_change >= 20:
+                observations.append(make_entry(
+                    make_id(),
+                    f"Sessions went {direction} {pct_change:.0f}% after '{commit['message_short'][:45]}'",
+                    f"Commit {commit['hash']} ({commit['date_display']}): "
+                    f"{before} sessions before vs {after} sessions after. "
+                    f"{pct_change:.0f}% {'increase' if direction == 'up' else 'drop'}. "
+                    f"{'Investigate what drove the increase.' if direction == 'up' else 'Review and consider reverting.'}"
                 ))
 
-        # Lots of before, zero after — possible regression
+        # Traffic dropped to zero
         elif before >= MIN_SESSIONS_FOR_DIFF and after == 0 and age_hours >= RECENT_COMMIT_HOURS:
-            suggestions.append(_suggestion(
-                id_=make_id(),
-                project_key=key,
-                project_name=name,
-                goal=_match_goal(goals, ["users", "grow"]),
-                priority="high",
-                type_="deployment_impact",
-                title=f"Traffic dropped to zero after '{commit['message_short'][:50]}'",
-                evidence=(
-                    f"Commit {commit['hash']} ({commit['date_display']}): "
-                    f"{before} sessions before, 0 after ({age_hours:.0f}h ago). "
-                    f"This is outside the 'too new to measure' window."
-                ),
-                suggestion=(
-                    "Zero sessions after a >72h-old deployment is a serious signal. "
-                    "Check if the site is accessible, links are live, and the page loads "
-                    "without errors on mobile and desktop."
-                ),
-                commit=commit["hash"],
+            observations.append(make_entry(
+                make_id(),
+                f"Traffic dropped to zero after '{commit['message_short'][:50]}'",
+                f"Commit {commit['hash']} ({commit['date_display']}): "
+                f"{before} sessions before, 0 after ({age_hours:.0f}h ago). "
+                f"Check if the site is accessible and links are live."
             ))
 
     # ── 2. Engagement gap ────────────────────────────────────────────────────
     if real_count >= 10 and eng_rate < ENGAGED_GOAL_PCT:
         gap = ENGAGED_GOAL_PCT - eng_rate
-        # Find the most common path of non-engaged users
         bounce_count = breakdown.get("bounce", 0) + breakdown.get("glancer", 0)
-        suggestions.append(_suggestion(
-            id_=make_id(),
-            project_key=key,
-            project_name=name,
-            goal=_match_goal(goals, ["engag", "session", "duration"]),
-            priority="high" if gap > 20 else "medium",
-            type_="engagement_gap",
-            title=f"Engagement at {eng_rate}% -- goal is {ENGAGED_GOAL_PCT:.0f}%",
-            evidence=(
-                f"{real_count} real users analysed. {eng_rate}% engaged (triggered an "
-                f"interaction event). {bounce_count} users bounced or glanced without "
-                f"interacting. Goal: {ENGAGED_GOAL_PCT:.0f}%."
-            ),
-            suggestion=(
-                f"The gap is {gap:.1f} points. Focus on the entry experience: "
-                f"the first 10 seconds after page load determine whether a user "
-                f"triggers an interaction. Review the most common single-view paths "
-                f"and add a clearer call-to-action or auto-start mechanic."
-            ),
-            commit=None,
+        observations.append(make_entry(
+            make_id(),
+            f"Engagement at {eng_rate}% — goal is {ENGAGED_GOAL_PCT:.0f}%",
+            f"{real_count} real users analysed. {eng_rate}% engaged. "
+            f"{bounce_count} users bounced or glanced without interacting. "
+            f"Gap: {gap:.1f} points. Focus on the entry experience."
         ))
 
     # ── 3. Duration goal gap ─────────────────────────────────────────────────
     if real_count >= 10 and median_s < MEDIAN_DURATION_GOAL_S:
         gap_s = MEDIAN_DURATION_GOAL_S - median_s
-        from analytics.session_analytics import fmt_duration
-        suggestions.append(_suggestion(
-            id_=make_id(),
-            project_key=key,
-            project_name=name,
-            goal=_match_goal(goals, ["session", "duration", "60 second", "minute"]),
-            priority="high" if gap_s > 30 else "medium",
-            type_="goal_gap",
-            title=f"Median session {fmt_duration(median_s)} -- goal is {fmt_duration(MEDIAN_DURATION_GOAL_S)}",
-            evidence=(
-                f"Median session duration across {real_count} real users is "
-                f"{fmt_duration(median_s)}. Goal is {fmt_duration(MEDIAN_DURATION_GOAL_S)}. "
-                f"Gap: {fmt_duration(gap_s)}."
-            ),
-            suggestion=(
-                "To increase dwell time, extend the core gameplay or content loop. "
-                "Look at the view funnel: which view has the highest exit rate? "
-                "That is where users are leaving. Add content depth or a re-engagement "
-                "hook at that specific point."
-            ),
-            commit=None,
+        observations.append(make_entry(
+            make_id(),
+            f"Median session {median_s:.0f}s — goal is {MEDIAN_DURATION_GOAL_S:.0f}s",
+            f"Median session duration across {real_count} real users is {median_s:.0f}s. "
+            f"Goal is {MEDIAN_DURATION_GOAL_S:.0f}s. Gap: {gap_s:.0f}s. "
+            f"Look at the view funnel for the highest exit-rate view."
         ))
 
-    # ── 4. Funnel drop analysis ───────────────────────────────────────────────
+    # ── 4. Funnel drop analysis ──────────────────────────────────────────────
     if view_funnel and real_count >= 10:
         for view in view_funnel:
             if view["visits"] < 5:
@@ -254,180 +260,15 @@ def _analyze_project(project: dict, *, prompt_log: list = None) -> list:
             exit_pct = view.get("exit_pct", 0)
             visit_pct = view.get("visit_pct", 0)
             if exit_pct >= FUNNEL_DROP_THRESHOLD and visit_pct >= 10:
-                goal = _match_goal(goals, ["trivia", "swag", "engag", "session"])
-                suggestions.append(_suggestion(
-                    id_=make_id(),
-                    project_key=key,
-                    project_name=name,
-                    goal=goal,
-                    priority="medium",
-                    type_="funnel_drop",
-                    title=f"{exit_pct:.0f}% of users exit from '{view['view']}' view",
-                    evidence=(
-                        f"'{view['view']}' view: visited by {view['visit_pct']:.0f}% of real "
-                        f"users ({view['visits']} visits), but {exit_pct:.0f}% exit from here. "
-                        f"Average time spent: {view['avg_display']}."
-                    ),
-                    suggestion=(
-                        f"High exit rate from '{view['view']}' with only "
-                        f"{view['avg_display']} avg time suggests users aren't finding "
-                        f"what they came for. Consider adding a visible next-action "
-                        f"button, reducing friction, or surfacing a hook within the "
-                        f"first {view['avg_display']} of this view."
-                    ),
-                    commit=None,
+                observations.append(make_entry(
+                    make_id(),
+                    f"{exit_pct:.0f}% of users exit from '{view['view']}' view",
+                    f"'{view['view']}' view: visited by {view['visit_pct']:.0f}% of real "
+                    f"users ({view['visits']} visits), {exit_pct:.0f}% exit here. "
+                    f"Avg time: {view['avg_display']}. Add a visible next-action or reduce friction."
                 ))
 
-    # ── 5. Goal-specific: trivia reach ────────────────────────────────────────
-    trivia_goal = _match_goal(goals, ["trivia"], exact=True)
-    if trivia_goal:
-        trivia_funnel = next((v for v in view_funnel if "trivia" in v["view"].lower()), None)
-        if trivia_funnel:
-            trivia_pct = trivia_funnel["visit_pct"]
-            if trivia_pct < 50:
-                suggestions.append(_suggestion(
-                    id_=make_id(),
-                    project_key=key,
-                    project_name=name,
-                    goal=trivia_goal,
-                    priority="high" if trivia_pct < 25 else "medium",
-                    type_="goal_gap",
-                    title=f"Only {trivia_pct:.0f}% of users reach the trivia view (goal: 50%+)",
-                    evidence=(
-                        f"Trivia view visited by {trivia_funnel['visits']} users "
-                        f"({trivia_pct:.0f}% of {real_count} real users). "
-                        f"Average time in trivia: {trivia_funnel['avg_display']}."
-                    ),
-                    suggestion=(
-                        "Trivia is deep in the funnel. Most users never get there. "
-                        "Consider surfacing a trivia teaser or prompt on the entry view, "
-                        "or reducing the number of steps needed to reach it. "
-                        "A 'try trivia' button on the main screen could double reach."
-                    ),
-                    commit=None,
-                ))
-
-    # ── 6. Goal-specific: swag ────────────────────────────────────────────────
-    swag_goal = _match_goal(goals, ["swag", "purchase", "store"], exact=True)
-    if swag_goal:
-        swag_event = next((e for e in top_events if "swag" in e["event"].lower()), None)
-        swag_dismissed = next((e for e in top_events if "swag_dismissed" in e["event"].lower()), None)
-
-        if swag_dismissed and (not swag_event or swag_dismissed["count"] > swag_event.get("count", 0)):
-            suggestions.append(_suggestion(
-                id_=make_id(),
-                project_key=key,
-                project_name=name,
-                goal=swag_goal,
-                priority="high",
-                type_="goal_gap",
-                title="Swag dismissed more than purchased",
-                evidence=(
-                    f"'swag_dismissed' event fired {swag_dismissed['count']} times. "
-                    + (f"'swag_ordered' fired {swag_event['count']} times."
-                       if swag_event else "No 'swag_ordered' events recorded at all.")
-                ),
-                suggestion=(
-                    "Users are actively closing the swag prompt. This means they're "
-                    "seeing it, but the timing or offer isn't right. Test: show the "
-                    "swag prompt after a completed game (post 'jump_landed') rather "
-                    "than proactively. Users who finish a game are warmer buyers."
-                ),
-                commit=None,
-            ))
-
-    # ── 7. Goal waypoint evaluation ───────────────────────────────────────────
-    if prompt_log:
-        goal_prompts = [p for p in prompt_log
-                        if p.get('category') == 'goal'
-                        and p.get('projectKey') == key
-                        and p.get('status') in ('pending', 'open', 'answered')]
-
-        for gp in goal_prompts:
-            prompt_text = gp.get('prompt', '')
-            prompt_id = gp.get('promptId', '')
-
-            # Try to match goal text against current data
-            evidence_parts = []
-            priority = "medium"
-
-            # Check if it mentions engagement
-            if any(kw in prompt_text.lower() for kw in ['engag', 'interact', 'session duration', 'duration']):
-                evidence_parts.append(f"Current engagement: {eng_rate}%, median session: {median_s:.0f}s")
-                if eng_rate < ENGAGED_GOAL_PCT:
-                    priority = "high"
-
-            # Check if it mentions users/growth/traffic
-            if any(kw in prompt_text.lower() for kw in ['user', 'grow', 'traffic', 'audience', 'active']):
-                evidence_parts.append(f"Current real users in dataset: {real_count}")
-                if real_count < 20:
-                    priority = "high"
-
-            # Check if it mentions specific views
-            for vf in view_funnel:
-                if vf['view'].lower() in prompt_text.lower():
-                    evidence_parts.append(
-                        f"'{vf['view']}' view: {vf['visit_pct']}% reach, "
-                        f"{vf.get('entry_pct', 0)}% start here, "
-                        f"{vf['exit_pct']}% exit, avg {vf['avg_display']}"
-                    )
-
-            # Check if it mentions events/conversion
-            for te in top_events:
-                if te['event'].lower() in prompt_text.lower():
-                    evidence_parts.append(f"'{te['event']}' event: {te['count']} occurrences")
-
-            if evidence_parts:
-                suggestions.append(_suggestion(
-                    id_=make_id(),
-                    project_key=key,
-                    project_name=name,
-                    goal=prompt_text,
-                    priority=priority,
-                    type_="goal_gap",
-                    title=f"Goal: {prompt_text[:60]}{'...' if len(prompt_text) > 60 else ''}",
-                    evidence="Current state: " + "; ".join(evidence_parts),
-                    suggestion=(
-                        f"This is an active goal (prompt {prompt_id}). "
-                        f"Review the evidence above to assess progress. "
-                        f"The intelligence agent will continue tracking this on each analysis run."
-                    ),
-                    commit=None,
-                ))
-
-    return suggestions
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _suggestion(
-    id_, project_key, project_name, goal, priority, type_,
-    title, evidence, suggestion, commit
-) -> dict:
-    return {
-        "id":           id_,
-        "project_key":  project_key,
-        "project_name": project_name,
-        "goal":         goal or "General improvement",
-        "priority":     priority,
-        "type":         type_,
-        "title":        title,
-        "evidence":     evidence,
-        "suggestion":   suggestion,
-        "commit":       commit,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "status":       "open",
-    }
-
-
-def _match_goal(goals: list, keywords: list, exact: bool = False) -> str:
-    """Return the first goal string that contains any of the keywords (case-insensitive)."""
-    for goal in goals:
-        goal_lower = goal.lower()
-        for kw in keywords:
-            if kw.lower() in goal_lower:
-                return goal
-    return goals[0] if goals else ""
+    return observations
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -441,17 +282,21 @@ if __name__ == "__main__":
     with open(analytics_path, encoding="utf-8") as f:
         analytics_data = json.load(f)
 
-    suggestions = run(analytics_data, Path(output_dir))
+    prompt_log_path = Path(output_dir) / "prompt_log.json"
+    prompt_log = json.loads(prompt_log_path.read_text(encoding="utf-8")) if prompt_log_path.exists() else []
 
-    print(f"\n[Ripple Intelligence] {len(suggestions)} suggestions generated:\n")
-    for s in suggestions:
-        priority_icon = {"high": "[!]", "medium": "[~]", "low": "[ ]"}.get(s["priority"], "[ ]")
-        print(f"  {priority_icon} [{s['type']}] {s['title']}")
-        print(f"       Goal: {s['goal']}")
-        print(f"       Why:  {s['evidence'][:120]}...")
-        print(f"       Do:   {s['suggestion'][:120]}...")
-        if s["commit"]:
-            print(f"       Commit: {s['commit']}")
-        print()
+    updated_log = run(analytics_data, Path(output_dir), prompt_log=prompt_log)
 
-    print(f"[Ripple Intelligence] Written to {Path(output_dir) / 'ripple_suggestions.json'}")
+    # Write updated prompt log
+    prompt_log_path.write_text(
+        json.dumps(updated_log, indent=2, ensure_ascii=False),
+        encoding="utf-8"
+    )
+
+    goals_updated = sum(1 for p in updated_log if p.get("category") == "goal"
+                        and p.get("answeredAt"))
+    observations = sum(1 for p in updated_log if p.get("subtype") == "agent_observation")
+
+    print(f"\n[Ripple Intelligence] {goals_updated} goal(s) evaluated, "
+          f"{observations} observation(s) in prompt_log")
+    print(f"[Ripple Intelligence] Written to {prompt_log_path}")

@@ -1274,7 +1274,6 @@
                     </div>
                     <div id="quick-nav" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
 
-                        <a href="#section-suggestions" id="nav-section-suggestions" onclick="switchPanel('section-suggestions'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">💡 Goal-Aware Suggestions</a>
                         <a href="#section-commits" id="nav-section-commits" onclick="switchPanel('section-commits'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔁 Deployment Correlation</a>
                         <a href="#section-traffic" id="nav-section-traffic" onclick="switchPanel('section-traffic'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📈 Traffic &amp; Commit Activity</a>
                         <a href="#section-explorer" id="nav-section-explorer" onclick="switchPanel('section-explorer'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔍 Session Explorer</a>
@@ -1357,16 +1356,6 @@
             <!-- Right Column (Workspace) -->
             <div class="workspace">
                 
-                <!-- Suggestions Section -->
-                <section id="section-suggestions">
-                    <h2 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        💡 Goal-Aware Suggestions <span id="suggestionCount" style="font-size: 0.8rem; padding: 0.1rem 0.5rem; background-color: var(--border-color); border-radius: 12px; color: var(--text-muted);">0</span>
-                    </h2>
-                    <div id="suggestionsContainer">
-                        <!-- Dynamic suggestions cards -->
-                    </div>
-                </section>
-
                 <!-- Commits & Correlation Section -->
                 <section class="card" id="section-commits">
                     <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
@@ -1715,7 +1704,6 @@
     <!-- JS Logic -->
     <script>
         let analyticsData = null;
-        let suggestionsData = null;
         let rippleConfig = null;   // loaded from api/config.php
         let activeProjectKey = "";
         let explorerMode = 'cumulative'; // 'cumulative' or 'unique'
@@ -1773,7 +1761,7 @@
             } else if (hash && document.getElementById(hash)) {
                 switchPanel(hash);
             } else {
-                switchPanel('section-suggestions'); // default
+                switchPanel('section-commits'); // default
             }
 
             // Live Reload for Prompt Log
@@ -1977,14 +1965,12 @@
         // Initial Data Fetch
         async function init() {
             try {
-                const [analyticsRes, suggestionsRes, configRes] = await Promise.all([
+                const [analyticsRes, configRes] = await Promise.all([
                     fetch('../../data/project_analytics.json?t=' + Date.now()),
-                    fetch('../../data/ripple_suggestions.json?t=' + Date.now()),
                     fetch('../../api/config.php?t=' + Date.now())
                 ]);
 
                 analyticsData = await analyticsRes.json();
-                suggestionsData = await suggestionsRes.json();
                 visitorAliases = analyticsData.visitor_names || {};
 
                 // Load config (optional — dashboard still works if API unavailable)
@@ -2166,93 +2152,6 @@
                 goalsContainer.innerHTML = '<p style="font-size:0.8rem;color:var(--text-muted);">No goals set. Use the button below to add one.</p>';
             }
 
-            // 3. Render Suggestions
-            const suggestionsContainer = document.getElementById('suggestionsContainer');
-            suggestionsContainer.innerHTML = "";
-            
-            let dynamicSuggestionsHtml = "";
-            let dynamicCount = 0;
-            
-            // Render failing metrics as high-priority suggestions
-            if (activeProjectKey !== 'all' && project && project.goals_status) {
-                project.goals_status.forEach(goal => {
-                    if (goal.type === "metric" && goal.status === "failing") {
-                        dynamicCount++;
-                        const actionText = goal.metric_type === "duration" 
-                            ? `Reduce average duration on the '${goal.target_name}' view to meet the target of ${goal.operator} ${goal.target_value}s.`
-                            : `Increase the conversion rate for '${goal.target_name}' event to meet the target of ${goal.operator} ${goal.target_value}%.`;
-                        
-                        dynamicSuggestionsHtml += `
-                            <div class="card suggestion-card high" style="border-left: 4px solid var(--accent-amber); background: rgba(210, 153, 34, 0.03); margin-bottom: 1rem; padding: 1rem;">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                                    <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 600; color: var(--accent-amber); letter-spacing: 0.5px;">⚠️ Goal Metric Failure</span>
-                                    <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">${goal.target_name}</span>
-                                </div>
-                                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: var(--text-main); font-weight: 600;">Metric Off-Target: ${goal.text}</h4>
-                                <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.8rem 0; line-height: 1.4;">
-                                    <strong>Status:</strong> ${goal.details}<br>
-                                    <strong>Recommended Action:</strong> ${actionText}
-                                </p>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <button class="btn-status" style="border-color: var(--accent-blue); color: var(--accent-blue); padding: 0.25rem 0.6rem; font-size: 0.75rem;" onclick="switchPanel('section-prompts'); window.location.hash='#section-prompts';">🎯 Resolve via Prompt Capture</button>
-                                </div>
-                            </div>
-                        `;
-                    }
-                });
-            }
-
-            // Filter suggestions for active project
-            const projectSuggestions = (suggestionsData.suggestions || []).filter(s => {
-                return projectKey === 'all' || s.project_key === projectKey;
-            });
-            const suggestionCountEl = document.getElementById('suggestionCount');
-            if (suggestionCountEl) suggestionCountEl.textContent = projectSuggestions.length + dynamicCount;
-
-            if (dynamicCount > 0 || projectSuggestions.length > 0) {
-                if (dynamicSuggestionsHtml) {
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = dynamicSuggestionsHtml;
-                    while (tempDiv.firstChild) {
-                        suggestionsContainer.appendChild(tempDiv.firstChild);
-                    }
-                }
-                
-                if (projectSuggestions.length > 0) {
-                    projectSuggestions.forEach(s => {
-                        const card = document.createElement('div');
-                        card.className = `suggestion-card ${s.priority}`;
-                        card.id = `card-${s.id}`;
-                        
-                        const shortCommit = s.commit ? s.commit.substring(0, 8) : null;
-                        const commitMarkup = shortCommit ? `<span class="tag type-tag">Commit: ${shortCommit}</span>` : '';
-
-                        card.innerHTML = `
-                            <div class="suggestion-header">
-                                <span class="suggestion-title">${s.title}</span>
-                                <div class="suggestion-tags">
-                                    <span class="tag priority-${s.priority}">${s.priority} priority</span>
-                                    ${commitMarkup}
-                                </div>
-                            </div>
-                            <div class="suggestion-evidence"><strong>Evidence:</strong> ${s.evidence}</div>
-                            <div class="suggestion-rec">${s.suggestion}</div>
-                            <div class="suggestion-footer">
-                                <span>Goal: ${s.goal}</span>
-                                <button class="btn-status" onclick="acknowledgeSuggestion('${s.id}')">Acknowledge</button>
-                            </div>
-                        `;
-                        suggestionsContainer.appendChild(card);
-                    });
-                }
-            } else {
-                suggestionsContainer.innerHTML = `
-                    <div style="text-align: center; padding: 3rem 1rem; border: 1px dashed var(--border-color); border-radius: 8px; color: var(--text-muted);">
-                        <p style="font-size: 0.95rem; font-weight: 500;">No active suggestions found!</p>
-                        <p style="font-size: 0.8rem; margin-top: 0.3rem;">Run new commits and collect session logs to trigger suggestions.</p>
-                    </div>
-                `;
-            }
 
             // Populate filter selections dynamically based on the project's sessions
             populateFilterDropdowns(project);
@@ -3634,18 +3533,6 @@ function renderPaths() {
             applyFilters();
         }
 
-        function acknowledgeSuggestion(id) {
-            const card = document.getElementById(`card-${id}`);
-            if (card) {
-                card.style.opacity = 0.4;
-                card.style.pointerEvents = 'none';
-                const btn = card.querySelector('.btn-status');
-                if (btn) btn.textContent = "Acknowledged";
-            }
-            // ── Ripple self-tracking ───────────────────────────────────────
-            if (window.Ripple) Ripple.track('suggestion_acknowledged', { id });
-        }
-
         // ── Trigger Recompile (ETL Run) ───────────────────────────────────────
         async function triggerAnalyze() {
             const btn = document.getElementById('refreshBtn');
@@ -3785,7 +3672,7 @@ function renderPaths() {
                     setTimeout(async () => {
                         document.getElementById('goalCaptureOverlay')?.remove();
                         await loadPromptLog();
-                        renderProjectDashboard();
+                        loadProjectDetails(activeProjectKey);
                     }, 800);
                 } else {
                     statusEl.innerHTML = `<span style="color:var(--accent-red)">❌ ${result.error || 'Save failed'}</span>`;
@@ -4166,9 +4053,12 @@ function renderPaths() {
                         </div>
                     </div>`;
 
+                const isAgent = p.sessionId === 'agent' || p.subtype === 'agent_observation';
+                const agentBadge = isAgent ? '<span style="font-size:0.65rem;background:rgba(56,139,253,0.12);color:var(--accent-blue);padding:0.1rem 0.4rem;border-radius:4px;font-weight:700;letter-spacing:0.03em;">🤖 auto</span>' : '';
+
                 return `<div class="prompt-item ${isDismissed ? 'dismissed' : (p.status === 'shipped' ? 'shipped' : '')}" id="pitem-${p.promptId}">
                     <div class="prompt-item-header">
-                        <div class="prompt-text">${p.prompt}</div>
+                        <div class="prompt-text">${agentBadge} ${p.prompt}</div>
                         <div class="prompt-badges">
                             <span class="prompt-cat ${cat.cls}">${cat.label}</span>
                             <span class="prompt-status ${p.status}">${statusLabel(p.status)}</span>

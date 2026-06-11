@@ -13,8 +13,8 @@ What it does:
     2. Reads session JSON files for each project
     3. Reads git log for deployment events
     4. Computes before/after behavioral diffs per commit
-    5. Runs the intelligence layer (generates goal-aware suggestions)
-    6. Writes output to data/project_analytics.json and data/ripple_suggestions.json
+    5. Runs the intelligence layer (evaluates goals + generates observations into prompt_log)
+    6. Writes output to data/project_analytics.json and updates data/prompt_log.json
     7. Prints a summary to the terminal
 
 Output is read by the Ripple dashboard (src/dashboard/index.html).
@@ -372,8 +372,17 @@ def main():
     from intelligence import agent
     prompt_log_path = output_dir / "prompt_log.json"
     prompt_log = json.loads(prompt_log_path.read_text(encoding="utf-8")) if prompt_log_path.exists() else []
-    suggestions = agent.run(output, output_dir, prompt_log=prompt_log)
-    print(f"[Ripple] {len(suggestions)} suggestions written to {output_dir / 'ripple_suggestions.json'}")
+    updated_log = agent.run(output, output_dir, prompt_log=prompt_log)
+
+    # Write updated prompt_log back
+    prompt_log_path.write_text(
+        json.dumps(updated_log, indent=2, ensure_ascii=False),
+        encoding="utf-8"
+    )
+
+    goals_updated = sum(1 for p in updated_log if p.get("category") == "goal" and p.get("answeredAt"))
+    observations = sum(1 for p in updated_log if p.get("subtype") == "agent_observation")
+    print(f"[Ripple] Intelligence: {goals_updated} goal(s) evaluated, {observations} observation(s) in prompt_log")
 
     print("[Ripple] Done.")
 
