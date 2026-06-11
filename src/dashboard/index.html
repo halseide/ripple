@@ -1286,9 +1286,12 @@
                 
                 <!-- Project Info / Vitals -->
                 <div class="card">
-                    <div class="card-title">
-                        <span>Project Vitals</span>
-                        <span id="projectUrl" style="font-size: 0.75rem; text-transform: lowercase; font-family: var(--font-mono); color: var(--accent-blue);"></span>
+                    <div class="card-title" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span>Project Vitals</span>
+                            <span id="projectUrl" style="font-size: 0.75rem; text-transform: lowercase; font-family: var(--font-mono); color: var(--accent-blue);"></span>
+                        </span>
+                        <span id="syncStatus" style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono); font-weight: normal;"></span>
                     </div>
                     <div class="metric-row">
                         <div class="metric-block">
@@ -2100,6 +2103,19 @@
                 document.getElementById('projectUrl').innerHTML = `<a href="${project.url || '#'}" target="_blank" style="color:var(--accent-blue);text-decoration:none;">${project.url || '(no URL configured)'}</a>`;
             } else {
                 document.getElementById('projectUrl').innerText = "All Configured Repositories";
+            }
+
+            // Render Sync Status
+            const syncStatusEl = document.getElementById('syncStatus');
+            if (syncStatusEl) {
+                if (project.last_sync_time) {
+                    const syncDate = new Date(project.last_sync_time);
+                    const formattedDate = syncDate.toLocaleDateString() + ' ' + syncDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const count = project.last_sync_count || 0;
+                    syncStatusEl.innerHTML = `🔄 Sync: <strong>${count}</strong> new (${formattedDate})`;
+                } else {
+                    syncStatusEl.textContent = '';
+                }
             }
 
             // 2. Render North Star

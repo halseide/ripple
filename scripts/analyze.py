@@ -199,11 +199,11 @@ def _sync_sessions_from_ftp(proj: dict):
     import os
     repo_path = proj.get("git_repo")
     if not repo_path:
-        return
+        return None, 0
         
     env_path = Path(repo_path) / ".env"
     if not env_path.exists():
-        return
+        return None, 0
         
     # Load .env
     env = {}
@@ -217,7 +217,7 @@ def _sync_sessions_from_ftp(proj: dict):
                 env[key.strip()] = value.strip()
     except Exception as e:
         print(f"  [{proj['name']}] Warning: Failed to read .env at {env_path}: {e}")
-        return
+        return None, 0
         
     host = env.get("FTP_HOST")
     user = env.get("FTP_USER")
@@ -225,7 +225,7 @@ def _sync_sessions_from_ftp(proj: dict):
     remote_dir = env.get("FTP_REMOTE_DIR", "/public_html")
     
     if not host or not user or not password:
-        return
+        return None, 0
         
     print(f"\n  [{proj['name']}] Found FTP credentials in .env. Checking for new sessions on production...")
     try:
@@ -238,7 +238,7 @@ def _sync_sessions_from_ftp(proj: dict):
         except ftplib.error_perm as e:
             print(f"    Notice: Could not cwd to remote sessions folder '{remote_sess_dir}'. Skipping FTP sync.")
             ftp.quit()
-            return
+            return None, 0
             
         remote_files = []
         try:
@@ -249,13 +249,15 @@ def _sync_sessions_from_ftp(proj: dict):
         session_files = [f for f in remote_files if f.startswith("sess_") and f.endswith(".json")]
         if not session_files:
             ftp.quit()
-            return
+            return None, 0
             
         local_sess_dir = Path(proj["sessions_dir"])
         local_sess_dir.mkdir(parents=True, exist_ok=True)
         local_files = set(os.listdir(local_sess_dir))
         
         new_sessions = [f for f in session_files if f not in local_files]
+        sync_time_iso = datetime.now(timezone.utc).isoformat()
+        
         if new_sessions:
             print(f"    Downloading {len(new_sessions)} new session(s) from production...")
             for idx, filename in enumerate(new_sessions, 1):
@@ -266,8 +268,10 @@ def _sync_sessions_from_ftp(proj: dict):
         else:
             print("    Local sessions are up to date.")
         ftp.quit()
+        return sync_time_iso, len(new_sessions)
     except Exception as e:
         print(f"    Warning: FTP session sync failed: {e}")
+        return None, 0
 
 
 def main():
@@ -304,7 +308,7 @@ def main():
     results = []
     for proj in projects_cfg:
         # Sync sessions from FTP if configured
-        _sync_sessions_from_ftp(proj)
+        sync_time, sync_count = _sync_sessions_from_ftp(proj)
 
         print(f"\n  [{proj['name']}] Analysing sessions ...")
 
@@ -342,6 +346,10 @@ def main():
             med = analytics["duration"]["median_display"]
             np_ = len(analytics["navigation_paths"])
             print(f"    Sessions: {ru}/{tot} real users | {eng}% engaged | median {med} | {np_} paths")
+
+        # Attach sync details
+        analytics["last_sync_time"] = sync_time
+        analytics["last_sync_count"] = sync_count
 
         # 2. Git log
         print(f"  [{proj['name']}] Reading git log ...")
