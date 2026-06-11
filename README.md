@@ -89,7 +89,7 @@ Click the indicator to open the capture modal. The modal includes:
 cp ripple.config.example.json ripple.config.json
 
 # 3. Open the dashboard and use the Settings panel (⚙️ top-right)
-#    to set your project name, goals, GitHub URL, and paths.
+#    to set your project name, GitHub URL, and paths.
 #    No JSON editing required.
 
 # 4. Run analysis
@@ -110,7 +110,6 @@ Ripple is configured via `ripple.config.json` in the project root. The **Setting
 | `github_url` | — | Full GitHub repo URL (e.g. `https://github.com/user/repo`). When set, commit hashes in the Prompt Log become clickable links. Leave empty for local-only repos. |
 | `git_repo` | ✅ | Absolute path to the local git repo directory. |
 | `sessions_dir` | ✅ | Absolute path to the sessions folder where tracker writes JSON files. |
-| `goals` | — | Array of plain-language goals. Used by the intelligence layer to generate targeted suggestions. |
 | `interaction_events` | — | Named events the tracker should flag as meaningful interactions. |
 
 ### Config API

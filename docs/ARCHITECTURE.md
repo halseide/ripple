@@ -16,7 +16,7 @@ You run: python scripts/analyze.py
   → git.py reads git log → deployment events with timestamps
   → analytics.py classifies sessions (bot/ghost/glancer/engaged/deep)
   → analytics.py computes navigation paths, view funnel, before/after windows
-  → intelligence.py reads diffs + your ripple.config.json goals
+  → intelligence.py reads diffs + goals from prompt_log.json
   → intelligence.py writes suggestions to ripple_suggestions.json
   → dashboard generates project_analytics.json for the web UI
 ```
@@ -41,7 +41,7 @@ You run: python scripts/analyze.py
 - Supports: local git repos, future: webhook receiver for CI/CD
 
 ### intelligence/ — Suggestion engine
-- `agent.py` — reads behavioral diffs + ripple.config.json goals
+- `agent.py` — reads behavioral diffs + goals from prompt_log.json
 - `suggestions.py` — writes/reads ripple_suggestions.json with lifecycle tracking
 - Suggestion lifecycle: open → accepted → shipped → measured → dismissed
 - Design principle: suggestions are grounded in data + stated intent, not generic advice
@@ -68,11 +68,6 @@ You run: python scripts/analyze.py
       "github_url": "https://github.com/user/repo",
       "sessions_dir": "./sessions",
       "git_repo": ".",
-      "goals": [
-        "Increase median session duration",
-        "Get users to reach the trivia view",
-        "Drive swag purchases"
-      ],
       "interaction_events": ["game_started", "jump_initiated", "swag_ordered"]
     }
   ]
@@ -92,8 +87,8 @@ Python because: string manipulation, subprocess (git), existing session_analytic
 ### ADR-003: Self-hosted first, managed cloud later
 Zero cloud dependency for v1. Forces clean local design. Managed tier added when open source adoption warrants it.
 
-### ADR-004: Goals are stated in config, not inferred
-The intelligence layer reads your stated goals from ripple.config.json. It does not guess your intent. This prevents hallucinated suggestions and keeps accountability grounded.
+### ADR-004: Goals are managed via prompt system, not inferred
+The intelligence layer reads your stated goals dynamically from the prompt log (`prompt_log.json`) under the `goal` category. It does not guess your intent. This prevents hallucinated suggestions and keeps accountability grounded.
 
 ### ADR-005: Settings panel writes config via localhost-only PHP API
 Rather than require developers to hand-edit JSON, the dashboard includes a Settings panel that reads and writes `ripple.config.json` through `api/config.php`. The endpoint is restricted to `127.0.0.1` / `::1` to prevent remote config modification. A `.bak` file is written before every save. The config file remains the single source of truth — the API is just a safe wrapper.

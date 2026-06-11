@@ -1,6 +1,6 @@
 # Ripple — User Guide
 
-> **Version:** v0.9.0 · **Last Updated:** 2026-06-08
+> **Version:** v0.12.0 · **Last Updated:** 2026-06-11
 
 Ripple is a live UI capture and session analytics tool. It runs on every page where the tracker is installed, gives you a direct line from browser to AI inbox, and measures whether your changes actually worked.
 
@@ -94,7 +94,7 @@ The dashboard shows:
 - **Vitals** — sessions, engagement, bounce rate, and project-specific metrics
 - **Activity Timeline** — hourly session chart
 - **Ripple Log** — all prompts with status (`pending`, `answered`, `shipped`, `dismissed`), filterable by status and category
-- **Configuration** — live `ripple.config.json` settings for the project
+- **Configuration** — live `ripple.config.json` settings for the project (excluding goals)
 
 ---
 
@@ -139,7 +139,7 @@ The tracker is trying to POST to `/ripple/api/capture.php`. Check that Laragon i
 You're in Home/Idle mode. Click the dot, then click "🔵 Prompt" in the modal footer to re-enter prompt mode.
 
 **Q: How do I add Ripple tracking to a new project?**
-1. Add the project to `ripple.config.json` with a `key`, `url`, `sessions_dir`, `git_repo`, and `goals` array.
+1. Add the project to `ripple.config.json` with a `key`, `url`, `sessions_dir`, and `git_repo` (no goals array needed).
 2. Add the `<script>` tag to the project's HTML: `<script src="/ripple/src/tracker/ripple-tracker.js?v={version}" data-project-key="{key}" defer></script>`
 3. Create a `ripple/` folder in the project and copy `index.html` from an existing project dashboard, updating the `PROJECT_KEY`.
 4. Add a `sessions/` directory to the project root.

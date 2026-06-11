@@ -47,10 +47,6 @@ Open `ripple.config.json` and append a new project object to the `"projects"` ar
   "url": "https://newproject.com",
   "sessions_dir": "C:\\path\\to\\project\\sessions",
   "git_repo": "C:\\path\\to\\project\\git_repo",
-  "goals": [
-    "Increase checkout completion rate",
-    "Reduce bounce rate on registration page"
-  ],
   "interaction_events": [
     "checkout_clicked",
     "registration_submitted"
@@ -59,7 +55,7 @@ Open `ripple.config.json` and append a new project object to the `"projects"` ar
 ```
 
 ### 2. How to Edit / Configure a Project
-*   **Modify Goals:** Edit the `"goals"` array. Ripple supports two types of goals:
+*   **Manage Goals:** Goals are managed dynamically directly from the dashboard UI via the **"+ New Goal"** button in the **Stated Goals** card. Under the hood, these are saved in `prompt_log.json` as prompts with `category: "goal"`. Ripple supports two types of goals:
     *   *Milestone Goals*: Simple plain-text checklist tasks (e.g., `"Add warning dismiss audio trigger"`). Ripple's backend evaluates these by searching recent git commit messages.
     *   *Metric Goals*: Structured rule-based thresholds with the prefix `[Metric]` (e.g., `[Metric] view:swag-store duration < 15s` or `[Metric] event:order_clicked conversion > 10%`). Ripple calculates actual sessional telemetry values (view durations and event conversion rates) within a configurable lookback window (default 7 days) and automatically checks them off or raises alerts.
 *   **Modify Lookback Window**: Edit `lookback_days` (per project or globally) to configure the moving average evaluation window for metrics.
@@ -83,7 +79,7 @@ When running Ripple, follow this checklist to manage multiple sites:
     ```html
     <script src="ripple.js" data-project="project_key"></script>
     ```
-2.  **Declare in Config:** Add each project key, folders, and goals in `ripple.config.json`.
+2.  **Declare in Config:** Add each project key, folders, and settings in `ripple.config.json` (no goals array needed).
 3.  **Run Compilation:** Execute the analyzer script to build the compiled data for all sites:
     ```bash
     python scripts/analyze.py
