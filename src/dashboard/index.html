@@ -1277,8 +1277,7 @@
                         <a href="#section-commits" id="nav-section-commits" onclick="switchPanel('section-commits'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔁 Deployment Correlation</a>
                         <a href="#section-traffic" id="nav-section-traffic" onclick="switchPanel('section-traffic'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📈 Traffic &amp; Commit Activity</a>
                         <a href="#section-explorer" id="nav-section-explorer" onclick="switchPanel('section-explorer'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔍 Session Explorer</a>
-                        <a href="#section-funnel" id="nav-section-funnel" onclick="switchPanel('section-funnel'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📐 View Funnel</a>
-                        <a href="#section-paths" id="nav-section-paths" onclick="switchPanel('section-paths'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🗺️ Navigation Paths</a>
+                        <a href="#section-flows" id="nav-section-flows" onclick="switchPanel('section-flows'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🗺️ Journey Flows</a>
                         <a href="#section-prompts" id="nav-section-prompts" onclick="switchPanel('section-prompts'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🎯 UI Prompt Log</a>
                         <a href="#section-audience" id="nav-section-audience" onclick="switchPanel('section-audience'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">👥 Audience Profiles</a>
                     </div>
@@ -1420,63 +1419,59 @@
                 </section>
 
                 
-                <!-- View Funnel -->
-                <section class="workspace-section panel-hidden" id="section-funnel">
-    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
-        <span>📐 View Funnel</span>
-    </h2>
+                <!-- Journey Flows -->
+                <section class="workspace-section panel-hidden" id="section-flows">
+                    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
+                        <span>🗺️ Journey Flows</span>
+                    </h2>
 
-    <!-- View Funnel -->
-    <div class="dashboard-panel card" style="padding: 1.5rem; border-color: var(--border-color);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <span style="font-size:11px;color:var(--text-muted)">click a view to filter & jump to matching paths</span>
-      </div>
-      <div class="funnel-grid" id="funnel-grid">
-         <div style="padding:2rem; text-align:center; color:var(--text-muted); font-style:italic;">Awaiting data...</div>
-      </div>
-    </div>
-</section>
+                    <!-- View Funnel -->
+                    <div class="dashboard-panel card" style="padding: 1.5rem; border-color: var(--border-color); margin-bottom: 1.5rem;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">📐 View Funnel</span>
+                        <span style="font-size:11px;color:var(--text-muted)">click a view to filter & jump to matching paths</span>
+                      </div>
+                      <div class="funnel-grid" id="funnel-grid">
+                         <div style="padding:2rem; text-align:center; color:var(--text-muted); font-style:italic;">Awaiting data...</div>
+                      </div>
+                    </div>
 
-
-                <!-- Navigation Paths -->
-                <section class="workspace-section panel-hidden" id="section-paths">
-    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
-        <span>🗺️ Navigation Paths</span>
-    </h2>
-
-    <!-- Navigation Paths -->
-    <div class="dashboard-panel card" style="padding: 1.5rem; border-color: var(--border-color);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <span style="font-size:11px;color:var(--text-muted)">click a view to filter paths & sessions below</span>
-        <button class="panel-action" style="background: none; border: 1px solid var(--border-color); color: var(--text-muted); padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" onclick="clearViewFilter()">Clear filter</button>
-      </div>
-      <div class="filter-bar" style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-        <select class="filter-select" id="path-filter-ref" onchange="renderPaths()" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
-          <option value="">All referrers</option>
-        </select>
-        <select class="filter-select" id="path-filter-dev" onchange="renderPaths()" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
-          <option value="">All devices</option>
-          <option value="mobile">Mobile</option>
-          <option value="desktop">Desktop</option>
-        </select>
-        <span class="filter-count" id="path-filter-count" style="margin-left: auto; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">—</span>
-      </div>
-      <table class="path-table" id="path-table">
-        <thead>
-          <tr>
-            <th>Path</th>
-            <th>Sessions</th>
-            <th>% of real users</th>
-            <th>Avg duration</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="path-tbody">
-          <tr><td colspan="5"><div style="padding:2rem; text-align:center; color:var(--text-muted); font-style:italic;">Awaiting data...</div></td></tr>
-        </tbody>
-      </table>
-    </div>
-</section>
+                    <!-- Navigation Paths -->
+                    <div class="dashboard-panel card" style="padding: 1.5rem; border-color: var(--border-color);">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">🗺️ Navigation Paths</span>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                          <span style="font-size:11px;color:var(--text-muted)">click a view to filter paths & sessions below</span>
+                          <button class="panel-action" style="background: none; border: 1px solid var(--border-color); color: var(--text-muted); padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" onclick="clearViewFilter()">Clear filter</button>
+                        </div>
+                      </div>
+                      <div class="filter-bar" style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                        <select class="filter-select" id="path-filter-ref" onchange="renderPaths()" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
+                          <option value="">All referrers</option>
+                        </select>
+                        <select class="filter-select" id="path-filter-dev" onchange="renderPaths()" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
+                          <option value="">All devices</option>
+                          <option value="mobile">Mobile</option>
+                          <option value="desktop">Desktop</option>
+                        </select>
+                        <span class="filter-count" id="path-filter-count" style="margin-left: auto; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">—</span>
+                      </div>
+                      <table class="path-table" id="path-table">
+                        <thead>
+                          <tr>
+                            <th>Path</th>
+                            <th>Sessions</th>
+                            <th>% of real users</th>
+                            <th>Avg duration</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody id="path-tbody">
+                          <tr><td colspan="5"><div style="padding:2rem; text-align:center; color:var(--text-muted); font-style:italic;">Awaiting data...</div></td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                </section>
 
 <!-- Session Explorer & Journey Analyzer -->
                 <section class="card" id="section-explorer">
@@ -1757,7 +1752,10 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            const hash = window.location.hash.replace('#', '');
+            let hash = window.location.hash.replace('#', '');
+            if (hash === 'section-funnel' || hash === 'section-paths') {
+                hash = 'section-flows';
+            }
             if (hash.startsWith('deploy/')) {
                 // Defer deploy deep-link until init() loads data
                 pendingDeployDeepLink = hash.split('/')[1];
@@ -2745,7 +2743,12 @@
 function toggleViewFilter(view) {
   activeViewFilter = activeViewFilter === view ? null : view;
   applyFilters();
-  if (activeViewFilter) switchPanel('section-paths');
+  if (activeViewFilter) {
+    const table = document.getElementById('path-table');
+    if (table) {
+      table.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
 }
 function clearViewFilter() { activeViewFilter = null; applyFilters(); }
 
@@ -3427,6 +3430,13 @@ function renderPaths() {
             const sessionsTimelineMarkup = v.sessions.map(s => {
                 const sDate = new Date(s.start).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                 
+                const pathStr = s.path || '(no path)';
+                const pathParts = pathStr === '(no path)' ? ['(no path)'] : pathStr.split(' → ');
+                const pathChips = pathParts.map((pPart, j) => {
+                    const escaped = pPart.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                    return `${j > 0 ? '<span class="view-arrow">→</span>' : ''}<span class="view-chip" style="font-size: 10px; padding: 1px 6px;">${escaped}</span>`;
+                }).join('');
+
                 const classBadges = {
                     deep: { label: "deep", color: "var(--accent-purple)", bg: "rgba(188, 140, 255, 0.1)" },
                     engaged: { label: "engaged", color: "var(--accent-green)", bg: "rgba(63, 185, 80, 0.1)" },
@@ -3473,9 +3483,12 @@ function renderPaths() {
                             </div>
                             <span style="background:${badge.bg}; color:${badge.color}; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.65rem; font-weight:700; text-transform:uppercase; border: 1px solid ${badge.color}22;">${badge.label}</span>
                         </div>
-                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem; font-family:var(--font-mono); display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSessionDetails('${s.id}')">
-                            <span>Path: <strong style="color:var(--text-main);">${s.path || '(no path)'}</strong></span>
-                            <span style="font-size: 0.7rem; color: var(--accent-blue);">Inspect ▾</span>
+                        <div style="margin-top:0.25rem; font-family:var(--font-mono); display:flex; justify-content:space-between; align-items:center; gap: 0.5rem; cursor:pointer;" onclick="toggleSessionDetails('${s.id}')">
+                            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; font-size:0.75rem; color:var(--text-muted);">
+                                <span>Path:</span>
+                                <div class="path-str" style="display:inline-flex; gap: 4px;">${pathChips}</div>
+                            </div>
+                            <span style="font-size: 0.7rem; color: var(--accent-blue); white-space: nowrap;">Inspect ▾</span>
                         </div>
                         
                         <div id="details-${s.id}" class="session-expanded-details hidden" style="margin-top: 0.6rem; border-top: 1px solid rgba(34, 42, 61, 0.3); padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.6rem;">
