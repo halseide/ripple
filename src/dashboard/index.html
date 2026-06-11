@@ -3941,6 +3941,30 @@ function renderPaths() {
             const statsBar       = document.getElementById('promptStatsBar');
             if (!container) return;
 
+            // Preserve active element, focus, selection, open threads, and unsaved inputs
+            const activeEl = document.activeElement;
+            const activeId = activeEl ? activeEl.id : null;
+            const selectionStart = activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') ? activeEl.selectionStart : null;
+            const selectionEnd = activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') ? activeEl.selectionEnd : null;
+
+            const openPromptIds = new Set();
+            document.querySelectorAll('.prompt-thread.open').forEach(el => {
+                const pId = el.id.replace('thread-', '');
+                openPromptIds.add(pId);
+            });
+
+            const unsavedReplies = {};
+            document.querySelectorAll('.prompt-thread-textarea').forEach(textarea => {
+                const pId = textarea.id.replace('reply-', '');
+                unsavedReplies[pId] = textarea.value;
+            });
+
+            const unsavedCategories = {};
+            document.querySelectorAll('[id^="recat-"]').forEach(select => {
+                const pId = select.id.replace('recat-', '');
+                unsavedCategories[pId] = select.value;
+            });
+
             // Sort
             const sorted = [...allPrompts].sort((a, b) => {
                 const tA = new Date(a.capturedAt || 0).getTime();
@@ -4040,7 +4064,8 @@ function renderPaths() {
 
                 // Thread expand button — always show for all prompts to allow replying, re-submit (changing category), and dismissing/archiving
                 const showThread = true;
-                const expandBtn = `<button class="prompt-expand-btn" onclick="togglePromptThread('${p.promptId}')" id="expand-btn-${p.promptId}">▶ Thread</button>`;
+                const isThreadOpen = openPromptIds.has(p.promptId);
+                const expandBtn = `<button class="prompt-expand-btn" onclick="togglePromptThread('${p.promptId}')" id="expand-btn-${p.promptId}">${isThreadOpen ? '▼' : '▶'} Thread</button>`;
 
                 // Answer block
                 const answerBlock = p.answer
@@ -4061,23 +4086,26 @@ function renderPaths() {
                        </div>`
                     : '';
 
+                const currentReply = (unsavedReplies[p.promptId] !== undefined) ? unsavedReplies[p.promptId] : (p.reply || '');
+                const currentCat = unsavedCategories[p.promptId] || '';
+
                 const threadPanel = `
-                    <div class="prompt-thread" id="thread-${p.promptId}">
+                    <div class="prompt-thread ${isThreadOpen ? 'open' : ''}" id="thread-${p.promptId}">
                         ${answerBlock}
                         ${replyBlock}
                         <div class="prompt-thread-reply">
                             <label>Your reply (optional)</label>
-                            <textarea class="prompt-thread-textarea" id="reply-${p.promptId}" placeholder="Follow-up, clarification, or new direction…">${escHtml(p.reply || '')}</textarea>
+                            <textarea class="prompt-thread-textarea" id="reply-${p.promptId}" placeholder="Follow-up, clarification, or new direction…">${escHtml(currentReply)}</textarea>
                             <div class="prompt-thread-actions">
                                 <select id="recat-${p.promptId}">
-                                    <option value="">Re-submit/Change Category…</option>
-                                    <option value="fix">🔧 fix</option>
-                                    <option value="feature">✨ feature</option>
-                                    <option value="design">🎨 design</option>
-                                    <option value="copy">✏️ copy</option>
-                                    <option value="data">📊 data</option>
-                                    <option value="question">❓ question</option>
-                                    <option value="goal">🎯 goal</option>
+                                    <option value="" ${currentCat === '' ? 'selected' : ''}>Re-submit/Change Category…</option>
+                                    <option value="fix" ${currentCat === 'fix' ? 'selected' : ''}>🔧 fix</option>
+                                    <option value="feature" ${currentCat === 'feature' ? 'selected' : ''}>✨ feature</option>
+                                    <option value="design" ${currentCat === 'design' ? 'selected' : ''}>🎨 design</option>
+                                    <option value="copy" ${currentCat === 'copy' ? 'selected' : ''}>✏️ copy</option>
+                                    <option value="data" ${currentCat === 'data' ? 'selected' : ''}>📊 data</option>
+                                    <option value="question" ${currentCat === 'question' ? 'selected' : ''}>❓ question</option>
+                                    <option value="goal" ${currentCat === 'goal' ? 'selected' : ''}>🎯 goal</option>
                                 </select>
                                 <button class="btn-thread-submit" onclick="resubmitPrompt('${p.promptId}')">↺ Re-submit</button>
                                 <span class="prompt-thread-toast" id="toast-${p.promptId}"></span>
@@ -4109,6 +4137,21 @@ function renderPaths() {
                     </div>
                 </div>`;
             }).join('');
+
+            // Restore focus and selection
+            if (activeId) {
+                const newActiveEl = document.getElementById(activeId);
+                if (newActiveEl) {
+                    newActiveEl.focus();
+                    if (selectionStart !== null && selectionEnd !== null) {
+                        try {
+                            newActiveEl.setSelectionRange(selectionStart, selectionEnd);
+                        } catch (e) {
+                            // ignore if not supported
+                        }
+                    }
+                }
+            }
         }
 
         // ── Prompt Thread Actions ──────────────────────────────────────────────
