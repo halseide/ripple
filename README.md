@@ -162,6 +162,7 @@ determines its category, and executes the correct workflow.
 | `design` | Visual / layout change | Edit CSS or inline styles → commit → log → archive |
 | `copy` | Text / wording change | Edit string in place → commit → log → archive |
 | `data` | Wrong value or missing data | Fix at source (data file or API) → commit → log → archive |
+| `goal` | Project-level goal or measurable checkpoint | Acknowledge and assess against analytics. No code changes. |
 
 ### Commit Message Format
 
