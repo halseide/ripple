@@ -1260,7 +1260,7 @@
                     <div style="display: flex; flex-direction: column; gap: 0.6rem;">
                         <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                             <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Project</label>
-                            <select id="projectSelect" class="project-selector" style="width:100%; border:1px solid var(--border-color); background:rgba(0,0,0,0.2); color:var(--text-main); font-size:0.85rem;">
+                            <select id="projectSelect" class="project-selector" style="width:100%; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); font-size:0.85rem; padding: 0.3rem; border-radius: 4px;">
                                 <option value="">Loading projects...</option>
                             </select>
                         </div>
@@ -1981,6 +1981,21 @@
                     if (configData.ok) rippleConfig = configData.config;
                 } catch(e) {
                     console.warn('Could not load ripple.config from API:', e);
+                }
+
+                // Inject configured projects even if they have no stats yet
+                if (rippleConfig && rippleConfig.projects) {
+                    if (!analyticsData.projects) analyticsData.projects = [];
+                    rippleConfig.projects.forEach(cfgProj => {
+                        if (!analyticsData.projects.find(p => p.project_key === cfgProj.key)) {
+                            analyticsData.projects.push({
+                                project_key: cfgProj.key,
+                                project: cfgProj.name || cfgProj.key,
+                                sessions: [],
+                                deployment_windows: []
+                            });
+                        }
+                    });
                 }
 
                 populateProjectSelector();
@@ -3897,6 +3912,34 @@ function renderPaths() {
             } catch(e) {
                 allPrompts = [];
             }
+            
+            // Inject any projects from prompt logs that don't have analytics stats yet
+            if (analyticsData && analyticsData.projects && allPrompts.length > 0) {
+                let discoveredNew = false;
+                allPrompts.forEach(p => {
+                    if (p.projectKey && !analyticsData.projects.find(x => x.project_key === p.projectKey)) {
+                        analyticsData.projects.push({
+                            project_key: p.projectKey,
+                            project: p.projectKey.toUpperCase(),
+                            sessions: [],
+                            deployment_windows: []
+                        });
+                        discoveredNew = true;
+                    }
+                });
+                
+                if (discoveredNew) {
+                    const currentSelection = document.getElementById('projectSelect').value;
+                    populateProjectSelector();
+                    // Restore selection if possible
+                    if (document.getElementById('projectSelect').querySelector(`option[value="${currentSelection}"]`)) {
+                        document.getElementById('projectSelect').value = currentSelection;
+                        activeProjectKey = currentSelection;
+                        loadProjectDetails(currentSelection);
+                    }
+                }
+            }
+
             renderPrompts();
         }
 
