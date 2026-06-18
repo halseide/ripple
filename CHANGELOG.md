@@ -4,6 +4,14 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.12.1] 2026-06-18 — Design Advisory Board Agent Skill Integration
+
+### Added
+- **feature** — Packaged the Design Advisory Board AI Agent Skill directly into the repository (`.agents/skills/design-advisory-board-filter`).
+- **docs** — Added an 'Included Agent Skills' section to the README explaining how to use the bundled skills and the Visual Cortex Rule.
+
+---
+
 ## [v0.12.0] 2026-06-11 — Goal-Prompt Unification, Geographic Profiles & UX Upgrades
 
 ### Added

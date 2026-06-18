@@ -1,6 +1,6 @@
 # Ripple
 
-> **The Continuous Design Loop** · v0.12.0
+> **The Continuous Design Loop** · v0.12.1
 
 Ripple turns your live website into an active canvas for AI-assisted design. Instead of copy-pasting code snippets to your LLM, Ripple's UI Capture drops a direct tether to the element you want to change. It’s the fastest way to iterate on front-end design, backed by a session analytics engine that proves whether your changes actually worked.
 
@@ -171,16 +171,13 @@ determines its category, and executes the correct workflow.
 - Resolves Prompt: <prompt_id>
 ```
 
-### Agent Skill
+### Included Agent Skills
 
-The full processing rules — including the critical `question` guardrail,
-step-by-step workflows for each category, common mistakes, and the archive
-procedure — are documented in:
+Ripple ships with pre-configured AI Agent Skills located in the `.agents/skills` directory. When you open this repository in your AI environment, these are automatically discovered.
 
-- **Project copy:** [`docs/SKILL_process_prompt.md`](docs/SKILL_process_prompt.md)
-- **Agent skill copy:** `[USER_HOME]\.gemini\config\plugins\science\skills\ripple_process_prompt\SKILL.md`
-
-Both copies must be kept in sync when the workflow changes.
+1. **Design Advisory Board Filter (`.agents/skills/design-advisory-board-filter`)**: Allows your AI to critique UI mockups through the persona of history's greatest designers (Dieter Rams, Steve Jobs, Don Norman, etc.). Includes the "Visual Cortex Rule" to evaluate rendered pixels instead of just reading HTML/CSS.
+   - **Usage:** *"Run the index.html screen through the Design Advisory Board."*
+2. **Process Prompt**: The core engine that processes Ripple UI captures. (Also documented in [`docs/SKILL_process_prompt.md`](docs/SKILL_process_prompt.md)).
 
 ---
 
