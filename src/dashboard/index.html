@@ -847,6 +847,7 @@
         .prompt-cat-feature { background: rgba(188, 140, 255, 0.1); color: var(--accent-purple); border-color: rgba(188, 140, 255, 0.2); }
         .prompt-cat-question{ background: rgba(56, 139, 253, 0.1); color: var(--accent-blue); border-color: rgba(56, 139, 253, 0.2); }
         .prompt-cat-design  { background: rgba(63, 185, 80, 0.1); color: var(--accent-green); border-color: rgba(63, 185, 80, 0.2); }
+        .prompt-cat-event   { background: rgba(255, 140, 0, 0.1); color: #ff8c00; border-color: rgba(255, 140, 0, 0.3); }
 
         .prompt-meta {
             font-size: 0.75rem;
@@ -1200,7 +1201,10 @@
             letter-spacing: 0.02em;
         }
 </style>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <!-- Leaflet JS for World Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="country_coords.js"></script>
 </head>
 <body>
 
@@ -1321,6 +1325,7 @@
                         <!-- Goals from prompt log -->
                     </div>
                     <button class="add-goal-btn" onclick="openGoalCapture()">+ New Goal</button>
+                    <button class="add-goal-btn" style="margin-top:0.3rem;" onclick="openEventCapture()">+ Add Event</button>
                 </div>
 
                 <!-- Raw Session Stats -->
@@ -1629,8 +1634,24 @@
                         </div>
                     </h2>
                     
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                        <input type="text" id="audienceSearch" placeholder="Search visitors..." oninput="renderAudience()" style="flex: 1; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <input type="text" id="audienceSearch" placeholder="Search visitors..." oninput="renderAudience()" style="flex: 1; min-width: 200px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                        
+                        <select id="audienceLocationFilter" onchange="renderAudience()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; outline: none; font-family: var(--font-main);">
+                            <option value="all">All Locations</option>
+                        </select>
+                        
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label for="audienceMinSessions" style="font-size: 0.8rem; color: var(--text-muted);">Min Sessions:</label>
+                            <input type="number" id="audienceMinSessions" min="1" value="1" oninput="renderAudience()" style="width: 60px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem; font-size: 0.8rem; outline: none; font-family: var(--font-main);">
+                        </div>
+                        
+                        <select id="audienceDateFilter" onchange="renderAudience()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; outline: none; font-family: var(--font-main);">
+                            <option value="all">All Time</option>
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                        </select>
+
                         <select id="audienceTypeFilter" onchange="renderAudience()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; outline: none; font-family: var(--font-main);">
                             <option value="all">All Users</option>
                             <option value="deep">🔥 Deep User</option>
@@ -1638,10 +1659,19 @@
                             <option value="glancer">👀 Glancer</option>
                             <option value="bounce">🚪 Bounce</option>
                         </select>
+
+                        <div style="display: flex; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;">
+                            <button id="btnAudienceList" onclick="toggleAudienceView('list')" style="padding: 0.35rem 0.8rem; background: var(--accent-blue); color: #fff; border: none; font-size: 0.8rem; cursor: pointer; font-weight: 600;">List</button>
+                            <button id="btnAudienceMap" onclick="toggleAudienceView('map')" style="padding: 0.35rem 0.8rem; background: transparent; color: var(--text-muted); border: none; font-size: 0.8rem; cursor: pointer; font-weight: 600; border-left: 1px solid var(--border-color);">Map</button>
+                        </div>
                     </div>
 
                     <div id="audience-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
                         <!-- JS injected audience cards -->
+                    </div>
+                    
+                    <div id="audience-map" style="display: none; height: 500px; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card);">
+                        <!-- Leaflet Map Container -->
                     </div>
                 </section>
 
@@ -1673,6 +1703,7 @@
                                 <option value="data">📊 Data</option>
                                 <option value="question">❓ Question</option>
                                 <option value="goal">🎯 Goal</option>
+                                <option value="event">📅 Event</option>
                             </select>
                             <!-- Sort -->
                             <select id="promptSort" onchange="renderPrompts()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
@@ -1821,6 +1852,21 @@
                 } : null;
             }).filter(Boolean);
 
+            // Event markLines (Marketing, milestones, etc.)
+            const events = (typeof allPrompts !== 'undefined' ? allPrompts : []).filter(p => (p.category === 'event' || p.category === 'marketing') && (activeProjectKey === 'all' || p.projectKey === activeProjectKey));
+            const eventMarkLines = events.map(ev => {
+                const d = (ev.capturedAt || '').slice(0, 10);
+                const idx = dates.indexOf(d);
+                const msg = (ev.prompt || '').slice(0, 40);
+                return idx >= 0 ? {
+                    xAxis: idx,
+                    lineStyle: { color: '#d29922', type: 'dashed', width: 1.5 },
+                    label: { formatter: msg, color: '#d29922', position: 'insideStartTop', fontSize: 10 }
+                } : null;
+            }).filter(Boolean);
+
+            const allMarkLines = [...markLines, ...eventMarkLines];
+
             const zoomStart = dates.length > 30 ? ((dates.length - 30) / dates.length) * 100 : 0;
 
             statsChart.setOption({
@@ -1883,7 +1929,7 @@
                         markLine: {
                             symbol: ['none', 'none'],
                             silent: false,
-                            data: markLines
+                            data: allMarkLines
                         }
                     },
                     {
@@ -3644,6 +3690,120 @@ function renderPaths() {
 
         // ── Goal Capture (from dashboard) ──────────────────────────────────────
 
+        function openEventCapture() {
+            const existing = document.getElementById('eventCaptureOverlay');
+            if (existing) existing.remove();
+
+            let projOptions = '';
+            if (activeProjectKey === 'all' && analyticsData && analyticsData.projects) {
+                analyticsData.projects.forEach(p => {
+                    projOptions += `<option value="${p.project_key}">${p.project}</option>`;
+                });
+            } else {
+                projOptions = `<option value="${activeProjectKey}">${activeProjectKey}</option>`;
+            }
+
+            // Get current local datetime for datetime-local input
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const localDatetime = now.toISOString().slice(0,16);
+
+            const overlay = document.createElement('div');
+            overlay.id = 'eventCaptureOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);';
+            overlay.innerHTML = `
+                <div style="background:var(--bg-card);border:1px solid rgba(210,153,34,0.25);border-radius:12px;padding:1.5rem;width:90%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                        <h3 style="margin:0;font-size:1rem;color:var(--accent-amber);">📢 New Event/Milestone</h3>
+                        <button onclick="document.getElementById('eventCaptureOverlay').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;">&times;</button>
+                    </div>
+                    
+                    <div style="margin-bottom:0.8rem;">
+                        <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">Project</label>
+                        <select id="eventCaptureProject" style="width:100%;box-sizing:border-box;background:var(--bg-main);border:1px solid var(--border-color);border-radius:8px;padding:0.6rem;color:var(--text-main);font-family:inherit;font-size:0.9rem;">
+                            ${projOptions}
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom:0.8rem;">
+                        <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">Event Details & URL</label>
+                        <textarea id="eventCaptureText" rows="3" placeholder="e.g. 'Posted jumpoff.space to HN: https://...'" style="width:100%;box-sizing:border-box;background:var(--bg-main);border:1px solid var(--border-color);border-radius:8px;padding:0.75rem;color:var(--text-main);font-family:inherit;font-size:0.9rem;resize:vertical;"></textarea>
+                    </div>
+                    
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">Date & Time</label>
+                        <input type="datetime-local" id="eventCaptureDate" value="${localDatetime}" style="width:100%;box-sizing:border-box;background:var(--bg-main);border:1px solid var(--border-color);border-radius:8px;padding:0.6rem;color:var(--text-main);font-family:inherit;font-size:0.9rem;" />
+                    </div>
+
+                    <div style="display:flex;gap:0.6rem;margin-top:1rem;justify-content:flex-end;">
+                        <button onclick="document.getElementById('eventCaptureOverlay').remove()" style="padding:0.5rem 1rem;background:transparent;border:1px solid var(--border-color);border-radius:6px;color:var(--text-muted);cursor:pointer;font-family:inherit;">Cancel</button>
+                        <button onclick="submitEventCapture()" style="padding:0.5rem 1.2rem;background:rgba(210,153,34,0.15);border:1px solid rgba(210,153,34,0.4);border-radius:6px;color:var(--accent-amber);cursor:pointer;font-weight:600;font-family:inherit;transition:all 0.2s;" onmouseover="this.style.background='rgba(210,153,34,0.25)'" onmouseout="this.style.background='rgba(210,153,34,0.15)'">Log Event</button>
+                    </div>
+                    <div id="eventCaptureStatus" style="margin-top:0.6rem;font-size:0.8rem;"></div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+            document.getElementById('eventCaptureText').focus();
+        }
+
+        async function submitEventCapture() {
+            const text = document.getElementById('eventCaptureText')?.value?.trim();
+            if (!text || text.length < 3) {
+                document.getElementById('eventCaptureStatus').innerHTML = '<span style="color:var(--accent-red)">Please enter an event description.</span>';
+                return;
+            }
+
+            const projKey = document.getElementById('eventCaptureProject').value;
+            let dateVal = document.getElementById('eventCaptureDate').value;
+            let timestamp = new Date().toISOString();
+            if (dateVal) {
+                const parsed = new Date(dateVal);
+                if (!isNaN(parsed.getTime())) timestamp = parsed.toISOString();
+            }
+
+            const payload = {
+                projectKey: projKey,
+                pageUrl: window.location.href,
+                elementSelector: 'dashboard-ui',
+                elementContext: 'manual-event',
+                category: 'event',
+                subtype: 'marketing',
+                prompt: text,
+                sessionId: 'dashboard_' + Date.now(),
+                timestamp: timestamp
+            };
+
+            const statusEl = document.getElementById('eventCaptureStatus');
+            statusEl.innerHTML = '<span style="color:var(--text-muted)">Saving...</span>';
+
+            try {
+                const res = await fetch('../../api/capture_prompt.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const result = await res.json();
+                if (result.ok) {
+                    statusEl.innerHTML = '<span style="color:var(--accent-green)">✅ Event captured!</span>';
+                    setTimeout(async () => {
+                        document.getElementById('eventCaptureOverlay')?.remove();
+                        // Load prompt log and refresh UI
+                        const prRes = await fetch('../../data/prompt_log.json?t=' + Date.now());
+                        const prData = await prRes.json();
+                        if (Array.isArray(prData)) {
+                            allPrompts = prData;
+                            loadProjectDetails(activeProjectKey); 
+                        }
+                    }, 800);
+                } else {
+                    statusEl.innerHTML = `<span style="color:var(--accent-red)">❌ ${result.error || 'Save failed'}</span>`;
+                }
+            } catch (e) {
+                statusEl.innerHTML = '<span style="color:var(--accent-red)">❌ Network error</span>';
+            }
+        }
+
         function openGoalCapture() {
             // Build a lightweight modal for goal capture
             const existing = document.getElementById('goalCaptureOverlay');
@@ -3962,6 +4122,7 @@ function renderPaths() {
                 copy:     { label: '✏️ copy',    cls: 'prompt-cat-copy' },
                 data:     { label: '📊 data',    cls: 'prompt-cat-data' },
                 goal:     { label: '🎯 goal',    cls: 'prompt-cat-goal' },
+                event:    { label: '📅 event',   cls: 'prompt-cat-event' },
             };
             return m[c] || { label: c, cls: 'prompt-cat-question' };
         }
@@ -4058,7 +4219,7 @@ function renderPaths() {
             // Stats bar by category
             const cats = {};
             filtered.forEach(p => { cats[p.category] = (cats[p.category] || 0) + 1; });
-            const catOrder = ['fix', 'feature', 'design', 'copy', 'data', 'question', 'goal'];
+            const catOrder = ['fix', 'feature', 'design', 'copy', 'data', 'question', 'goal', 'event'];
             statsBar.innerHTML = catOrder.map(c => {
                 const n = cats[c] || 0;
                 const m = catMeta(c);

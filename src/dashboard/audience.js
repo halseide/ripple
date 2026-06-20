@@ -79,6 +79,10 @@ function renderAudience() {
     
     const searchTerm = document.getElementById('audienceSearch').value.toLowerCase();
     const typeFilter = document.getElementById('audienceTypeFilter').value;
+    const locationFilterElement = document.getElementById('audienceLocationFilter');
+    const locationFilter = locationFilterElement ? locationFilterElement.value : 'all';
+    const dateFilter = document.getElementById('audienceDateFilter') ? document.getElementById('audienceDateFilter').value : 'all';
+    const minSessions = document.getElementById('audienceMinSessions') ? parseInt(document.getElementById('audienceMinSessions').value) || 1 : 1;
 
     let html = '';
     
@@ -113,10 +117,40 @@ function renderAudience() {
 
     const visitors = Object.values(visitorsMap);
 
+    // Populate Location Dropdown if it hasn't been populated yet
+    if (locationFilterElement && locationFilterElement.options.length <= 1) {
+        const uniqueLocations = [...new Set(visitors.map(v => {
+            const parts = (v.location || 'Unknown').split(',');
+            return parts[parts.length - 1].trim(); // Just country for dropdown
+        }))].filter(Boolean).sort();
+        
+        uniqueLocations.forEach(loc => {
+            const opt = document.createElement('option');
+            opt.value = loc;
+            opt.textContent = loc;
+            locationFilterElement.appendChild(opt);
+        });
+    }
+
+    const now = new Date();
+
     const filtered = visitors.filter(v => {
         const name = getVisitorDisplayName(v.visitorId).toLowerCase();
         if (searchTerm && !name.includes(searchTerm) && !v.visitorId.toLowerCase().includes(searchTerm)) return false;
         if (typeFilter !== 'all' && v.type !== typeFilter) return false;
+        
+        if (v.sessionCount < minSessions) return false;
+        
+        if (locationFilter !== 'all') {
+            if (!(v.location || '').includes(locationFilter)) return false;
+        }
+        
+        if (dateFilter !== 'all') {
+            const daysAgo = parseInt(dateFilter);
+            const msAgo = now - (daysAgo * 24 * 60 * 60 * 1000);
+            if (new Date(v.lastSeen).getTime() < msAgo) return false;
+        }
+
         return true;
     });
 
@@ -167,6 +201,106 @@ function renderAudience() {
     });
 
     listContainer.innerHTML = html;
+    
+    // Refresh map if it's currently visible
+    if (document.getElementById('audience-map') && document.getElementById('audience-map').style.display !== 'none') {
+        renderMap(filtered);
+    }
+}
+
+// ----------------------------------------------------------------------------
+// World Map Logic
+// ----------------------------------------------------------------------------
+let audienceLeafletMap = null;
+let audienceMarkersLayer = null;
+
+function toggleAudienceView(view) {
+    const listBtn = document.getElementById('btnAudienceList');
+    const mapBtn = document.getElementById('btnAudienceMap');
+    const listContainer = document.getElementById('audience-list');
+    const mapContainer = document.getElementById('audience-map');
+    
+    if (view === 'list') {
+        listBtn.style.background = 'var(--accent-blue)';
+        listBtn.style.color = '#fff';
+        mapBtn.style.background = 'transparent';
+        mapBtn.style.color = 'var(--text-muted)';
+        
+        listContainer.style.display = 'grid';
+        mapContainer.style.display = 'none';
+    } else {
+        mapBtn.style.background = 'var(--accent-blue)';
+        mapBtn.style.color = '#fff';
+        listBtn.style.background = 'transparent';
+        listBtn.style.color = 'var(--text-muted)';
+        
+        listContainer.style.display = 'none';
+        mapContainer.style.display = 'block';
+        
+        // Trigger resize so Leaflet knows its container size changed
+        if (audienceLeafletMap) {
+            audienceLeafletMap.invalidateSize();
+        }
+        
+        // Render map with current filters
+        renderAudience(); 
+    }
+}
+
+function renderMap(filteredVisitors) {
+    if (typeof L === 'undefined') return; // Leaflet not loaded
+    
+    if (!audienceLeafletMap) {
+        audienceLeafletMap = L.map('audience-map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(audienceLeafletMap);
+        
+        audienceMarkersLayer = L.layerGroup().addTo(audienceLeafletMap);
+    }
+    
+    audienceMarkersLayer.clearLayers();
+    
+    // Group visitors by country
+    const countryGroups = {};
+    filteredVisitors.forEach(v => {
+        const parts = (v.location || 'Unknown').split(',');
+        const country = parts[parts.length - 1].trim();
+        if (!countryGroups[country]) countryGroups[country] = [];
+        countryGroups[country].push(v);
+    });
+    
+    for (const [country, visitors] of Object.entries(countryGroups)) {
+        if (typeof COUNTRY_COORDS !== 'undefined' && COUNTRY_COORDS[country]) {
+            const [lat, lon] = COUNTRY_COORDS[country];
+            
+            // Marker styling based on traffic volume
+            const size = Math.min(Math.max(visitors.length * 5, 10), 40);
+            
+            const markerHtml = \`<div style="background: rgba(188, 140, 255, 0.4); border: 2px solid var(--accent-purple); border-radius: 50%; width: \${size}px; height: \${size}px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; font-weight: bold; box-shadow: 0 0 10px rgba(188, 140, 255, 0.5);">\${visitors.length}</div>\`;
+            
+            const icon = L.divIcon({
+                html: markerHtml,
+                className: 'custom-map-marker',
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2]
+            });
+            
+            const popupHtml = \`
+                <div style="font-family: var(--font-main); color: #333; min-width: 150px;">
+                    <h4 style="margin: 0 0 0.5rem 0; border-bottom: 1px solid #ccc; padding-bottom: 0.25rem;">\${country}</h4>
+                    <div style="font-size: 0.8rem;">
+                        <strong>\${visitors.length}</strong> Visitors<br>
+                        <strong>\${visitors.reduce((acc, v) => acc + v.sessionCount, 0)}</strong> Sessions
+                    </div>
+                </div>
+            \`;
+            
+            L.marker([lat, lon], { icon }).bindPopup(popupHtml).addTo(audienceMarkersLayer);
+        }
+    }
 }
 
 function formatDuration(ms) {
