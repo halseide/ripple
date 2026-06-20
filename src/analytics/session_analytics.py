@@ -543,6 +543,8 @@ def parse_sessions(
         geo = s.get("geo", {})
         country = geo.get("country", "Unknown") if isinstance(geo, dict) else "Unknown"
         city = geo.get("city", "Unknown") if isinstance(geo, dict) else "Unknown"
+        lat = float(geo.get("lat", 0)) if isinstance(geo, dict) else 0.0
+        lon = float(geo.get("lon", 0)) if isinstance(geo, dict) else 0.0
         
         ttfa = calculate_ttfa(s, interaction_events)
         session_records.append({
@@ -559,6 +561,8 @@ def parse_sessions(
             "path":           session_path(s),
             "country":        country,
             "city":           city,
+            "lat":            lat,
+            "lon":            lon,
             "views": [
                 {
                     "view":       v.get("view", "?"),

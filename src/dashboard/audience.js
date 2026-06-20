@@ -105,7 +105,9 @@ function renderAudience() {
                 firstSeen: s.start,
                 lastSeen: s.start,
                 sessionCount: 0,
-                totalDuration: 0
+                totalDuration: 0,
+                lat: s.lat || 0,
+                lon: s.lon || 0
             };
         }
         const v = visitorsMap[sVisitorId];
@@ -113,6 +115,10 @@ function renderAudience() {
         v.totalDuration += (s.duration_s || 0) * 1000;
         if (new Date(s.start) < new Date(v.firstSeen)) v.firstSeen = s.start;
         if (new Date(s.start) > new Date(v.lastSeen)) v.lastSeen = s.start;
+        if (s.lat && s.lon && s.lat !== 0 && s.lon !== 0) {
+            v.lat = s.lat;
+            v.lon = s.lon;
+        }
     });
 
     const visitors = Object.values(visitorsMap);
@@ -263,43 +269,45 @@ function renderMap(filteredVisitors) {
     
     audienceMarkersLayer.clearLayers();
     
-    // Group visitors by country
-    const countryGroups = {};
+    // Group visitors by exact geo-coordinates
+    const geoGroups = {};
     filteredVisitors.forEach(v => {
-        const parts = (v.location || 'Unknown').split(',');
-        const country = parts[parts.length - 1].trim();
-        if (!countryGroups[country]) countryGroups[country] = [];
-        countryGroups[country].push(v);
+        if (!v.lat || !v.lon || (v.lat === 0 && v.lon === 0)) return; // Skip unknown
+        
+        const coordKey = `${v.lat},${v.lon}`;
+        if (!geoGroups[coordKey]) geoGroups[coordKey] = [];
+        geoGroups[coordKey].push(v);
     });
     
-    for (const [country, visitors] of Object.entries(countryGroups)) {
-        if (typeof COUNTRY_COORDS !== 'undefined' && COUNTRY_COORDS[country]) {
-            const [lat, lon] = COUNTRY_COORDS[country];
-            
-            // Marker styling based on traffic volume
-            const size = Math.min(Math.max(visitors.length * 5, 10), 40);
-            
-            const markerHtml = \`<div style="background: rgba(188, 140, 255, 0.4); border: 2px solid var(--accent-purple); border-radius: 50%; width: \${size}px; height: \${size}px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; font-weight: bold; box-shadow: 0 0 10px rgba(188, 140, 255, 0.5);">\${visitors.length}</div>\`;
-            
-            const icon = L.divIcon({
-                html: markerHtml,
-                className: 'custom-map-marker',
-                iconSize: [size, size],
-                iconAnchor: [size/2, size/2]
-            });
-            
-            const popupHtml = \`
-                <div style="font-family: var(--font-main); color: #333; min-width: 150px;">
-                    <h4 style="margin: 0 0 0.5rem 0; border-bottom: 1px solid #ccc; padding-bottom: 0.25rem;">\${country}</h4>
-                    <div style="font-size: 0.8rem;">
-                        <strong>\${visitors.length}</strong> Visitors<br>
-                        <strong>\${visitors.reduce((acc, v) => acc + v.sessionCount, 0)}</strong> Sessions
-                    </div>
+    for (const [coordKey, visitors] of Object.entries(geoGroups)) {
+        const [lat, lon] = coordKey.split(',').map(Number);
+        
+        const parts = (visitors[0].location || 'Unknown').split(',');
+        const locationName = parts.length > 1 ? `${parts[0].trim()}, ${parts[parts.length - 1].trim()}` : parts[0].trim();
+        
+        // Marker styling based on traffic volume
+        const size = Math.min(Math.max(visitors.length * 5, 10), 40);
+        
+        const markerHtml = `<div style="background: rgba(188, 140, 255, 0.4); border: 2px solid var(--accent-purple); border-radius: 50%; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; font-weight: bold; box-shadow: 0 0 10px rgba(188, 140, 255, 0.5);">${visitors.length}</div>`;
+        
+        const icon = L.divIcon({
+            html: markerHtml,
+            className: 'custom-map-marker',
+            iconSize: [size, size],
+            iconAnchor: [size/2, size/2]
+        });
+        
+        const popupHtml = `
+            <div style="font-family: var(--font-main); color: #333; min-width: 150px;">
+                <h4 style="margin: 0 0 0.5rem 0; border-bottom: 1px solid #ccc; padding-bottom: 0.25rem;">${locationName}</h4>
+                <div style="font-size: 0.8rem;">
+                    <strong>${visitors.length}</strong> Visitors<br>
+                    <strong>${visitors.reduce((acc, v) => acc + v.sessionCount, 0)}</strong> Sessions
                 </div>
-            \`;
-            
-            L.marker([lat, lon], { icon }).bindPopup(popupHtml).addTo(audienceMarkersLayer);
-        }
+            </div>
+        `;
+        
+        L.marker([lat, lon], { icon }).bindPopup(popupHtml).addTo(audienceMarkersLayer);
     }
 }
 
