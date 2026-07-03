@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.12.0
+ * Ripple Tracker  v0.12.1
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -7,7 +7,8 @@
  * Install:
  *   <script src="/path/to/ripple-tracker.js"
  *           data-ripple-key="my-project"
- *           data-ripple-endpoint="/api/session.php"></script>
+ *           data-ripple-endpoint="/api/session.php"
+ *           data-ripple-hide="true"></script>
  *
  * Debug Mode (shows live event log overlay):
  *   URL:           ?ripple_debug=1
@@ -28,7 +29,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.12.0';
+    const RIPPLE_VERSION = 'v0.12.1';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -48,6 +49,7 @@
     const DEBUG_MODE   = new URLSearchParams(location.search).has('ripple_debug') ||
                          localStorage.getItem('ripple_debug') === 'true';
     let   _homeMode    = localStorage.getItem('ripple_home') === 'true';
+    const HIDE_UI      = _script && _script.getAttribute('data-ripple-hide') === 'true';
 
 
     // ── Session state ─────────────────────────────────────────────────────────
@@ -75,6 +77,23 @@
     // Session ID embeds the visitor ID as prefix: sess_{visitorId}_{timestamp}
     // Matches the example.com schema so session_analytics.py can link sessions.
     const _sessionId = `sess_${_visitorId}_${_startMs}`;
+
+    const _sessionReferrer = (function() {
+        try {
+            let ref = sessionStorage.getItem('_ripple_ref');
+            if (!ref) {
+                const params = new URLSearchParams(location.search);
+                const utmSource = params.get('utm_source');
+                ref = utmSource ? 'utm_source:' + utmSource : (document.referrer || 'direct');
+                sessionStorage.setItem('_ripple_ref', ref);
+            }
+            return ref;
+        } catch (_) {
+            const params = new URLSearchParams(location.search);
+            const utmSource = params.get('utm_source');
+            return utmSource ? 'utm_source:' + utmSource : (document.referrer || 'direct');
+        }
+    }());
 
     let _currentView  = null;
     let _viewStartMs  = _startMs;
@@ -440,7 +459,7 @@
         return {
             sessionId:            _sessionId,
             projectKey:           PROJECT_KEY,
-            referrer:             document.referrer || 'direct',
+            referrer:             _sessionReferrer,
             userAgent:            navigator.userAgent,
             startTime:            _startTime,
             views:                snapViews,
@@ -785,7 +804,7 @@
     }
 
     // ── UI Capture: Modal ─────────────────────────────────────────────────────
-    const CATEGORIES = ['fix', 'feature', 'design', 'copy', 'data', 'question', 'goal'];
+    const CATEGORIES = ['fix', 'feature', 'design', 'copy', 'data', 'question', 'goal', 'marketing', 'event'];
     const MODAL_ID   = '_rpl_capture_modal';
 
     function _openModal(targetEl, captureX, captureY) {
@@ -1006,6 +1025,10 @@
                     <button id="_rpl_btn_cancel" class="_rpl_btn_cancel">Cancel</button>
                     <button id="_rpl_btn_send" class="_rpl_btn_send">⚡ Send to AI Inbox</button>
                 </div>
+                <div id="_rpl_utm_tip" style="display:none; margin-top:12px; padding:10px; background:rgba(56,139,253,0.1); border:1px solid rgba(56,139,253,0.3); border-radius:8px; font-size:11px; color:rgba(200,220,255,0.9); line-height:1.4;">
+                    💡 <strong>UTM Tracking Tip:</strong> Want to track this link? Use <code>?utm_source=skool</code> (or facebook, newsletter, etc.) at the end of your URL. Ripple will natively catch it and bypass privacy blockers!<br>
+                    <em>Example:</em> <code>https://jumpoff.space/?utm_source=skool</code>
+                </div>
                 <div id="_rpl_status" class="_rpl_status"></div>
             </div>`;
 
@@ -1051,6 +1074,19 @@
         // Focus textarea
         const textarea = document.getElementById('_rpl_prompt_text');
         setTimeout(() => textarea && textarea.focus(), 80);
+
+        // Toggle UTM tip
+        const catSelect = document.getElementById('_rpl_cat_select');
+        const utmTip = document.getElementById('_rpl_utm_tip');
+        if (catSelect && utmTip) {
+            catSelect.addEventListener('change', (e) => {
+                if (['marketing', 'event'].includes(e.target.value)) {
+                    utmTip.style.display = 'block';
+                } else {
+                    utmTip.style.display = 'none';
+                }
+            });
+        }
 
         // ── Wire close actions ───────────────────────────────────────────────
         document.getElementById('_rpl_close_x').addEventListener('click', _closeModal);
@@ -1473,7 +1509,9 @@
 
     // ── Boot: fetch pending prompts and inject indicator ─────────────────────────────
     function _initRipple() {
-        _buildIndicator();
+        if (!HIDE_UI) {
+            _buildIndicator();
+        }
         _loadPendingPrompts();
     }
 

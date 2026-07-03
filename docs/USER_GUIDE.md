@@ -1,6 +1,6 @@
 # Ripple — User Guide
 
-> **Version:** v0.12.0 · **Last Updated:** 2026-06-11
+> **Version:** v0.12.1 · **Last Updated:** 2026-07-03
 
 Ripple is a live UI capture and session analytics tool. It runs on every page where the tracker is installed, gives you a direct line from browser to AI inbox, and measures whether your changes actually worked.
 
@@ -84,17 +84,27 @@ Ripple's tracker automatically records navigation views to build your `view_funn
 
 Each project has a dashboard at `http://localhost/{project}/ripple/`.
 
-| Project | Dashboard URL |
-|---|---|
-| App Alpha | http://localhost/app-alpha/ripple/ |
-| App Beta | http://localhost/app-beta/ripple/ |
-| Example Site | http://localhost/example-site/ripple/ |
+The dashboard is structured as an **Event-Centric Validation Tool** designed to correlate behavior shifts with known and unknown events:
 
-The dashboard shows:
-- **Vitals** — sessions, engagement, bounce rate, and project-specific metrics
-- **Activity Timeline** — hourly session chart
-- **Ripple Log** — all prompts with status (`pending`, `answered`, `shipped`, `dismissed`), filterable by status and category
-- **Configuration** — live `ripple.config.json` settings for the project (excluding goals)
+- **Events & Deployments (Timeline)** — The core view. It anchors around three types of events:
+  - 💻 **Code Deployments** (Known: AI prompt/code changes pulled via Git)
+  - 📢 **External Events** (Known: Marketing blasts, logged via the UI)
+  - ❓ **Organic Anomalies** (Unknown: Statistically significant traffic spikes/drops)
+- **Sessions Explorer** — Drill down into raw session paths with Cumulative vs. Unique Visitor modes.
+- **Audience** — Track high-value returning visitors across their distinct journeys.
+- **Goals & North Stars** — Define success metrics to align analytics with intent.
+
+### Anomaly Diagnostics & Resolution
+When Ripple detects an `Organic Anomaly` (a traffic spike > 2 standard deviations without a known cause), it appears on your timeline as `❓ Unresolved Anomaly`. 
+Clicking into the anomaly opens the **Diagnostic Panel** which reveals:
+- Top Referrers driving the spike
+- Top Entry Pages
+- Geographic Hotspots and Device Shifts
+
+If you identify the cause (e.g. a Reddit post), use the **Resolve (Add Event)** button. This will log the event, update the timeline, and permanently convert the Anomaly into a Known External Event.
+
+### Prompt Log Correlation
+When viewing the Drilldown Detail for a code deployment, Ripple cross-references the Git commit with your `prompt_log.json` to display the original Architect Prompt. A **Copy Raw** button is provided to quickly extract the exact prompt for context/handoffs.
 
 ---
 
