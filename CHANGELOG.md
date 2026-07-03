@@ -4,6 +4,22 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.12.2] 2026-07-03 — Update Documentation & Telemetry Hide Setting
+
+### Changes
+- `1ec79e5` — feat: added data-ripple-hide and bumped version to v0.12.1
+- `8c154ba` — [Vibe] feat: use precise geo-coordinates (lat/lon) for Audience Map markers instead of country averages
+- `c00b39f` — [Vibe] feat: add Audience filters and World Map view - Resolves Prompt: prompt_1781972803_ripple
+- `a4caad7` — feat: bundle Design Advisory Board agent skill
+- `3ee021d` — [Vibe] fix: improve select contrast - Resolves Prompt: prompt_1781645018_ripple
+- `83a359d` — [Vibe] docs: add goal category to documentation and agent skill
+- `6fe9991` — [Vibe] design: render visual chips and expandable session details in visitor modal - Resolves Prompt: prompt_1781193731_ripple
+- `a24b86b` — [Vibe] fix: preserve input focus and thread state on live reload - Resolves Prompt: prompt_1781195446_ripple
+- `a87de78` — [Vibe] feat: consolidate journey flows and render visual path chips in audience profiles
+- `2ed3070` — [Vibe] feat: render FTP session sync status on dashboard
+
+---
+
 ## [v0.12.1] 2026-06-18 — Design Advisory Board Agent Skill Integration
 
 ### Added

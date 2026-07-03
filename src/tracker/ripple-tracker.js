@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.12.1
+ * Ripple Tracker  v0.12.2
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -29,7 +29,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.12.1';
+    const RIPPLE_VERSION = 'v0.12.2';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
