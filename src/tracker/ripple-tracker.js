@@ -29,7 +29,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.12.2';
+    const RIPPLE_VERSION = 'v0.13.0';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -103,6 +103,7 @@
     let _overlayReady = false;
     let _flushed      = false;
     let _modalOpen    = false;
+    let _identity     = null;  // set via Ripple.identify() — travels with every flush
 
     // ── Public API ────────────────────────────────────────────────────────────
     const Ripple = {
@@ -117,6 +118,24 @@
             _events.push(entry);
             _debugLog(name, details || {}, 'event');
             _updateCount();
+        },
+
+        /**
+         * Attach an authenticated identity to this session (v0.13.0).
+         * Travels in the session payload as `identity`; analyze.py maps it
+         * onto the visitor so dashboards show real names automatically.
+         * Call with null to clear. Host apps should call this server-truthfully
+         * (e.g. from a PHP-emitted snippet), not from user-editable input.
+         * @param {{name:string, id?:string, admin?:boolean}|null} info
+         */
+        identify(info) {
+            if (!info || !info.name) { _identity = null; return; }
+            _identity = {
+                name:  String(info.name).slice(0, 80),
+                id:    info.id != null ? String(info.id).slice(0, 64) : undefined,
+                admin: !!info.admin,
+            };
+            _debugLog('identify', _identity, 'event');
         },
 
         /**
@@ -464,6 +483,7 @@
             startTime:            _startTime,
             views:                snapViews,
             events:               _events,
+            identity:             _identity,
             totalDurationSeconds: (nowMs - _startMs) / 1000,
         };
     }

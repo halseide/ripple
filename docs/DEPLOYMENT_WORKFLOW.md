@@ -58,3 +58,8 @@ Open your local project dashboard (e.g., `http://localhost/ripple/src/dashboard/
 * **Time Synchronization:** The tracker uses `new Date().toISOString()` which uses the client's system clock in UTC. Ripple matches it with the Git log's UTC time. Ensure your server's clock is synced with NTP to prevent timezone offsets in geo-tracking records.
 * **Double-Tracking in Local Dev:** In development, Ripple's script is injected on `localhost` dynamically. Ensure your project's inline tracker bridges calls to `window.Ripple` (if available) on localhost to avoid generating duplicate session records.
 * **Database Size Limits:** The `analyze.py` script limits individual session storage in the compiled json file to avoid bloat (default `max_sessions_stored = 300` in config).
+
+---
+
+## v0.13.0 addendum
+When deploying the receiver, ship `api/session.php` verbatim from Ripple core (it is hardened by default) plus your app's `ripple.hooks.php` if you need tenant validation, geo, or CORS. Multi-tenant apps: one `ripple.config.json` entry per tenant, same `git_repo` for all — one commit timeline, separate before/after windows per domain. Web-block the sessions directories in your `.htaccess` and keep local session mirrors out of deploys and commits. If your app authenticates users, emit `Ripple.identify()` server-side so dashboards resolve visitors to real names.

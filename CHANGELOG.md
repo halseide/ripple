@@ -4,6 +4,15 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.13.0] 2026-07-05 — Hardened Core, Identity API, Multi-Tenant Hooks
+
+### Changes
+- **`Ripple.identify({name, id, admin})`** — first-class identity API. Travels in the session payload as `identity`; `analyze.py` auto-maps it onto visitor names so dashboards show real people instead of hashes, zero manual labeling. Host apps call it server-truthfully (PHP-emitted snippet from their auth layer). Later sessions win on shared devices.
+- **`api/session.php` hardened by default** — 512 KB body cap; no CORS wildcard (opt-in); secret query params (`t, token, key, auth, secret, password, apikey, api_key, sig, signature`) scrubbed recursively from every string before disk; external geo (ip-api.com) now **opt-in** — visitor IPs no longer leave the server by default. Localhost filtering unaffected (detects via referrer/href, not geo).
+- **`ripple.hooks.php` extension point** — optional per-app file next to session.php. `ripple_valid_keys()` activates multi-tenant mode: keys validated, sessions written to `ripple/{key}/sessions/` so one codebase serving many domains gets one Ripple project per domain with zero core changes (config `ftp_remote_dir: /app/ripple/{key}`). Other hooks: `ripple_scrub_params`, `ripple_allow_geo`, `ripple_allow_cors`, `ripple_max_bytes`. No hooks = legacy single-project behavior.
+- First consumer: FamilyFirst (labelle.family / halseide.family as separate projects, admin `person_search` events, member auto-identify).
+- **Migration note:** projects re-copying session.php that relied on geo must add a hooks file with `ripple_allow_geo(): true` (jumpoff). Existing deployed copies are unaffected until re-copied.
+
 ## [v0.12.2] 2026-07-03 — Update Documentation & Telemetry Hide Setting
 
 ### Changes

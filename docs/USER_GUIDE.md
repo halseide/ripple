@@ -178,3 +178,19 @@ Sessions, clicks (element tag/label/path, never text content), field focus/blur 
 | Breadcrumb appears but dashboard shows no prompt | `prompt_log.json` write failed | Check `/ripple/data/` directory permissions |
 | Version shows wrong in modal | Script cache | Hard-refresh `Ctrl+Shift+R` |
 | Dot is in wrong position after scroll | Old version of tracker (pre-v0.7.7) | Update tracker — fixed in v0.7.7 |
+
+---
+
+## v0.13.0 — Identity, Hardened Receiver, Multi-Tenant Hooks
+
+### Ripple.identify() — see WHO, not hashes
+```js
+Ripple.identify({ name: 'Anne LaBelle', id: 'con_anne', admin: false });
+```
+Call once per page from a server-emitted snippet (your auth layer is the source of truth — never from user input). The identity travels with every flush; `analyze.py` maps it onto the visitor automatically, so the dashboard's Unique Visitors and session views show real names with zero manual labeling. Manual labels still work; `identify()` wins. On shared devices the name follows the most recent sign-in. Call `Ripple.identify(null)` to clear.
+
+### Hardened session.php (defaults, no config)
+The receiver now ships with: a 512 KB body cap, no CORS wildcard, and a recursive scrub that redacts secret query params (`t, token, key, auth, secret, password, apikey, api_key, sig, signature`) from every string before disk. The ip-api.com geo lookup is **opt-in** — visitor IPs no longer leave your server by default (re-enable via hooks; localhost session filtering does not depend on geo).
+
+### ripple.hooks.php — per-app adaptation in one file
+Drop next to session.php. Defining `ripple_valid_keys()` activates multi-tenant mode: keys are validated and sessions write to `ripple/{key}/sessions/`, giving each domain of a multi-domain app its own Ripple project (config `ftp_remote_dir: /app/ripple/{key}`). Other hooks: `ripple_scrub_params`, `ripple_allow_geo`, `ripple_allow_cors`, `ripple_max_bytes`. No hooks file = legacy single-project behavior, unchanged.

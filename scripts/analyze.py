@@ -516,7 +516,31 @@ def main():
 
         results.append(analytics)
 
-    # Load visitor names lookup table
+    # ── Auto-name visitors from Ripple.identify() payloads (v0.13.0) ─────────
+    # Sessions carrying an `identity` block (host app called Ripple.identify
+    # with the authenticated user) map their visitorId → real name, so the
+    # dashboard shows people instead of hashes with zero manual labeling.
+    # Later sessions win (shared-device case: name follows the latest sign-in).
+    auto_names = {}
+    for proj in config.get("projects", []):
+        sdir = Path(proj.get("sessions_dir", ""))
+        if not sdir.is_dir():
+            continue
+        for sf in sorted(sdir.glob("sess_*.json")):
+            try:
+                sd = json.loads(sf.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            name = ((sd.get("identity") or {}).get("name") or "").strip()
+            if not name:
+                continue
+            parts = str(sd.get("sessionId", sf.stem)).split("_")
+            if len(parts) >= 3:          # sess_{visitorId}_{startMs}
+                auto_names[parts[1]] = name
+    if auto_names:
+        print(f"[Ripple] Auto-named {len(auto_names)} visitor(s) from identify() payloads.")
+
+    # Load visitor names lookup table (manual labels), then let identify() win
     visitor_names_path = output_dir / "visitor_names.json"
     visitor_names = {}
     if visitor_names_path.exists():
@@ -528,6 +552,13 @@ def main():
     else:
         try:
             visitor_names_path.write_text(json.dumps({}, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+    if auto_names:
+        visitor_names.update(auto_names)
+        try:
+            visitor_names_path.write_text(
+                json.dumps(visitor_names, indent=2, ensure_ascii=False), encoding="utf-8")
         except Exception:
             pass
 
