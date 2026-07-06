@@ -193,7 +193,7 @@ def evaluate_goals(proj: dict, sessions: list, commits: list, config: dict) -> l
     return evaluated
 
 
-def _sync_sessions_from_ftp(proj: dict):
+def _sync_sessions_from_ftp(proj: dict, config: dict):
     """Checks if a project has FTP credentials in its .env and syncs new sessions."""
     import ftplib
     import os
@@ -201,7 +201,8 @@ def _sync_sessions_from_ftp(proj: dict):
     if not repo_path:
         return None, 0
         
-    env_path = Path(repo_path) / ".env"
+    env_path_str = config.get("ftp_env_path")
+    env_path = Path(env_path_str) if env_path_str else (Path(repo_path) / ".env")
     if not env_path.exists():
         return None, 0
         
@@ -222,7 +223,7 @@ def _sync_sessions_from_ftp(proj: dict):
     host = env.get("FTP_HOST")
     user = env.get("FTP_USER")
     password = env.get("FTP_PASS")
-    remote_dir = env.get("FTP_REMOTE_DIR", "/public_html")
+    remote_dir = proj.get("ftp_remote_dir") or env.get("FTP_REMOTE_DIR", "/public_html")
     
     if not host or not user or not password:
         return None, 0
@@ -297,6 +298,7 @@ def main():
             "url":                p.get("url", ""),
             "sessions_dir":       p["sessions_dir"],
             "git_repo":           p.get("git_repo", ""),
+            "ftp_remote_dir":     p.get("ftp_remote_dir", ""),
             "interaction_events": p.get("interaction_events", []),
             "goals":              p.get("goals", []),
             "lookback_days":      p.get("lookback_days"),
@@ -308,7 +310,7 @@ def main():
     results = []
     for proj in projects_cfg:
         # Sync sessions from FTP if configured
-        sync_time, sync_count = _sync_sessions_from_ftp(proj)
+        sync_time, sync_count = _sync_sessions_from_ftp(proj, config)
 
         print(f"\n  [{proj['name']}] Analysing sessions ...")
 
@@ -358,17 +360,84 @@ def main():
             n=config.get("max_commits", 50),
         )
 
-        if commits:
-            print(f"    Commits:  {len(commits)} found — latest: '{commits[0]['message_short']}' ({commits[0]['date_display']})")
-        else:
-            print(f"    Commits:  none found (git_repo not set or empty repo)")
+        timeline_events = []
+        for c in commits:
+            c["event_type"] = "commit"
+            timeline_events.append(c)
 
-        # 3. Build deployment windows (before/after behavioral diff per commit)
+        # Load prompt_log early to get logged events
+        prompt_log_path = output_dir / "prompt_log.json"
+        prompt_log = json.loads(prompt_log_path.read_text(encoding="utf-8")) if prompt_log_path.exists() else []
+
+        for p in prompt_log:
+            if p.get("category") == "event" and p.get("projectKey") == proj["key"]:
+                try:
+                    ts_str = p.get("capturedAt", p.get("timestamp", ""))
+                    dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                    timeline_events.append({
+                        "hash": f"EVT_{__import__('hashlib').md5(p.get('promptId', '').encode()).hexdigest()[:6]}",
+                        "event_type": "logged_event",
+                        "date_iso": dt.isoformat(),
+                        "date_ts": dt.timestamp(),
+                        "date_display": dt.strftime("%b %d, %H:%M"),
+                        "message_short": p.get("prompt", "")[:72],
+                        "message": p.get("prompt", ""),
+                        "prompt_id": p.get("promptId")
+                    })
+                except Exception as e:
+                    print(f"Error parsing event: {e}")
+
         real_sessions = [s for s in analytics.get("sessions", []) if not s.get("is_localhost", False)]
-        windows = git_reader.build_deployment_windows(commits, real_sessions)
+        
+        # Anomaly detection (Traffic spikes/drops)
+        daily_counts = {}
+        for s in real_sessions:
+            try:
+                start_str = s.get("start", "") or s.get("startTime", "")
+                if start_str.endswith("Z"): start_str = start_str[:-1] + "+00:00"
+                dt = datetime.fromisoformat(start_str)
+                day = dt.strftime("%Y-%m-%d")
+                daily_counts[day] = daily_counts.get(day, 0) + 1
+            except:
+                pass
+                
+        import statistics
+        counts = list(daily_counts.values())
+        if len(counts) >= 3:
+            mean = statistics.mean(counts)
+            stdev = statistics.stdev(counts) if len(counts) > 1 else 0
+            
+            for day, count in daily_counts.items():
+                if stdev > 0 and (count > mean + 2 * stdev or count < mean - 2 * stdev):
+                    has_event = False
+                    for ev in timeline_events:
+                        if ev.get("date_iso", "").startswith(day):
+                            has_event = True
+                            break
+                    
+                    if not has_event:
+                        dt = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=timezone.utc, hour=12)
+                        anomaly_type = "Spike" if count > mean else "Drop"
+                        timeline_events.append({
+                            "hash": f"ANO_{day.replace('-','')}",
+                            "event_type": "anomaly",
+                            "date_iso": dt.isoformat(),
+                            "date_ts": dt.timestamp(),
+                            "date_display": dt.strftime("%b %d"),
+                            "message_short": f"Unresolved Anomaly: {anomaly_type} in traffic (Count: {count})",
+                            "message": f"Organic Anomaly detected. Mean traffic: {mean:.1f}, Stdev: {stdev:.1f}, Count: {count}"
+                        })
+
+        timeline_events.sort(key=lambda x: x["date_ts"], reverse=True)
+
+        if timeline_events:
+            print(f"    Timeline Events:  {len(timeline_events)} total events found")
+
+        # 3. Build deployment windows (before/after behavioral diff per event)
+        windows = git_reader.build_deployment_windows(timeline_events, real_sessions)
 
         if windows:
-            print(f"    Windows:  {len(windows)} deployment windows computed")
+            print(f"    Windows:  {len(windows)} event windows computed")
             for w in windows[:3]:   # preview first 3
                 print(f"      {w['commit']['hash']}  {w['commit']['date_display']}  "
                       f"before={w['before_count']} sessions  after={w['after_count']} sessions  "
@@ -424,7 +493,7 @@ def main():
         analytics["goals_status"]        = evaluate_goals(proj, real_sessions, commits, config)
 
         # 5. Attach to result
-        analytics["commits"]             = commits
+        analytics["commits"]             = timeline_events
         analytics["deployment_windows"]  = windows
 
         results.append(analytics)
@@ -458,6 +527,8 @@ def main():
 
     # ── Intelligence layer ───────────────────────────────────────────────────
     from intelligence import agent
+    # We already read prompt_log earlier, but it may not be in scope here.
+    # Re-reading is fine.
     prompt_log_path = output_dir / "prompt_log.json"
     prompt_log = json.loads(prompt_log_path.read_text(encoding="utf-8")) if prompt_log_path.exists() else []
     updated_log = agent.run(output, output_dir, prompt_log=prompt_log)
