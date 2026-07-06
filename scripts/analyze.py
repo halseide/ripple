@@ -241,26 +241,44 @@ def _sync_sessions_from_ftp(proj: dict, config: dict):
             ftp.quit()
             return None, 0
             
-        remote_files = []
+        remote_files = {}
         try:
-            remote_files = ftp.nlst()
+            for name, facts in ftp.mlsd():
+                if name.startswith("sess_") and name.endswith(".json"):
+                    if "size" in facts:
+                        remote_files[name] = int(facts["size"])
         except Exception:
-            pass
+            # Fallback if mlsd not supported
+            try:
+                for f in ftp.nlst():
+                    if f.startswith("sess_") and f.endswith(".json"):
+                        remote_files[f] = -1 # Unknown size
+            except Exception:
+                pass
             
-        session_files = [f for f in remote_files if f.startswith("sess_") and f.endswith(".json")]
-        if not session_files:
+        if not remote_files:
             ftp.quit()
             return None, 0
             
         local_sess_dir = Path(proj["sessions_dir"])
         local_sess_dir.mkdir(parents=True, exist_ok=True)
-        local_files = set(os.listdir(local_sess_dir))
         
-        new_sessions = [f for f in session_files if f not in local_files]
+        new_sessions = []
+        for filename, remote_size in remote_files.items():
+            local_path = local_sess_dir / filename
+            if not local_path.exists():
+                new_sessions.append(filename)
+            elif remote_size > 0:
+                # Compare sizes if mlsd provided it
+                local_size = local_path.stat().st_size
+                # If remote file grew (events appended), download it again
+                if remote_size > local_size:
+                    new_sessions.append(filename)
+        
         sync_time_iso = datetime.now(timezone.utc).isoformat()
         
         if new_sessions:
-            print(f"    Downloading {len(new_sessions)} new session(s) from production...")
+            print(f"    Downloading {len(new_sessions)} new/updated session(s) from production...")
             for idx, filename in enumerate(new_sessions, 1):
                 local_path = local_sess_dir / filename
                 with open(local_path, "wb") as f:
