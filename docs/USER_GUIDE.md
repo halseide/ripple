@@ -80,6 +80,16 @@ Ripple's tracker automatically records navigation views to build your `view_funn
 
 ---
 
+## Cross-Session User Tracking
+
+Ripple natively tracks returning users across multiple sessions without requiring them to log in, while remaining entirely privacy-friendly.
+
+1. **Visitor IDs:** When a user visits a site for the very first time, Ripple generates a random alphanumeric string (the `visitorId`) and stores it locally in the browser's `localStorage` (under the key `_ripple_vid`).
+2. **Session Identification:** Every time a new session starts, the tracker generates a unique session filename using this specific format: `sess_{visitorId}_{timestamp}.json`.
+3. **Analytics Grouping:** By embedding the `visitorId` directly into the filename, the backend `analyze.py` script can seamlessly group all sessions sharing the same middle prefix. This is how the dashboard natively powers the "Unique Visitors" tab and tracks returning user journeys across multiple days.
+
+---
+
 ## The Dashboard
 
 Each project has a dashboard at `http://localhost/{project}/ripple/`.
