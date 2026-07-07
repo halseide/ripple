@@ -1,6 +1,6 @@
 sessions/
 data/*
-!data/visitor_names.json
+# !data/visitor_names.json  — REMOVED 2026-07-07 (S6 class): identify-map holds REAL member names; public repo
 __pycache__/
 *.pyc
 ripple.config.json
