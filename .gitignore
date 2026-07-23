@@ -4,6 +4,7 @@ data/*
 __pycache__/
 *.pyc
 ripple.config.json
+*.bak
 *.log
 .env
 node_modules/
