@@ -28,8 +28,14 @@ if (!file_exists($scriptPath)) {
 $started_at = microtime(true);
 
 // Run the script and capture both stdout and stderr
-// We assume 'python' is on the path (since it works in the shell)
-$cmd = 'python ' . escapeshellarg($scriptPath) . ' 2>&1';
+// Resolve absolute path to python if possible to avoid Apache path environment constraints
+$pythonCmd = 'python';
+$userPath = 'C:\\Users\\halse\\AppData\\Local\\Programs\\Python\\Python314\\python.exe';
+if (file_exists($userPath)) {
+    $pythonCmd = $userPath;
+}
+
+$cmd = escapeshellarg($pythonCmd) . ' ' . escapeshellarg($scriptPath) . ' 2>&1';
 $output = [];
 $exit_code = 0;
 
