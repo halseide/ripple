@@ -8,8 +8,18 @@ Ripple turns your live website into an active canvas for AI-assisted design. Ins
 
 1. **Omnipresent UI Capture**: `Shift+Right-Click` any element on your live site to instantly send its precise DOM context and your prompt to your AI assistant.
 2. **Instant Iteration**: Your AI assistant edits the exact files, commits them, and your live site updates.
-3. **Silent Validation**: In the background, Ripple tracks session data to compute before/after behavioral diffs of every deployment.
+3. **Silent Validation**: In the background, Ripple tracks session data to compute before/after behavioral diffs of every change event.
 4. **Goal-Aware Insights**: Surfaces the impact in plain language: "Median session dropped 18% — here's why and what to try."
+
+## Change Events, Not Just Commits
+
+Ripple's unit of analysis is the **change event** — anything that might alter user behavior — and it accepts them three ways:
+
+- **Detected automatically** — git deployments read straight from your repo's log. Zero configuration.
+- **Declared before the fact** — a planned experiment ("posting to Reddit tomorrow", "new CTA goes live Friday"). Declare it first and Ripple measures against a hypothesis you committed to *before* seeing the results.
+- **Declared after the fact** — an annotation with teeth ("that Tuesday spike was the newsletter"). Unlike chart-marker annotations in conventional analytics tools, a declared event *recomputes the before/after windows* around itself — it's analysis, not decoration.
+
+Where session-centric tools organize the world around users and pageviews, Ripple organizes it around **causes**: what changed, and did it help or hurt?
 
 ## The Core Loop
 
@@ -28,9 +38,9 @@ You see something to fix →
 |---|---|
 | `tracker/` | Lightweight JS snippet that records sessions as JSON |
 | `analytics/` | Session classification (bot/ghost/engaged), path analysis, view funnel |
-| `git/` | Git log reader, deployment event detection, before/after windowing |
+| `git/` | Git log reader, automatic deployment-event detection, before/after windowing |
 | `intelligence/` | Agent that generates goal-aware suggestions from diffs |
-| `dashboard/` | Self-hosted web UI showing impact per commit |
+| `dashboard/` | Self-hosted web UI showing impact per change event (commits + declared events), goal tracking, manual event entry |
 
 ## Testimonials
 
