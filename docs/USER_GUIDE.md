@@ -90,6 +90,16 @@ Ripple natively tracks returning users across multiple sessions without requirin
 
 ---
 
+## UTM Campaign Referrals
+
+To trace marketing campaigns and distribution spikes, Ripple automatically extracts UTM (Urchin Tracking Module) parameters from page entry URLs.
+
+1. **How it Works:** On initial page load, the tracker script reads the URL query string (`location.search`).
+2. **Referral Extraction:** If a `utm_source` parameter is detected (e.g., `?utm_source=linkedin`), Ripple overrides the default referrer with `utm_source:linkedin` and saves it in `sessionStorage` for the duration of the journey.
+3. **Timeline Anomaly Resolution:** When a traffic spike triggers an `Organic Anomaly` on the timeline, the dashboard automatically highlights these UTM sources in the Diagnostic Panel, making it simple to identify which post or campaign drove the traffic.
+
+---
+
 ## The Dashboard
 
 Each project has a dashboard at `http://localhost/{project}/ripple/`.
