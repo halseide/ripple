@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.12.2
+ * Ripple Tracker  v0.12.4
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -29,7 +29,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.13.0';
+    const RIPPLE_VERSION = 'v0.12.4';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -1213,7 +1213,11 @@
         }
 
         // ── Wire send ────────────────────────────────────────────────────────
-        document.getElementById('_rpl_btn_send').addEventListener('click', function () {
+        // Guarded like _cancelBtn/_homeBtn above: in Home/Debug mode the modal
+        // body has no send button, and the unguarded lookup crashed the page
+        // (caught on Numen 2026-08-07, "Cannot read properties of null").
+        const _sendBtn = document.getElementById('_rpl_btn_send');
+        if (_sendBtn) _sendBtn.addEventListener('click', function () {
             const text     = textarea.value.trim();
             const category = document.getElementById('_rpl_cat_select').value;
             const statusEl = document.getElementById('_rpl_status');
