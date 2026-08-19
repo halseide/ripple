@@ -4,6 +4,17 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.14.0] 2026-08-19 — Production Privacy Gating, Remote Prompt Queues & SPA Dwell Time Tracking
+
+### Changes
+- **Production Privacy Standard & Developer Mode Gate** — Interactive developer overlays (floating indicator dot, debug bar, and Shift+Click prompt capture modal) are now **disabled by default on production domains** to prevent public visitors from triggering prompt captures or debug tools. Developers/admins can activate developer tools on production by visiting once with `?ripple_dev=1` (cached in `localStorage`) or by passing `data-ripple-allow-capture="true"`. Silent background telemetry (`Ripple.track`, `Ripple.setView`, `Ripple.identify`) remains 100% active across all environments.
+- **Remote Prompt Queue & Automated Ingestion** — `capture_prompt.php` writes UI prompt captures to `{remote_project}/prompts/`; `analyze.py` automatically pulls remote prompts from all projects via FTP during data refresh, writes structured Markdown notes into `[VAULT_PATH]/raw/` for AI agent consumption, updates `data/prompt_log.json`, and cleans up the remote queue.
+- **Relative Endpoint Routing** — `ripple-tracker.js` defaults `CAPTURE_EP` to relative `api/capture_prompt.php` for seamless multi-domain standalone deployment without requiring `/ripple/` subdirectories.
+- **SPA Multi-Card Funnel & Navigation Dwell Time Standard (`Ripple.setView`)** — Formally codified step-by-step dwell time tracking and view transition measurements (`Ripple.setView('step_name')`) to capture exact user drop-off points in single-page wizards and dashboard tabs.
+- **Config-Driven Dual Write** — `analyze.py` now supports `dual_write_path` in `ripple.config.json` for secondary dashboard mirrors.
+
+---
+
 ## [v0.13.0] 2026-07-05 — Hardened Core, Identity API, Multi-Tenant Hooks
 
 ### Hotfix (2026-07-23)

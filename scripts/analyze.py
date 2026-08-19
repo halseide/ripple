@@ -286,6 +286,81 @@ def _sync_sessions_from_ftp(proj: dict, config: dict):
             print(f"    Sync complete.")
         else:
             print("    Local sessions are up to date.")
+
+        # ── Also Sync Remote UI Prompts from {remote_dir}/prompts/ ──
+        remote_prompt_dir = f"{remote_dir}/prompts"
+        pulled_prompts = 0
+        try:
+            ftp.cwd(remote_prompt_dir)
+            remote_prompt_files = [f for f in ftp.nlst() if f.startswith("prompt_") and (f.endswith(".md") or f.endswith(".json"))]
+            if remote_prompt_files:
+                vault_raw = Path(config["vault_path"]) / "raw" if config.get("vault_path") else (Path(__file__).parent.parent / "data" / "prompts")
+                vault_raw.mkdir(parents=True, exist_ok=True)
+                
+                prompt_log_path = Path(__file__).parent.parent / "data" / "prompt_log.json"
+                existing_prompts = []
+                if prompt_log_path.exists():
+                    try: existing_prompts = json.loads(prompt_log_path.read_text(encoding="utf-8"))
+                    except: existing_prompts = []
+
+                print(f"    📥 Found {len(remote_prompt_files)} new UI prompt(s) on production! Pulling to vault raw inbox...")
+                for pfile in remote_prompt_files:
+                    local_target = vault_raw / pfile
+                    with open(local_target, "wb") as pf:
+                        ftp.retrbinary(f"RETR {pfile}", pf.write)
+                    pulled_prompts += 1
+                    
+                    # Parse frontmatter to update prompt_log.json
+                    try:
+                        content = local_target.read_text(encoding="utf-8")
+                        meta = {}
+                        if content.startswith("---"):
+                            parts = content.split("---", 2)
+                            if len(parts) >= 3:
+                                for line in parts[1].strip().splitlines():
+                                    if ":" in line:
+                                        k, _, v = line.partition(":")
+                                        meta[k.strip()] = v.strip().strip('"\'')
+                        
+                        prompt_id = meta.get("prompt_id") or meta.get("id") or pfile.rsplit(".", 1)[0]
+                        if not any(p.get("promptId") == prompt_id for p in existing_prompts):
+                            prompt_text = ""
+                            if "## 📝 User Request / Prompt:" in content:
+                                prompt_text = content.split("## 📝 User Request / Prompt:")[1].split("---")[0].strip()
+                            elif "## Prompt" in content:
+                                prompt_text = content.split("## Prompt")[1].split("---")[0].strip()
+                            else:
+                                prompt_text = meta.get("prompt", "")
+                            
+                            existing_prompts.append({
+                                "promptId": prompt_id,
+                                "projectKey": meta.get("project_key") or meta.get("project", proj["key"]),
+                                "category": meta.get("category", "fix"),
+                                "status": meta.get("status", "pending"),
+                                "prompt": prompt_text,
+                                "elementSelector": meta.get("element_selector", "body"),
+                                "elementContext": meta.get("element_context", ""),
+                                "pageUrl": meta.get("page_url") or meta.get("url", proj.get("url", "")),
+                                "sessionId": meta.get("session_id", "unknown"),
+                                "timestamp": meta.get("created") or meta.get("captured_at") or datetime.now(timezone.utc).isoformat()
+                            })
+                    except Exception as pe:
+                        print(f"      Notice parsing {pfile}: {pe}")
+                    
+                    # Delete from remote server so it is only pulled once
+                    try:
+                        ftp.delete(pfile)
+                    except Exception:
+                        pass
+                
+                if pulled_prompts > 0:
+                    prompt_log_path.write_text(json.dumps(existing_prompts, indent=2), encoding="utf-8")
+                    print(f"    ✨ Successfully pulled {pulled_prompts} prompt(s) into {vault_raw} and updated prompt_log.json")
+        except ftplib.error_perm:
+            pass
+        except Exception as pe:
+            print(f"    Notice checking remote prompts: {pe}")
+
         ftp.quit()
         return sync_time_iso, len(new_sessions)
     except Exception as e:
@@ -573,6 +648,17 @@ def main():
     out_path = output_dir / "project_analytics.json"
     out_path.write_text(json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\n[Ripple] Analytics written to {out_path}")
+
+    # Optional dual-write to secondary portal / dashboard if configured
+    dual_write_path = config.get("dual_write_path")
+    if dual_write_path:
+        target_path = Path(dual_write_path)
+        try:
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8")
+            print(f"[Ripple] Dual-written to {target_path}")
+        except Exception as e:
+            print(f"[Ripple] Notice: Could not dual-write: {e}")
 
     # ── Intelligence layer ───────────────────────────────────────────────────
     from intelligence import agent

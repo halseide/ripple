@@ -77,17 +77,19 @@ function renderAudience() {
     const listContainer = document.getElementById('audience-list');
     if (!listContainer) return;
     
-    const searchTerm = document.getElementById('audienceSearch').value.toLowerCase();
-    const typeFilter = document.getElementById('audienceTypeFilter').value;
+    
     const locationFilterElement = document.getElementById('audienceLocationFilter');
     const locationFilter = locationFilterElement ? locationFilterElement.value : 'all';
-    const dateFilter = document.getElementById('audienceDateFilter') ? document.getElementById('audienceDateFilter').value : 'all';
     const minSessions = document.getElementById('audienceMinSessions') ? parseInt(document.getElementById('audienceMinSessions').value) || 1 : 1;
+    
+    const globalSearchInput = document.getElementById('globalSearch');
+    const searchTerm = globalSearchInput ? globalSearchInput.value.toLowerCase().trim() : '';
+
 
     let html = '';
     
     // Get sessions from projectData
-    let projectSessions = projectData.sessions || [];
+    let projectSessions = window.globalFilteredSessions || projectData.sessions || [];
     
     // Build project-specific visitor metrics
     const visitorsMap = {};
@@ -140,10 +142,25 @@ function renderAudience() {
 
     const now = new Date();
 
+    
+    
     const filtered = visitors.filter(v => {
         const name = getVisitorDisplayName(v.visitorId).toLowerCase();
-        if (searchTerm && !name.includes(searchTerm) && !v.visitorId.toLowerCase().includes(searchTerm)) return false;
-        if (typeFilter !== 'all' && v.type !== typeFilter) return false;
+        if (searchTerm && !name.includes(searchTerm) && !v.visitorId.toLowerCase().includes(searchTerm)) {
+            // Also allow the session-level matches to pass this visitor through, but if they strictly want to find by name:
+            // Since projectSessions is already filtered by searchTerm via global search (matching ID), 
+            // if we are here it's because they had a session match. But if they specifically typed a name that isn't the ID, we should match it.
+            // Actually, if they typed a name, and the name matches, we show them. If they typed a path, the session matches so we show them.
+            // If they typed something and NEITHER the name matches NOR did the global filter pass them (they wouldn't be here), well...
+            // Let's just say: we only filter out if the global filter didn't catch them AND their name doesn't match. 
+            // BUT wait! If the global filter caught them, they ARE in visitors. 
+            // So if they are in visitors, they passed the global filter. We don't need to double filter by searchTerm unless we strictly want name-only filtering in audience.
+            // We'll leave the name matching check just in case it's a specific custom name that wasn't in the global search's session properties.
+            // Actually, global search doesn't check custom names! It checks session ID.
+            // So if `searchTerm` exists, and it DOES NOT match the custom name, AND it didn't match the session (which means they wouldn't be in projectSessions), we drop them.
+            // But if they are in projectSessions, they DID match the session. So we shouldn't drop them!
+            // Thus, we only need to filter by minSessions and location here.
+        }
         
         if (v.sessionCount < minSessions) return false;
         
@@ -151,14 +168,10 @@ function renderAudience() {
             if (!(v.location || '').includes(locationFilter)) return false;
         }
         
-        if (dateFilter !== 'all') {
-            const daysAgo = parseInt(dateFilter);
-            const msAgo = now - (daysAgo * 24 * 60 * 60 * 1000);
-            if (new Date(v.lastSeen).getTime() < msAgo) return false;
-        }
-
         return true;
     });
+
+
 
     if (filtered.length === 0) {
         listContainer.innerHTML = `<div style="padding:2rem; text-align:center; color:var(--text-muted); font-style:italic; grid-column: 1 / -1;">No visitors matched your criteria.</div>`;
@@ -621,7 +634,7 @@ async function generateAggregateAIAnalysis() {
     }
 
     // Filter sessions by active project
-    let projectSessions = projectData.sessions || [];
+    let projectSessions = window.globalFilteredSessions || projectData.sessions || [];
     
     // Get unique visitors for the current project selection
     const visitorIds = new Set(projectSessions.map(s => s.id.split('_')[1] || s.id));

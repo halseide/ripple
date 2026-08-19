@@ -36,9 +36,11 @@ You run: python scripts/analyze.py
 - `funnel.py` — view funnel with drop-off rates
 
 ### git/ — Deployment event reader
-- `git_reader.py` — reads git log with `--format=%H\x1f%aI\x1f%s`
-- `deployment.py` — windows sessions into before/after each commit
-- Supports: local git repos, future: webhook receiver for CI/CD
+- `git_reader.py` — orchestrates the unified timeline. It reads from:
+  1. `git log` with `--format=%H\x1f%aI\x1f%s` (Code Deployments)
+  2. `prompt_log.json` (Logged External Events)
+- `deployment.py` — windows sessions into before/after each event on the timeline
+- Supports: local git repos, manually logged events, and future webhook receivers for CI/CD
 
 ### intelligence/ — Suggestion engine
 - `agent.py` — reads behavioral diffs + goals from prompt_log.json

@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.12.4
+ * Ripple Tracker  v0.14.0
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -29,7 +29,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.12.4';
+    const RIPPLE_VERSION = 'v0.14.0';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -45,11 +45,38 @@
     const PROJECT_KEY  = (_script && _script.getAttribute('data-ripple-key'))      || 'unknown';
     const PROJECT_PATH = (_script && _script.getAttribute('data-ripple-path'))     || `/${PROJECT_KEY}`;
     const ENDPOINT     = (_script && _script.getAttribute('data-ripple-endpoint')) || '/api/session.php';
-    const CAPTURE_EP   = '/ripple/api/capture_prompt.php';
-    const DEBUG_MODE   = new URLSearchParams(location.search).has('ripple_debug') ||
-                         localStorage.getItem('ripple_debug') === 'true';
+    const CAPTURE_EP   = (_script && _script.getAttribute('data-ripple-capture'))  || 'api/capture_prompt.php';
+
+    const IS_LOCALHOST = Boolean(
+        location.hostname === 'localhost' ||
+        location.hostname === '127.0.0.1' ||
+        location.hostname.endsWith('.test') ||
+        location.hostname.endsWith('.local')
+    );
+
+    // Dev / Prompt Capture Mode is enabled if:
+    // 1. Localhost, OR 2. URL ?ripple_dev=1, OR 3. localStorage ripple_dev=true, OR 4. data-ripple-allow-capture="true"
+    const _urlParams = new URLSearchParams(location.search);
+    const _devParam  = _urlParams.get('ripple_dev') || _urlParams.get('ripple_admin');
+    if (_devParam === '1' || _devParam === 'true') {
+        try { localStorage.setItem('ripple_dev', 'true'); } catch(_) {}
+    } else if (_devParam === '0' || _devParam === 'false') {
+        try { localStorage.removeItem('ripple_dev'); } catch(_) {}
+    }
+
+    const HAS_DEV_STORAGE = (function() {
+        try { return localStorage.getItem('ripple_dev') === 'true'; } catch(_) { return false; }
+    })();
+
+    const ALLOW_CAPTURE_ATTR = _script && _script.getAttribute('data-ripple-allow-capture') === 'true';
+    const HIDE_UI_ATTR       = _script && _script.getAttribute('data-ripple-hide') === 'true';
+
+    // Interactive developer overlays active ONLY on localhost or authenticated dev sessions
+    const DEV_MODE_ACTIVE = IS_LOCALHOST || HAS_DEV_STORAGE || ALLOW_CAPTURE_ATTR;
+    const SHOW_UI         = DEV_MODE_ACTIVE && !HIDE_UI_ATTR;
+
+    const DEBUG_MODE   = (_urlParams.has('ripple_debug') || localStorage.getItem('ripple_debug') === 'true') && DEV_MODE_ACTIVE;
     let   _homeMode    = localStorage.getItem('ripple_home') === 'true';
-    const HIDE_UI      = _script && _script.getAttribute('data-ripple-hide') === 'true';
 
 
     // ── Session state ─────────────────────────────────────────────────────────
@@ -105,6 +132,25 @@
     let _modalOpen    = false;
     let _identity     = null;  // set via Ripple.identify() — travels with every flush
 
+    function _cleanPath(urlPath) {
+        if (!urlPath) return urlPath;
+        try {
+            const dummyUrl = new URL(urlPath, 'http://dummy.com');
+            const params = dummyUrl.searchParams;
+            const trackers = ['fbclid', 'gclid', 'dclid', 'msclkid', 'ttclid', 'ykclid'];
+            for (const key of Array.from(params.keys())) {
+                if (trackers.includes(key) || key.startsWith('utm_')) {
+                    params.delete(key);
+                }
+            }
+            const newSearch = params.toString();
+            const searchStr = newSearch ? '?' + newSearch : '';
+            return dummyUrl.pathname + searchStr + dummyUrl.hash;
+        } catch (_) {
+            return urlPath;
+        }
+    }
+
     // ── Public API ────────────────────────────────────────────────────────────
     const Ripple = {
         /**
@@ -144,6 +190,7 @@
          * @param {string} viewName
          */
         setView(viewName) {
+            viewName = _cleanPath(viewName);
             if (viewName === _currentView) return;
             const now = Date.now();
             if (_currentView !== null) {
@@ -236,7 +283,7 @@
         // Skip shift+right-click (that's for the modal)
         if (e.button !== 0) return;
 
-        const el    = e.target;
+        const el    = e.target.closest('button, a, select, input') || e.target;
         const key   = _elKey(el);
         const label = _elLabel(el);
         const tag   = (el.tagName || '').toLowerCase();
@@ -562,12 +609,13 @@
     // ── UI Capture: Shift + Left-Click interceptor ───────────────────────────
     document.addEventListener('click', function (e) {
         if (!e.shiftKey) return; // normal click — pass through
+        if (!DEV_MODE_ACTIVE) return; // public visitor — suppress prompt capture
         e.preventDefault();
         e.stopPropagation();
         // If in home/idle mode, instantly exit it and open prompt capture
         if (_homeMode) {
             _homeMode = false;
-            localStorage.removeItem('ripple_home');
+            try { localStorage.removeItem('ripple_home'); } catch(_) {}
             _setIndicatorColor('prompt');
         }
         _openModal(e.target, e.pageX, e.pageY);
@@ -1533,10 +1581,10 @@
 
     // ── Boot: fetch pending prompts and inject indicator ─────────────────────────────
     function _initRipple() {
-        if (!HIDE_UI) {
+        if (SHOW_UI) {
             _buildIndicator();
+            _loadPendingPrompts();
         }
-        _loadPendingPrompts();
     }
 
     function _loadPendingPrompts() {

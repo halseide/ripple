@@ -1208,6 +1208,11 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="country_coords.js"></script>
+
+    <!-- Flatpickr Date Range -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
 <body>
 
@@ -1226,7 +1231,7 @@
             </div>
             
             <div style="display:flex; align-items:center; gap:1rem;">
-                <button class="btn-gear" id="refreshBtn" onclick="triggerAnalyze()" title="Recompile Analytics and Suggestions">
+                <button class="btn-gear" id="refreshBtn" onclick="triggerAnalyze()" title="Important: You must FTP/sync session files from your live server to your local sessions folder first. This button then recompiles the analytics from those local files.">
                     🔄 Refresh Data
                 </button>
                 <button class="btn-gear" id="gearBtn" onclick="openSettings()" title="Project Settings">
@@ -1281,12 +1286,13 @@
                     </div>
                     <div id="quick-nav" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
 
-                        <a href="#section-commits" id="nav-section-commits" onclick="switchPanel('section-commits'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔁 Deployment Correlation</a>
-                        <a href="#section-traffic" id="nav-section-traffic" onclick="switchPanel('section-traffic'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📈 Traffic &amp; Commit Activity</a>
+                        <a href="#section-commits" id="nav-section-commits" onclick="switchPanel('section-commits'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📅 Events & Deployments</a>
                         <a href="#section-explorer" id="nav-section-explorer" onclick="switchPanel('section-explorer'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔍 Session Explorer</a>
+                        <a href="#section-audience" id="nav-section-audience" onclick="switchPanel('section-audience'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">👥 Audience Profiles</a>
+                        <a href="#section-traffic" id="nav-section-traffic" onclick="switchPanel('section-traffic'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">📈 Traffic &amp; Commit Activity</a>
                         <a href="#section-flows" id="nav-section-flows" onclick="switchPanel('section-flows'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🗺️ Journey Flows</a>
                         <a href="#section-prompts" id="nav-section-prompts" onclick="switchPanel('section-prompts'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🎯 UI Prompt Log</a>
-                        <a href="#section-audience" id="nav-section-audience" onclick="switchPanel('section-audience'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">👥 Audience Profiles</a>
+                        <a href="#section-search" id="nav-section-search" onclick="switchPanel('section-search'); return false;" style="color: var(--text-main); text-decoration: none; padding: 0.4rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 3px solid transparent; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(!this.style.borderLeft.includes('solid var')) this.style.background='rgba(255,255,255,0.03)'">🔎 Search Logs</a>
                     </div>
                 </div>
                 
@@ -1367,9 +1373,57 @@
             <div class="workspace">
                 
                 <!-- Commits & Correlation Section -->
-                <section class="card" id="section-commits">
+                
+                <!-- Global Filter Bar -->
+                <div class="card" id="global-filter-bar" style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; background: rgba(34, 42, 61, 0.4); border: 1px solid var(--border-color); padding: 1rem; border-radius: 8px;">
+                    <!-- Search Query -->
+                    <div style="display: flex; flex-grow: 1; min-width: 250px;">
+                        <input type="text" id="globalSearch" placeholder="Search paths, visitors, details..." oninput="applyFilters();" style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                    </div>
+                    
+                    <!-- Date Range -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="text" id="globalDateRange" placeholder="Select Date Range..." style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main); min-width: 220px; cursor: pointer;">
+                    </div>
+
+                    <!-- Platform -->
+                    <select id="globalPlatform" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                        <option value="all">All Platforms</option>
+                        <option value="desktop">💻 Desktop</option>
+                        <option value="mobile">📱 Mobile</option>
+                    </select>
+
+                    <!-- Browser -->
+                    <select id="globalBrowser" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                        <option value="all">All Browsers</option>
+                    </select>
+
+                    <!-- Traffic Source -->
+                    <select id="globalSource" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                        <option value="all">All Sources</option>
+                    </select>
+
+                    <!-- User Type -->
+                    <select id="globalUserType" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                        <option value="all">All Types</option>
+                        <option value="deep">🔥 Deep User</option>
+                        <option value="engaged">⚡ Engaged User</option>
+                        <option value="glancer">👀 Glancer</option>
+                        <option value="bounce">🚪 Bounce</option>
+                        <option value="ghost">👻 Ghost Tab</option>
+                        <option value="bot">🤖 Bot / Direct</option>
+                    </select>
+
+                    <label style="display: flex; align-items: center; gap: 0.35rem; color: var(--text-main); font-size: 0.8rem; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="hideLocalhostCheckbox" onchange="applyFilters()" checked style="cursor: pointer; accent-color: var(--accent-green);">
+                        <span>🛡️ Hide Localhost</span>
+                    </label>
+                    
+                    <button onclick="resetGlobalFilters()" style="background: transparent; border: 1px solid rgba(248, 81, 73, 0.3); color: var(--accent-red); font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;">Reset</button>
+                </div>
+<section class="card" id="section-commits">
                     <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
-                        Deployment Correlation Loop
+                        Events & Deployments
                     </h2>
                     <div id="commitsContainer">
                         <!-- Dynamic commits list -->
@@ -1390,6 +1444,19 @@
                     </div>
                     <h2 id="ddMessage" style="font-size: 1.15rem; font-weight: 600; margin: 0.3rem 0;"></h2>
                     <p id="ddMeta" style="font-size: 0.8rem; color: var(--text-muted);"></p>
+                  </div>
+
+                  <!-- Prompt Detail Container (Injected by JS if match found) -->
+                  <div id="ddPromptContainer" class="hidden" style="background: rgba(34, 42, 61, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                          <h3 style="font-size: 0.9rem; font-weight: 600; color: var(--accent-blue); margin: 0; display:flex; align-items:center; gap:0.5rem;">
+                              <span id="ddPromptIcon">📢</span> 
+                              <span id="ddPromptType">Prompt Log</span>
+                          </h3>
+                          <button id="ddPromptCopyBtn" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 4px; cursor: pointer;">Copy Raw</button>
+                      </div>
+                      <div id="ddPromptText" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); white-space: pre-wrap; word-break: break-word; background: var(--bg-main); padding: 0.8rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+                      </div>
                   </div>
 
                   <!-- Window mode selector -->
@@ -1515,84 +1582,16 @@
                             <button id="tabCumulative" class="btn-tab active" onclick="setExplorerMode('cumulative')" style="background: var(--bg-card); color: var(--text-main); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 600; font-family: var(--font-main);">📁 Cumulative Sessions</button>
                             <button id="tabUnique" class="btn-tab" onclick="setExplorerMode('unique')" style="background: transparent; color: var(--text-muted); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 600; font-family: var(--font-main); margin-left: 0.25rem;">👥 Inferred Journeys (Unique Visitors)</button>
                         </div>
-                        <!-- Search Query -->
-                        <div style="display: flex; flex-grow: 1; max-width: 400px; position: relative;">
-                            <input type="text" id="explorerSearch" placeholder="Search path, visitor, referrer, details..." oninput="applyFilters(); if(this.value && window.Ripple) Ripple.track('explorer_searched', { query_length: this.value.length });" style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
-                        </div>
-                    </div>
+                        <!-- Search Query (Now Handled by Global Filter Bar) -->
 
-                    <!-- Consolidated Filters & Sorting Controls -->
-                    <div style="background: rgba(34, 42, 61, 0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
-                        <!-- Filters Grid -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.8rem;">
-                            <!-- Date Select -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Date</label>
-                                <select id="explorerDateFilter" data-ripple-event="filter_changed" data-ripple-label="date" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Dates</option>
-                                </select>
-                            </div>
-                            <!-- Duration Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Duration</label>
-                                <select id="explorerDurationFilter" data-ripple-event="filter_changed" data-ripple-label="duration" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Durations</option>
-                                    <option value="bounce">&lt; 10s</option>
-                                    <option value="short">10s - 1m</option>
-                                    <option value="medium">1m - 5m</option>
-                                    <option value="long">&gt; 5m</option>
-                                </select>
-                            </div>
-                            <!-- Platform/Device Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Platform</label>
-                                <select id="explorerDeviceFilter" data-ripple-event="filter_changed" data-ripple-label="platform" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Platforms</option>
-                                    <option value="desktop">💻 Desktop</option>
-                                    <option value="mobile">📱 Mobile</option>
-                                </select>
-                            </div>
-                            <!-- Browser Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Browser</label>
-                                <select id="explorerBrowserFilter" data-ripple-event="filter_changed" data-ripple-label="browser" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Browsers</option>
-                                </select>
-                            </div>
-                            <!-- Traffic Source Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Traffic Source</label>
-                                <select id="explorerSourceFilter" data-ripple-event="filter_changed" data-ripple-label="traffic_source" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Sources</option>
-                                </select>
-                            </div>
-                            <!-- User Type Filter -->
-                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">User Type</label>
-                                <select id="explorerClassFilter" data-ripple-event="filter_changed" data-ripple-label="user_type" onchange="applyFilters()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.45rem; font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-main);">
-                                    <option value="all">All Types</option>
-                                    <option value="deep">🔥 Deep User</option>
-                                    <option value="engaged">⚡ Engaged User</option>
-                                    <option value="glancer">👀 Glancer</option>
-                                    <option value="bounce">🚪 Bounce</option>
-                                    <option value="ghost">👻 Ghost Tab</option>
-                                    <option value="bot">🤖 Bot / Direct</option>
-                                </select>
-                            </div>
-                        </div>
+                        <!-- Filters Grid (Removed in favor of Global Filters) -->
 
                         <!-- Sorting Bar -->
                         <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 0.8rem; margin-top: 0.2rem; gap: 0.8rem;">
                             <div style="display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center;">
                                 <button data-ripple-event="filters_reset" data-ripple-label="Reset All Filters" onclick="resetAllFilters()" style="background: transparent; border: 1px solid rgba(248, 81, 73, 0.3); color: var(--accent-red); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">🧹 Reset All Filters</button>
                                 <button data-ripple-event="export_names_json" data-ripple-label="Export Names JSON" onclick="exportVisitorNames()" style="background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">💾 Export Names JSON</button>
-                                
-                                <!-- Hide Localhost Filter -->
-                                <label style="display: flex; align-items: center; gap: 0.35rem; color: var(--text-main); font-size: 0.8rem; cursor: pointer; user-select: none;">
-                                    <input type="checkbox" id="hideLocalhostCheckbox" onchange="applyFilters()" checked style="cursor: pointer; accent-color: var(--accent-green);">
-                                    <span>🛡️ Hide Localhost/Dev</span>
-                                </label>
-                            </div>
+                                <!-- Hide Localhost Filter (Now in Global Filter Bar) -->
                             
                             <!-- Sort & Comparison Controls -->
                             <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
@@ -1638,7 +1637,7 @@
                     </h2>
                     
                     <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                        <input type="text" id="audienceSearch" placeholder="Search visitors..." oninput="renderAudience()" style="flex: 1; min-width: 200px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; font-family: var(--font-main);">
+                        <!-- Search Query (Now Handled by Global Filter Bar) -->
                         
                         <select id="audienceLocationFilter" onchange="renderAudience()" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.8rem; outline: none; font-family: var(--font-main);">
                             <option value="all">All Locations</option>
@@ -1729,6 +1728,16 @@
                     </div>
                 </section>
 
+                <!-- Search Logs -->
+                <section class="card panel-hidden" id="section-search">
+                    <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem;">
+                        <span>🔎 Search Log Navigator</span>
+                    </h2>
+                    <div id="search-logs-container" style="max-height: 600px; overflow-y: auto;">
+                        <!-- Injected by JS -->
+                    </div>
+                </section>
+
             </div>
 
         </div>
@@ -1749,8 +1758,110 @@
         let deployDetailTab = 'after';
         let pendingDeployDeepLink = null; // deferred deep-link hash
 
+
+                function renderSearchLogs() {
+            const container = document.getElementById('search-logs-container');
+            if (!container) return;
+            
+            const project = activeProjectKey === "all" ? getCombinedProjectVirtual() : analyticsData.projects.find(p => p.project_key === activeProjectKey);
+            
+            if (!project || !project.sessions) {
+                container.innerHTML = '<div style="padding: 1rem; color: var(--text-muted); text-align: center;">No sessions available.</div>';
+                return;
+            }
+
+            const searchGroups = {};
+            project.sessions.forEach(session => {
+                if (!session.events) return;
+                
+                const hideLocalhost = document.getElementById('filterHideLocalhost') && document.getElementById('filterHideLocalhost').checked;
+                const url = session.start_url || "";
+                const isLocal = url.includes('localhost') || url.includes('127.0.0.1');
+                if (hideLocalhost && isLocal) return;
+
+                const visitorId = session.visitor_id || (session.id ? session.id.split('_')[1] : 'unknown') || session.id;
+
+                session.events.forEach(ev => {
+                    if (ev.name === 'search_performed') {
+                        const rawQuery = ev.details && ev.details.query ? ev.details.query : '?';
+                        const normalizedQuery = rawQuery.toLowerCase().trim();
+                        
+                        if (!searchGroups[normalizedQuery]) {
+                            searchGroups[normalizedQuery] = {
+                                query: rawQuery,
+                                count: 0,
+                                events: []
+                            };
+                        }
+                        searchGroups[normalizedQuery].count++;
+                        searchGroups[normalizedQuery].events.push({
+                            session: session,
+                            visitorId: visitorId,
+                            timestamp: ev.timestamp
+                        });
+                    }
+                });
+            });
+
+            const sortedGroups = Object.values(searchGroups).sort((a, b) => b.count - a.count);
+
+            if (sortedGroups.length === 0) {
+                container.innerHTML = '<div style="padding: 1rem; color: var(--text-muted); text-align: center;">No searches found.</div>';
+                return;
+            }
+
+            let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">';
+            
+            sortedGroups.forEach((group, index) => {
+                // Sort individual events newest first
+                group.events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                const groupId = `search-group-${index}`;
+                
+                html += `
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;">
+                    <!-- Group Header -->
+                    <div style="padding: 0.8rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s;" 
+                         onmouseover="this.style.background='rgba(255,255,255,0.05)'" 
+                         onmouseout="this.style.background='transparent'"
+                         onclick="const el = document.getElementById('${groupId}'); el.style.display = el.style.display === 'none' ? 'block' : 'none';">
+                        <div style="display: flex; align-items: center; gap: 0.8rem;">
+                            <span style="color: var(--text-main); font-weight: 600; font-size: 0.95rem;">"${group.query}"</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="background: rgba(188, 140, 255, 0.1); color: var(--accent-purple); padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 700; font-size: 0.75rem;">${group.count} ${group.count === 1 ? 'search' : 'searches'}</span>
+                            <i class="fa-solid fa-chevron-down" style="color: var(--text-muted); font-size: 0.8rem;"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Expanded Sessions List -->
+                    <div id="${groupId}" style="display: none; border-top: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <tbody>`;
+                            
+                group.events.forEach(ev => {
+                    const date = new Date(ev.timestamp);
+                    const timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const visitorName = getVisitorDisplayName(ev.visitorId);
+                    
+                    html += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 0.6rem 0.8rem; color: var(--text-muted); width: 160px;">${timeStr}</td>
+                        <td style="padding: 0.6rem 0.8rem; color: var(--accent-purple); cursor: pointer;" onclick="window.location.hash='#section-explorer/' + '${ev.visitorId}';" title="Click to filter session explorer by this user">👤 ${visitorName}</td>
+                    </tr>`;
+                });
+                
+                html += `       </tbody>
+                        </table>
+                    </div>
+                </div>`;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
         // --- Panel Navigation Logic ---
-        function switchPanel(panelId) {
+        function switchPanel(panelId, subPath = null) {
             // Hide all workspace sections
             const sections = document.querySelectorAll('.workspace > section');
             sections.forEach(sec => sec.classList.add('panel-hidden'));
@@ -1762,6 +1873,8 @@
             // Update URL hash
             if (panelId === 'section-deploy-detail' && deployDetailHash) {
                 window.history.replaceState(null, null, '#deploy/' + deployDetailHash);
+            } else if (subPath) {
+                window.history.replaceState(null, null, '#' + panelId + '/' + subPath);
             } else {
                 window.history.replaceState(null, null, '#' + panelId);
             }
@@ -1785,20 +1898,54 @@
             }
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
+
+        function handleHashChange(isInitialLoad = false) {
             let hash = window.location.hash.replace('#', '');
+            if (!hash) {
+                switchPanel('section-commits');
+                return;
+            }
+            
             if (hash === 'section-funnel' || hash === 'section-paths') {
                 hash = 'section-flows';
             }
+            
             if (hash.startsWith('deploy/')) {
-                // Defer deploy deep-link until init() loads data
                 pendingDeployDeepLink = hash.split('/')[1];
                 switchPanel('section-deploy-detail');
-            } else if (hash && document.getElementById(hash)) {
-                switchPanel(hash);
+            } else if (hash.startsWith('section-explorer/')) {
+                const parts = hash.split('/');
+                const visitorId = parts[1];
+                const searchInput = document.getElementById('globalSearch');
+                if (searchInput) searchInput.value = visitorId;
+                switchPanel('section-explorer', visitorId);
+                if (!isInitialLoad) applyFilters();
             } else {
-                switchPanel('section-commits'); // default
+                const baseHash = hash.split('/')[0];
+                if (document.getElementById(baseHash)) {
+                    switchPanel(baseHash);
+                } else {
+                    switchPanel('section-commits');
+                }
             }
+        }
+        
+        window.addEventListener('hashchange', () => handleHashChange(false));
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Initialize Flatpickr for global date range
+            const dateRangeInput = document.getElementById('globalDateRange');
+            if (dateRangeInput) {
+                flatpickr(dateRangeInput, {
+                    mode: 'range',
+                    dateFormat: 'Y-m-d',
+                    onChange: function(selectedDates, dateStr, instance) {
+                        applyFilters();
+                    }
+                });
+            }
+
+            handleHashChange(true);
 
             // Live Reload for Prompt Log
             setInterval(() => {
@@ -1808,6 +1955,7 @@
                         if (Array.isArray(data) && allPrompts && allPrompts.length !== data.length) {
                             allPrompts = data;
                             renderPrompts();
+            if(typeof renderSearchLogs === 'function') renderSearchLogs();
                         }
                     })
                     .catch(e => console.error("Live reload fetch failed", e));
@@ -1828,9 +1976,28 @@
             }
             if (!proj) return;
 
+            // Parse Date Filter
+            const dateRangeInput = document.getElementById('globalDateRange');
+            const dateRangeRaw = dateRangeInput ? dateRangeInput.value : "";
+            let activeDateStart = null;
+            let activeDateEnd = null;
+            if (dateRangeRaw.includes(" to ")) {
+                const parts = dateRangeRaw.split(" to ");
+                activeDateStart = parts[0].trim();
+                activeDateEnd = parts[1].trim();
+            } else if (dateRangeRaw) {
+                activeDateStart = dateRangeRaw.trim();
+                activeDateEnd = dateRangeRaw.trim();
+            }
+
             // Daily trend (sessions per day)
             const daily = proj.daily_trend || {};
-            const dates = Object.keys(daily).sort();
+            let dates = Object.keys(daily).sort();
+            
+            if (activeDateStart && activeDateEnd) {
+                dates = dates.filter(d => d >= activeDateStart && d <= activeDateEnd);
+            }
+            
             const sessionCounts = dates.map(d => daily[d]);
 
             // Commits bucketed by date
@@ -1842,35 +2009,66 @@
             });
             const commitCounts = dates.map(d => commitsByDate[d] || 0);
 
-            // Deployment markLines
-            const deployments = proj.deployments || [];
-            const markLines = deployments.map(dep => {
-                const d = (dep.date_iso || '').slice(0, 10);
+            // Event markLines from unified deployment_windows stream
+            const windows = proj.deployment_windows || [];
+            const allMarkLines = windows.map(win => {
+                const ev = win.commit;
+                const d = (ev.date_iso || '').slice(0, 10);
                 const idx = dates.indexOf(d);
-                const msg = (dep.message || '').slice(0, 40);
-                return idx >= 0 ? {
+                if (idx < 0) return null;
+                
+                const msg = (ev.message_short || ev.message || '').slice(0, 40);
+                let color = '#bc8cff'; // Default purple for commits
+                if (ev.event_type === 'logged_event') color = '#d29922'; // Amber for events
+                if (ev.event_type === 'anomaly') color = '#ff5b5b'; // Red/Vibrant for anomalies
+                
+                return {
+                    name: ev.hash, // Used for click routing
+                    id: ev.hash,
                     xAxis: idx,
-                    lineStyle: { color: '#bc8cff', type: 'dashed', width: 1.5 },
-                    label: { formatter: msg, color: '#bc8cff', position: 'insideStartTop', fontSize: 10 }
-                } : null;
+                    lineStyle: { color: color, type: 'dashed', width: 1.5 },
+                    label: { formatter: msg, color: color, position: 'insideStartTop', fontSize: 10 }
+                };
             }).filter(Boolean);
 
-            // Event markLines (Marketing, milestones, etc.)
-            const events = (typeof allPrompts !== 'undefined' ? allPrompts : []).filter(p => (p.category === 'event' || p.category === 'marketing') && (activeProjectKey === 'all' || p.projectKey === activeProjectKey));
-            const eventMarkLines = events.map(ev => {
-                const d = (ev.capturedAt || '').slice(0, 10);
-                const idx = dates.indexOf(d);
-                const msg = (ev.prompt || '').slice(0, 40);
-                return idx >= 0 ? {
-                    xAxis: idx,
-                    lineStyle: { color: '#d29922', type: 'dashed', width: 1.5 },
-                    label: { formatter: msg, color: '#d29922', position: 'insideStartTop', fontSize: 10 }
-                } : null;
-            }).filter(Boolean);
-
-            const allMarkLines = [...markLines, ...eventMarkLines];
-
-            const zoomStart = dates.length > 30 ? ((dates.length - 30) / dates.length) * 100 : 0;
+            const zoomStart = (dates.length > 30 && dates.length > 0) ? ((dates.length - 30) / dates.length) * 100 : 0;
+            
+            // Build a map of xAxis index to event hash for the click handler
+            const eventMap = {};
+            allMarkLines.forEach(ml => {
+                eventMap[ml.xAxis] = ml.name;
+            });
+            statsChart._eventMap = eventMap;
+            
+            // Add global click listener if not already attached
+            if (!statsChart._hasClickListener) {
+                statsChart.on('click', function(params) {
+                    if (params.componentType === 'markLine') {
+                        const hash = params.name || (params.data && params.data.name) || (params.data && params.data.id);
+                        if (hash) {
+                            window.location.hash = '#deploy/' + hash;
+                            renderDeployDetail(hash);
+                            switchPanel('section-deploy-detail');
+                        }
+                    }
+                });
+                
+                statsChart.getZr().on('click', function(params) {
+                    const pointInPixel = [params.offsetX, params.offsetY];
+                    if (statsChart.containPixel('grid', pointInPixel)) {
+                        const pointInGrid = statsChart.convertFromPixel('grid', pointInPixel);
+                        const xIndex = Math.round(pointInGrid[0]); // Round because click might be off-center!
+                        // If there is an event at this X index, route to it
+                        if (statsChart._eventMap && statsChart._eventMap[xIndex]) {
+                            const hash = statsChart._eventMap[xIndex];
+                            window.location.hash = '#deploy/' + hash;
+                            renderDeployDetail(hash);
+                            switchPanel('section-deploy-detail');
+                        }
+                    }
+                });
+                statsChart._hasClickListener = true;
+            }
 
             statsChart.setOption({
                 tooltip: {
@@ -2112,6 +2310,7 @@
                 loadProjectDetails(val);
                 applyFilters();
                 renderPrompts();
+            if(typeof renderSearchLogs === 'function') renderSearchLogs();
                 // ── Ripple self-tracking ───────────────────────────────────────
                 if (window.Ripple) Ripple.track('project_switched', { project: val });
             });
@@ -2436,11 +2635,117 @@
             const commit = win.commit;
 
             // ── Header ──
-            document.getElementById('ddHash').textContent = commit.hash.substring(0, 8);
+            const eventType = commit.event_type || 'commit';
+            let eventIcon = '💻';
+            if (eventType === 'logged_event') eventIcon = '📢';
+            if (eventType === 'anomaly') eventIcon = '❓';
+
+            document.getElementById('ddHash').textContent = eventIcon + ' ' + (commit.hash.startsWith('ANO_') || commit.hash.startsWith('EVT_') ? commit.hash : commit.hash.substring(0, 8));
             document.getElementById('ddMessage').textContent = commit.message_short;
-            document.getElementById('ddMeta').textContent = (commit.date_display || '') + ' • by ' + (commit.author_name || commit.author || 'unknown');
+            document.getElementById('ddMeta').textContent = (commit.date_display || '') + ' • by ' + (commit.author_name || commit.author || 'system');
             const swBadge = document.getElementById('ddShortWindowBadge');
             if (win.short_window) { swBadge.classList.remove('hidden'); } else { swBadge.classList.add('hidden'); }
+
+            // ── Prompt Log Correlation ──
+            const promptContainer = document.getElementById('ddPromptContainer');
+            const promptText = document.getElementById('ddPromptText');
+            const promptCopyBtn = document.getElementById('ddPromptCopyBtn');
+            const promptType = document.getElementById('ddPromptType');
+            
+            let matchedPrompt = null;
+            if (eventType === 'logged_event' && commit.prompt_id) {
+                matchedPrompt = allPrompts.find(p => p.id === commit.prompt_id || p.promptId === commit.prompt_id);
+            } else if (eventType === 'commit') {
+                matchedPrompt = allPrompts.find(p => p.commitHash && p.commitHash.startsWith(commit.hash));
+            }
+
+            if (matchedPrompt && matchedPrompt.prompt) {
+                promptContainer.classList.remove('hidden');
+                promptType.textContent = (matchedPrompt.category === 'event' || matchedPrompt.category === 'marketing') ? 'Logged Event' : 'Architect Prompt';
+                promptText.innerHTML = `<span style="font-family:var(--font-mono);">${matchedPrompt.prompt}</span>`;
+                
+                promptCopyBtn.classList.remove('hidden');
+                promptCopyBtn.textContent = 'Copy Raw';
+                promptCopyBtn.onclick = () => {
+                    navigator.clipboard.writeText(matchedPrompt.prompt);
+                    const origText = promptCopyBtn.textContent;
+                    promptCopyBtn.textContent = 'Copied!';
+                    setTimeout(() => promptCopyBtn.textContent = origText, 2000);
+                };
+            } else if (eventType === 'anomaly') {
+                promptContainer.classList.remove('hidden');
+                promptType.textContent = 'Anomaly Diagnostics';
+                
+                const buildFreq = (arr, keyFn) => {
+                    const counts = {};
+                    arr.forEach(s => {
+                        const val = keyFn(s);
+                        if (val) counts[val] = (counts[val] || 0) + 1;
+                    });
+                    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+                };
+
+                const getFirstPage = s => {
+                    if (s.views && s.views.length > 0) return s.views[0].path;
+                    return 'Unknown';
+                };
+
+                const formatDelta = (afterList, beforeList, limit=3) => {
+                    const beforeMap = Object.fromEntries(beforeList);
+                    return afterList.slice(0,limit).map(([key, aCount]) => {
+                        const bCount = beforeMap[key] || 0;
+                        const delta = aCount - bCount;
+                        const deltaStr = delta > 0 ? `(+${delta})` : `(${delta})`;
+                        return `<li><strong style="color:var(--text-main);">${key}</strong>: ${aCount} sess <span style="color:var(--text-muted);font-size:0.75rem;margin-left:0.3rem;">${deltaStr}</span></li>`;
+                    }).join('');
+                };
+
+                const aRefs = buildFreq(afterSessions, s => s.referrer || 'Direct/Unknown');
+                const bRefs = buildFreq(beforeSessions, s => s.referrer || 'Direct/Unknown');
+                const topRefsHtml = formatDelta(aRefs, bRefs, 3) || '<li>None</li>';
+                
+                const aPages = buildFreq(afterSessions, getFirstPage);
+                const bPages = buildFreq(beforeSessions, getFirstPage);
+                const topPagesHtml = formatDelta(aPages, bPages, 3) || '<li>None</li>';
+
+                const aCountries = buildFreq(afterSessions, s => s.country || 'Unknown');
+                const bCountries = buildFreq(beforeSessions, s => s.country || 'Unknown');
+                const topCountriesHtml = formatDelta(aCountries, bCountries, 3) || '<li>None</li>';
+                
+                const aDevices = buildFreq(afterSessions, s => s.device || 'Desktop');
+                const bDevices = buildFreq(beforeSessions, s => s.device || 'Desktop');
+                const topDevicesHtml = formatDelta(aDevices, bDevices, 3) || '<li>None</li>';
+
+                promptText.innerHTML = `
+                    <p style="margin-top:0;margin-bottom:1rem;font-family:var(--font-main);color:var(--text-main);">${commit.message || commit.message_short}</p>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; font-family:var(--font-main); font-size:0.85rem;">
+                        <div style="background:rgba(0,0,0,0.2); padding:0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
+                            <h4 style="margin:0 0 0.5rem 0; color:var(--text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px;">Top Referrers</h4>
+                            <ul style="margin:0; padding-left:1.2rem; color:var(--text-muted); line-height:1.6;">${topRefsHtml}</ul>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.2); padding:0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
+                            <h4 style="margin:0 0 0.5rem 0; color:var(--text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px;">Top Entry Pages</h4>
+                            <ul style="margin:0; padding-left:1.2rem; color:var(--text-muted); line-height:1.6;">${topPagesHtml}</ul>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.2); padding:0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
+                            <h4 style="margin:0 0 0.5rem 0; color:var(--text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px;">Geographic Hotspots</h4>
+                            <ul style="margin:0; padding-left:1.2rem; color:var(--text-muted); line-height:1.6;">${topCountriesHtml}</ul>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.2); padding:0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
+                            <h4 style="margin:0 0 0.5rem 0; color:var(--text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px;">Device Shifts</h4>
+                            <ul style="margin:0; padding-left:1.2rem; color:var(--text-muted); line-height:1.6;">${topDevicesHtml}</ul>
+                        </div>
+                    </div>
+                `;
+                
+                promptCopyBtn.classList.remove('hidden');
+                promptCopyBtn.textContent = 'Resolve (Add Event)';
+                promptCopyBtn.onclick = () => {
+                    openEventCapture(commit.date_iso);
+                };
+            } else {
+                promptContainer.classList.add('hidden');
+            }
 
             // ── Metrics Grid ──
             const getFirstPageExitRate = (sessions) => {
@@ -2642,11 +2947,10 @@
 
         function populateFilterDropdowns(project) {
             // Save current selection values to preserve them across project changes
-            const prevDate = document.getElementById('explorerDateFilter').value;
-            const prevBrowser = document.getElementById('explorerBrowserFilter').value;
-            const prevSource = document.getElementById('explorerSourceFilter').value;
+            const prevBrowser = document.getElementById('globalBrowser') ? document.getElementById('globalBrowser').value : "all";
+            const prevSource = document.getElementById('globalSource') ? document.getElementById('globalSource').value : "all";
 
-            // Scan sessions to extract distinct dates, browsers, and sources
+            // Scan sessions to extract distinct browsers, and sources
             let sessionsToScan = [];
             if (activeProjectKey === 'all') {
                 analyticsData.projects.forEach(p => {
@@ -2660,68 +2964,48 @@
                 sessionsToScan = project.sessions || [];
             }
 
-            // 1. Date Dropdown
-            const dateSelect = document.getElementById('explorerDateFilter');
-            dateSelect.innerHTML = '<option value="all">All Dates</option>';
-            
-            const datesSet = new Set();
-            sessionsToScan.forEach(s => {
-                if (s.start) {
-                    const dateStr = s.start.substring(0, 10);
-                    datesSet.add(dateStr);
+            // 1. Browser Dropdown
+            const browserSelect = document.getElementById('globalBrowser');
+            if (browserSelect) {
+                browserSelect.innerHTML = '<option value="all">All Browsers</option>';
+                
+                const browserSet = new Set();
+                sessionsToScan.forEach(s => {
+                    if (s.browser) browserSet.add(s.browser);
+                });
+                Array.from(browserSet).sort().forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b;
+                    opt.textContent = b;
+                    browserSelect.appendChild(opt);
+                });
+                if (browserSet.has(prevBrowser)) {
+                    browserSelect.value = prevBrowser;
+                } else {
+                    browserSelect.value = "all";
                 }
-            });
-            const sortedDates = Array.from(datesSet).sort((a, b) => new Date(b) - new Date(a));
-            sortedDates.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d;
-                opt.textContent = d;
-                dateSelect.appendChild(opt);
-            });
-            if (datesSet.has(prevDate)) {
-                dateSelect.value = prevDate;
-            } else {
-                dateSelect.value = "all";
             }
 
-            // 2. Browser Dropdown
-            const browserSelect = document.getElementById('explorerBrowserFilter');
-            browserSelect.innerHTML = '<option value="all">All Browsers</option>';
-            
-            const browserSet = new Set();
-            sessionsToScan.forEach(s => {
-                if (s.browser) browserSet.add(s.browser);
-            });
-            Array.from(browserSet).sort().forEach(b => {
-                const opt = document.createElement('option');
-                opt.value = b;
-                opt.textContent = b;
-                browserSelect.appendChild(opt);
-            });
-            if (browserSet.has(prevBrowser)) {
-                browserSelect.value = prevBrowser;
-            } else {
-                browserSelect.value = "all";
-            }
-
-            // 3. Traffic Source Dropdown
-            const sourceSelect = document.getElementById('explorerSourceFilter');
-            sourceSelect.innerHTML = '<option value="all">All Sources</option>';
-            
-            const sourceSet = new Set();
-            sessionsToScan.forEach(s => {
-                if (s.referrer) sourceSet.add(s.referrer);
-            });
-            Array.from(sourceSet).sort().forEach(src => {
-                const opt = document.createElement('option');
-                opt.value = src;
-                opt.textContent = src;
-                sourceSelect.appendChild(opt);
-            });
-            if (sourceSet.has(prevSource)) {
-                sourceSelect.value = prevSource;
-            } else {
-                sourceSelect.value = "all";
+            // 2. Traffic Source Dropdown
+            const sourceSelect = document.getElementById('globalSource');
+            if (sourceSelect) {
+                sourceSelect.innerHTML = '<option value="all">All Sources</option>';
+                
+                const sourceSet = new Set();
+                sessionsToScan.forEach(s => {
+                    if (s.referrer) sourceSet.add(s.referrer);
+                });
+                Array.from(sourceSet).sort().forEach(src => {
+                    const opt = document.createElement('option');
+                    opt.value = src;
+                    opt.textContent = src;
+                    sourceSelect.appendChild(opt);
+                });
+                if (sourceSet.has(prevSource)) {
+                    sourceSelect.value = prevSource;
+                } else {
+                    sourceSelect.value = "all";
+                }
             }
         }
 
@@ -2736,14 +3020,25 @@
                 s.project_key = activeProjectKey !== 'all' ? activeProjectKey : 'unknown';
             }
 
-            const query = document.getElementById('explorerSearch').value.toLowerCase().trim();
+            const searchInput = document.getElementById('globalSearch');
+            const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
             const projFilter = activeProjectKey;
-            const dateFilter = document.getElementById('explorerDateFilter').value;
-            const durFilter = document.getElementById('explorerDurationFilter').value;
-            const deviceFilter = document.getElementById('explorerDeviceFilter').value;
-            const browserFilter = document.getElementById('explorerBrowserFilter').value;
-            const sourceFilter = document.getElementById('explorerSourceFilter').value;
-            const classFilter = document.getElementById('explorerClassFilter').value;
+            
+            // Flatpickr Date Range
+            const dateRangeInput = document.getElementById('globalDateRange');
+            const dateRangeRaw = dateRangeInput ? dateRangeInput.value : "";
+            
+            const platformInput = document.getElementById('globalPlatform');
+            const deviceFilter = platformInput ? platformInput.value : 'all';
+            
+            const browserInput = document.getElementById('globalBrowser');
+            const browserFilter = browserInput ? browserInput.value : 'all';
+            
+            const sourceInput = document.getElementById('globalSource');
+            const sourceFilter = sourceInput ? sourceInput.value : 'all';
+            
+            const userTypeInput = document.getElementById('globalUserType');
+            const classFilter = userTypeInput ? userTypeInput.value : 'all';
 
             // Project filter
             const projMatch = projFilter === 'all' || s.project_key === projFilter;
@@ -2753,19 +3048,27 @@
             const pathMatch = s.path && s.path.toLowerCase().includes(query);
             const visitorMatch = visitorId.toLowerCase().includes(query);
             const refMatch = s.referrer && s.referrer.toLowerCase().includes(query);
-            const queryMatch = !query || pathMatch || visitorMatch || refMatch;
+            
+            let nameMatch = false;
+            if (typeof getVisitorDisplayName === 'function') {
+                const displayName = getVisitorDisplayName(visitorId).toLowerCase();
+                if (displayName.includes(query)) nameMatch = true;
+            }
 
-            // Date filter
-            const sDate = s.start ? s.start.substring(0, 10) : "";
-            const dateMatch = dateFilter === 'all' || sDate === dateFilter;
+            const queryMatch = !query || pathMatch || visitorMatch || refMatch || nameMatch;
 
-            // Duration filter
-            let durMatch = true;
-            const dS = s.duration_s || 0;
-            if (durFilter === 'bounce') durMatch = dS < 10;
-            else if (durFilter === 'short') durMatch = dS >= 10 && dS < 60;
-            else if (durFilter === 'medium') durMatch = dS >= 60 && dS < 300;
-            else if (durFilter === 'long') durMatch = dS >= 300;
+            // Date Range filter
+            let dateMatch = true;
+            if (dateRangeRaw && dateRangeRaw.includes(" to ")) {
+                const parts = dateRangeRaw.split(" to ");
+                if (parts.length === 2 && s.start) {
+                    const sessionDateStr = s.start.substring(0, 10);
+                    dateMatch = (sessionDateStr >= parts[0] && sessionDateStr <= parts[1]);
+                }
+            } else if (dateRangeRaw && s.start) {
+                const sessionDateStr = s.start.substring(0, 10);
+                dateMatch = (sessionDateStr === dateRangeRaw);
+            }
 
             // Platform / Device filter
             const deviceMatch = deviceFilter === 'all' || s.device === deviceFilter;
@@ -2773,24 +3076,92 @@
             // Browser filter
             const browserMatch = browserFilter === 'all' || s.browser === browserFilter;
 
-            // Referrer / Source filter
-            const sourceMatch = sourceFilter === 'all' || s.referrer === sourceFilter;
+            // Traffic Source filter
+            let sourceMatch = true;
+            if (sourceFilter !== 'all') {
+                if (sourceFilter === 'Direct') {
+                    sourceMatch = !s.referrer || s.referrer.trim() === '';
+                } else {
+                    sourceMatch = s.referrer && s.referrer.includes(sourceFilter);
+                }
+            }
 
-            // User type / Classification filter
+            // User Class / Type filter
             const classMatch = classFilter === 'all' || s.classification === classFilter;
 
-            // Funnel View filter
-            const funnelMatch = !activeViewFilter || (s.path || '').includes(activeViewFilter);
-
-            return queryMatch && projMatch && dateMatch && durMatch && deviceMatch && browserMatch && sourceMatch && classMatch && funnelMatch;
+            return projMatch && queryMatch && dateMatch && deviceMatch && browserMatch && sourceMatch && classMatch;
         }
 
         
         let activeViewFilter = null;
         function renderFunnel() {
   const p = activeProjectKey === 'all' ? getCombinedProjectVirtual() : (analyticsData.projects.find(proj => proj.project_key === activeProjectKey) || {});
-  const maxVisits = Math.max(...(p.view_funnel||[]).map(v => v.visits), 1);
-  document.getElementById('funnel-grid').innerHTML = (p.view_funnel||[]).map(v => `
+  
+  // Use globally filtered sessions if available to aggregate view funnel dynamically
+  const sessions = window.globalFilteredSessions || p.sessions || [];
+  const realCount = sessions.length;
+
+  const viewVisitCounts = {};
+  const firstViewCounts = {};
+  const viewDurations = {};
+  const viewExitCounts = {};
+
+  sessions.forEach(s => {
+    const views = s.views || [];
+    if (views.length === 0) return;
+    
+    const firstView = views[0].view || '?';
+    firstViewCounts[firstView] = (firstViewCounts[firstView] || 0) + 1;
+    
+    const seen = new Set();
+    views.forEach(v => {
+      const vname = v.view || '?';
+      if (!seen.has(vname)) {
+        viewVisitCounts[vname] = (viewVisitCounts[vname] || 0) + 1;
+        seen.add(vname);
+      }
+      if (!viewDurations[vname]) viewDurations[vname] = [];
+      viewDurations[vname].push(v.durationSeconds || 0);
+    });
+    
+    const lastView = views[views.length - 1].view || '?';
+    viewExitCounts[lastView] = (viewExitCounts[lastView] || 0) + 1;
+  });
+
+  const viewFunnel = Object.keys(viewVisitCounts).map(vname => {
+    const durs = viewDurations[vname] || [];
+    const capped = durs.map(d => Math.min(d, 300)); // Cap at 300s
+    const avgD = capped.length ? capped.reduce((a,b)=>a+b, 0)/capped.length : 0;
+    const visits = viewVisitCounts[vname] || 0;
+    const exits = viewExitCounts[vname] || 0;
+    const entries = firstViewCounts[vname] || 0;
+    
+    // Format duration helper
+    let avgDisplay = '0s';
+    if (avgD >= 60) {
+      avgDisplay = `${Math.floor(avgD / 60)}m ${Math.round(avgD % 60)}s`;
+    } else {
+      avgDisplay = `${Math.round(avgD)}s`;
+    }
+
+    return {
+      view: vname,
+      visits: visits,
+      visit_pct: realCount ? parseFloat((visits / realCount * 100).toFixed(1)) : 0,
+      avg_display: avgDisplay,
+      exit_pct: visits ? parseFloat((exits / visits * 100).toFixed(1)) : 0,
+      entry_pct: realCount ? parseFloat((entries / realCount * 100).toFixed(1)) : 0
+    };
+  }).sort((a,b) => b.visits - a.visits);
+
+  const maxVisits = Math.max(...viewFunnel.map(v => v.visits), 1);
+  
+  if (viewFunnel.length === 0) {
+    document.getElementById('funnel-grid').innerHTML = `<div style="padding:2rem; text-align:center; color:var(--text-muted); font-style:italic;">No views match filters</div>`;
+    return;
+  }
+
+  document.getElementById('funnel-grid').innerHTML = viewFunnel.map(v => `
     <div class="funnel-card ${activeViewFilter===v.view?'active':''}"
          onclick="toggleViewFilter('${v.view}')">
       <div class="funnel-view-name">${v.view}</div>
@@ -2882,9 +3253,13 @@ function renderPaths() {
   const sessLookup = {};
   (p.sessions||[]).forEach(s => { sessLookup[s.id] = s; });
 
+  // Get active filtered session IDs from global filters
+  const filteredSessIds = new Set((window.globalFilteredSessions || []).map(s => s.id));
+
   // Filter paths based on which sessions pass the filter
   let paths = (p.navigation_paths||[]).map(path => {
-    let sids = path.session_ids;
+    // Keep only session IDs that exist in the active globally filtered session list
+    let sids = path.session_ids.filter(id => filteredSessIds.has(id));
     if (activeViewFilter) sids = sids.filter(id => (sessLookup[id]?.path||'').includes(activeViewFilter));
     if (refFilter) sids = sids.filter(id => sessLookup[id]?.referrer === refFilter);
     if (devFilter) sids = sids.filter(id => sessLookup[id]?.device === devFilter);
@@ -2933,6 +3308,19 @@ function renderPaths() {
 
 
 
+        function resetGlobalFilters() {
+            document.getElementById('globalSearch').value = "";
+            const dp = document.getElementById('globalDateRange')._flatpickr;
+            if (dp) dp.clear();
+            document.getElementById('globalPlatform').value = "all";
+            document.getElementById('globalBrowser').value = "all";
+            document.getElementById('globalSource').value = "all";
+            document.getElementById('globalUserType').value = "all";
+            const loc = document.getElementById('hideLocalhostCheckbox');
+            if (loc) loc.checked = true;
+            applyFilters();
+        }
+
         function applyFilters() {
             const project = activeProjectKey === 'all' ? getCombinedProjectVirtual() : analyticsData.projects.find(p => p.project_key === activeProjectKey);
             if (!project) return;
@@ -2950,6 +3338,22 @@ function renderPaths() {
 
             // 2. Filter base sessions for the explorer view
             let filtered = baseSessions.filter(matchesFilters);
+            window.globalFilteredSessions = filtered;
+
+            // Re-render currently visible components dependent on global filters
+            if (!document.getElementById('section-audience').classList.contains('panel-hidden')) {
+                if (typeof renderAudience === 'function') renderAudience();
+            }
+
+            if (!document.getElementById('section-commits').classList.contains('panel-hidden')) {
+                if (typeof updateTimelineChartData === 'function') updateTimelineChartData();
+            }
+
+            if (!document.getElementById('section-traffic').classList.contains('panel-hidden')) {
+                if (typeof buildStatsChart === 'function') buildStatsChart(project);
+            }
+
+            if (typeof renderPaths === 'function') renderPaths();
 
             // 3. Sort sessions
             const sortBy = document.getElementById('explorerSortBy').value;
@@ -3203,6 +3607,28 @@ function renderPaths() {
                     exitDeltaStr = exitDelta > 0 ? `(+${exitDelta.toFixed(1)}%)` : (exitDelta < 0 ? `(${exitDelta.toFixed(1)}%)` : '');
                     exitClass = exitDelta < -2 ? "var(--accent-green)" : (exitDelta > 2 ? "var(--accent-red)" : "var(--text-muted)");
 
+                    // Generate Primary Mini-Diff from backend 3d metrics
+                    let miniDiffHtml = "";
+                    if (w.before_3d_metrics && w.after_3d_metrics) {
+                        const b3d = w.before_3d_metrics;
+                        const a3d = w.after_3d_metrics;
+                        const bounceDelta = (a3d.bounce_pct || 0) - (b3d.bounce_pct || 0);
+                        const engDelta = (a3d.engaged_pct || 0) - (b3d.engaged_pct || 0);
+                        
+                        // Pick the most significant diff to highlight
+                        if (Math.abs(bounceDelta) > Math.abs(engDelta) && Math.abs(bounceDelta) > 2) {
+                            const isGood = bounceDelta < 0;
+                            const color = isGood ? 'var(--accent-green)' : 'var(--accent-red)';
+                            const icon = isGood ? '↓' : '↑';
+                            miniDiffHtml = `<span style="background:rgba(255,255,255,0.05); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: ${color}; border: 1px solid ${color}40;">${icon} ${Math.abs(bounceDelta).toFixed(1)}% Bounce Rate</span>`;
+                        } else if (Math.abs(engDelta) > 2) {
+                            const isGood = engDelta > 0;
+                            const color = isGood ? 'var(--accent-green)' : 'var(--accent-red)';
+                            const icon = isGood ? '↑' : '↓';
+                            miniDiffHtml = `<span style="background:rgba(255,255,255,0.05); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: ${color}; border: 1px solid ${color}40;">${icon} ${Math.abs(engDelta).toFixed(1)}% Engagement</span>`;
+                        }
+                    }
+
                     const row = document.createElement('div');
                     row.className = "commit-row";
                     if (commit.hash === deployDetailHash) {
@@ -3220,15 +3646,22 @@ function renderPaths() {
                         <span class="tag priority-high" style="background:rgba(239,68,68,0.15); color:var(--accent-red); font-size:10px; padding:1px 4px; border-radius:2px; cursor:help;" title="Strict evaluation window is short (< 6 hours). Metrics may be noisy; use Fixed Window mode.">⚠️ Short Window</span>
                     ` : '';
 
+                    const eventType = commit.event_type || 'commit';
+                    let eventIcon = '💻';
+                    if (eventType === 'logged_event') eventIcon = '📢';
+                    if (eventType === 'anomaly') eventIcon = '❓';
+
                     row.innerHTML = `
                         <div class="commit-hash" style="display:flex; flex-direction:column; justify-content:center;">
                             ${projectBadge}
-                            <span>${hashShort}</span>
+                            <span style="font-size:1.2rem; margin-bottom:0.2rem; text-align:center;">${eventIcon}</span>
+                            <span style="font-size:0.75rem;">${hashShort}</span>
                         </div>
                         <div class="commit-info">
-                            <h4 style="display:flex; align-items:center; gap:0.4rem; margin:0 0 0.25rem 0;">
+                            <h4 style="display:flex; align-items:center; gap:0.6rem; margin:0 0 0.25rem 0;">
                                 ${commit.message_short}
                                 ${shortWindowBadge}
+                                ${miniDiffHtml}
                             </h4>
                             <p>${commit.date_display} • by ${commit.author_name}</p>
                             
@@ -3415,11 +3848,15 @@ function renderPaths() {
                     
                     let detailsStr = "";
                     if (e.details) {
-                        if (e.details.conclusion) detailsStr = `<span style="color: var(--accent-green);">[conclusion: ${e.details.conclusion}]</span>`;
+                        if (e.details.query) detailsStr = `<span style="color: var(--accent-green); font-weight: 500;">"${e.details.query}"</span>`;
+                        else if (e.details.topic) detailsStr = `<span style="color: var(--accent-purple);">[Topic: ${e.details.topic} | Asker: ${e.details.asker || 'Unknown'}]</span>`;
+                        else if (e.details.status) detailsStr = `<span style="color: var(--accent-amber);">[Status: ${e.details.status}]</span>`;
+                        else if (e.details.conclusion) detailsStr = `<span style="color: var(--accent-green);">[conclusion: ${e.details.conclusion}]</span>`;
                         else if (e.details.to) detailsStr = `<span style="color: var(--text-muted);">→ ${e.details.to}</span>`;
                         else if (e.details.title) detailsStr = `<span style="color: var(--accent-amber); font-weight: 500;">"${e.details.title}"</span>`;
                         else if (e.details.modal) detailsStr = `<span style="color: var(--accent-purple);">[modal: ${e.details.modal}]</span>`;
                         else if (e.details.timeOnPage) detailsStr = `<span style="color: var(--text-muted);">(stayed ${parseFloat(e.details.timeOnPage).toFixed(1)}s)</span>`;
+                        else detailsStr = `<span style="color: var(--text-muted); font-size: 0.7rem;">${JSON.stringify(e.details)}</span>`;
                     }
                     
                     return `
@@ -3608,7 +4045,7 @@ function renderPaths() {
         }
 
         function resetAllFilters() {
-            document.getElementById('explorerSearch').value = "";
+            resetGlobalFilters();
             document.getElementById('projectSelect').value = "all";
 
             activeProjectKey = "all";
@@ -3693,7 +4130,7 @@ function renderPaths() {
 
         // ── Goal Capture (from dashboard) ──────────────────────────────────────
 
-        function openEventCapture() {
+        function openEventCapture(prefillDate = null) {
             const existing = document.getElementById('eventCaptureOverlay');
             if (existing) existing.remove();
 
@@ -3706,10 +4143,17 @@ function renderPaths() {
                 projOptions = `<option value="${activeProjectKey}">${activeProjectKey}</option>`;
             }
 
-            // Get current local datetime for datetime-local input
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            const localDatetime = now.toISOString().slice(0,16);
+            // Get local datetime for datetime-local input
+            let localDatetime = "";
+            if (prefillDate) {
+                const d = new Date(prefillDate);
+                d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                localDatetime = d.toISOString().slice(0,16);
+            } else {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                localDatetime = now.toISOString().slice(0,16);
+            }
 
             const overlay = document.createElement('div');
             overlay.id = 'eventCaptureOverlay';
@@ -3791,12 +4235,17 @@ function renderPaths() {
                     statusEl.innerHTML = '<span style="color:var(--accent-green)">✅ Event captured!</span>';
                     setTimeout(async () => {
                         document.getElementById('eventCaptureOverlay')?.remove();
-                        // Load prompt log and refresh UI
-                        const prRes = await fetch('../../data/prompt_log.json?t=' + Date.now());
-                        const prData = await prRes.json();
-                        if (Array.isArray(prData)) {
-                            allPrompts = prData;
-                            loadProjectDetails(activeProjectKey); 
+                        // Trigger analyze.py so the new event is folded into the timeline
+                        if (typeof triggerAnalyze === 'function') {
+                            await triggerAnalyze();
+                        } else {
+                            // Fallback if not available
+                            const prRes = await fetch('../../data/prompt_log.json?t=' + Date.now());
+                            const prData = await prRes.json();
+                            if (Array.isArray(prData)) {
+                                allPrompts = prData;
+                                loadProjectDetails(activeProjectKey); 
+                            }
                         }
                     }, 800);
                 } else {
@@ -4104,6 +4553,7 @@ function renderPaths() {
             }
 
             renderPrompts();
+            if(typeof renderSearchLogs === 'function') renderSearchLogs();
         }
 
         // Returns the GitHub commit base URL for a project key, sourced from rippleConfig.
@@ -4446,6 +4896,39 @@ function renderPaths() {
         setInterval(() => loadPromptLog(), 30000);
 
         // Boot
+        function handleHashChange(isInitialLoad = false) {
+            let hash = window.location.hash.replace('#', '');
+            if (!hash) {
+                switchPanel('section-commits');
+                return;
+            }
+            
+            if (hash === 'section-funnel' || hash === 'section-paths') {
+                hash = 'section-flows';
+            }
+            
+            if (hash.startsWith('deploy/')) {
+                pendingDeployDeepLink = hash.split('/')[1];
+                switchPanel('section-deploy-detail');
+            } else if (hash.startsWith('section-explorer/')) {
+                const parts = hash.split('/');
+                const visitorId = parts[1];
+                const searchInput = document.getElementById('globalSearch');
+                if (searchInput) searchInput.value = visitorId;
+                switchPanel('section-explorer', visitorId);
+                if (!isInitialLoad) applyFilters();
+            } else {
+                const baseHash = hash.split('/')[0];
+                if (document.getElementById(baseHash)) {
+                    switchPanel(baseHash);
+                } else {
+                    switchPanel('section-commits');
+                }
+            }
+        }
+        
+        window.addEventListener('hashchange', () => handleHashChange(false));
+
         window.addEventListener('DOMContentLoaded', () => { init(); loadPromptLog(); });
     </script>
 

@@ -30,7 +30,7 @@ import json
 from pathlib import Path
 from datetime import datetime, timezone
 from collections import defaultdict
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qsl, urlencode
 import subprocess
 
 # ── Defaults (overridable via config) ─────────────────────────────────────────
@@ -341,6 +341,30 @@ def build_visitors(session_records: list) -> list:
 
 # ── Main parse ────────────────────────────────────────────────────────────────
 
+def _clean_view_path(path_str: str) -> str:
+    if not path_str:
+        return path_str
+    try:
+        parsed = urlparse(path_str)
+        if parsed.query:
+            qsl = parse_qsl(parsed.query)
+            trackers = {'fbclid', 'gclid', 'dclid', 'msclkid', 'ttclid', 'ykclid'}
+            cleaned_qsl = [
+                (k, v) for k, v in qsl
+                if k not in trackers and not k.startswith('utm_')
+            ]
+            new_query = urlencode(cleaned_qsl)
+            path = parsed.path
+            if new_query:
+                path += '?' + new_query
+            if parsed.fragment:
+                path += '#' + parsed.fragment
+            return path
+        return path_str
+    except Exception:
+        return path_str
+
+
 def parse_sessions(
     project: dict,
     min_duration_bot: float  = DEFAULT_BOT_MAX_S,
@@ -370,7 +394,14 @@ def parse_sessions(
     for f in sorted(sessions_dir.glob("sess_*.json")):
         try:
             with open(f, encoding="utf-8") as fh:
-                raw_sessions.append(json.load(fh))
+                data = json.load(fh)
+                # Clean tracking params from all views in this session
+                for v in data.get("views", []):
+                    if "view" in v:
+                        v["view"] = _clean_view_path(v["view"])
+                if "path" in data:
+                    data["path"] = _clean_view_path(data["path"])
+                raw_sessions.append(data)
         except Exception:
             pass
 

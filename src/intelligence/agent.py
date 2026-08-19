@@ -68,7 +68,7 @@ def run(analytics_data: dict, output_dir: Path, *, prompt_log: list = None) -> l
         _evaluate_goals(prompt_log, project, now_iso)
 
         # 2. Generate anomaly observations
-        observations = _detect_anomalies(project)
+        observations = _detect_anomalies(project, prompt_log)
         for obs in observations:
             if obs["promptId"] not in existing_obs_ids:
                 prompt_log.append(obs)
@@ -140,7 +140,7 @@ def _evaluate_goals(prompt_log: list, project: dict, now_iso: str):
 
 # ── Anomaly detection (creates new entries) ──────────────────────────────────
 
-def _detect_anomalies(project: dict) -> list:
+def _detect_anomalies(project: dict, prompt_log: list) -> list:
     """Detect anomalies and return new prompt_log entries for them."""
     observations = []
     key         = project["project_key"]
@@ -186,21 +186,28 @@ def _detect_anomalies(project: dict) -> list:
 
     # ── 1. Deployment impact ──────────────────────────────────────────────────
     for window in windows:
-        commit      = window["commit"]
-        before      = window["before_count"]
-        after       = window["after_count"]
+        commit      = window.get("commit", {})
+        before      = window.get("before_count", 0)
+        after       = window.get("after_count", 0)
         commit_ts   = commit.get("date_ts", 0)
         age_hours   = (now_ts - commit_ts) / 3600
+        
+        msg_short = commit.get('message_short', commit.get('message', ''))[:50]
+        c_hash = commit.get('hash', '')
+        c_date = commit.get('date_display', '')
 
         # No sessions after recent deploy
         if after == 0 and age_hours < RECENT_COMMIT_HOURS:
+            commit_context = (
+                f"({c_date}) with {commit.get('files_changed', 0)} files changed "
+                f"({commit.get('insertions', 0)} insertions, {commit.get('deletions', 0)} deletions). "
+                f"Message: {commit.get('message', '')}"
+            )
             observations.append(make_entry(
                 make_id(),
-                f"No sessions yet after '{commit['message_short'][:50]}'",
-                f"Commit {commit['hash']} was deployed {age_hours:.0f}h ago "
-                f"({commit['date_display']}) with {commit['files_changed']} files changed "
-                f"(+{commit['insertions']}/-{commit['deletions']} lines). "
-                f"Zero sessions recorded since deployment. Share the link to get real users."
+                f"No sessions yet after '{msg_short}'",
+                f"Commit {c_hash} was deployed {age_hours:.0f}h ago "
+                f"{commit_context} Zero sessions recorded since deployment. Share the link to get real users."
             ))
 
         # Significant before/after diff
@@ -212,8 +219,8 @@ def _detect_anomalies(project: dict) -> list:
             if pct_change >= 20:
                 observations.append(make_entry(
                     make_id(),
-                    f"Sessions went {direction} {pct_change:.0f}% after '{commit['message_short'][:45]}'",
-                    f"Commit {commit['hash']} ({commit['date_display']}): "
+                    f"Sessions went {direction} {pct_change:.0f}% after '{msg_short}'",
+                    f"Commit {c_hash} ({c_date}): "
                     f"{before} sessions before vs {after} sessions after. "
                     f"{pct_change:.0f}% {'increase' if direction == 'up' else 'drop'}. "
                     f"{'Investigate what drove the increase.' if direction == 'up' else 'Review and consider reverting.'}"
@@ -223,10 +230,10 @@ def _detect_anomalies(project: dict) -> list:
         elif before >= MIN_SESSIONS_FOR_DIFF and after == 0 and age_hours >= RECENT_COMMIT_HOURS:
             observations.append(make_entry(
                 make_id(),
-                f"Traffic dropped to zero after '{commit['message_short'][:50]}'",
-                f"Commit {commit['hash']} ({commit['date_display']}): "
-                f"{before} sessions before, 0 after ({age_hours:.0f}h ago). "
-                f"Check if the site is accessible and links are live."
+                f"Traffic dropped to zero after '{msg_short}'",
+                f"Commit {c_hash} was deployed {age_hours:.0f}h ago. "
+                f"Traffic dropped from {before} sessions to 0. "
+                f"This is highly anomalous. Check production immediately."
             ))
 
     # ── 2. Engagement gap ────────────────────────────────────────────────────
@@ -266,6 +273,73 @@ def _detect_anomalies(project: dict) -> list:
                     f"'{view['view']}' view: visited by {view['visit_pct']:.0f}% of real "
                     f"users ({view['visits']} visits), {exit_pct:.0f}% exit here. "
                     f"Avg time: {view['avg_display']}. Add a visible next-action or reduce friction."
+                ))
+
+    # ── 5. Traffic Spikes & Event Correlation ────────────────────────────────
+    sessions = project.get("sessions", [])
+    real_sessions = [s for s in sessions if not s.get("is_localhost", False)]
+    
+    if real_sessions:
+        from collections import defaultdict
+        daily_counts = defaultdict(int)
+        daily_referrers = defaultdict(lambda: defaultdict(int))
+        for s in real_sessions:
+            start_str = s.get("start", "") or s.get("startTime", "")
+            if start_str:
+                date_str = start_str[:10]
+                daily_counts[date_str] += 1
+                ref = s.get("referrer", "direct")
+                if not ref or ref == "direct":
+                    ref = "direct"
+                daily_referrers[date_str][ref] += 1
+                
+        sorted_dates = sorted(daily_counts.keys())
+        for i in range(1, len(sorted_dates)):
+            date_str = sorted_dates[i]
+            prev_date = sorted_dates[i-1]
+            count = daily_counts[date_str]
+            prev_count = daily_counts[prev_date]
+            
+            # Spike criteria: > 10 sessions AND > 100% increase over previous day
+            if count > 10 and count >= prev_count * 2:
+                # Calculate top referrers for the spike day
+                refs = daily_referrers[date_str]
+                top_refs = sorted(refs.items(), key=lambda x: x[1], reverse=True)[:3]
+                ref_str = ", ".join([f"{r} ({c})" for r, c in top_refs])
+                
+                # Check for an event near this date (same day or 1 day prior)
+                spike_date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+                
+                correlated_event = None
+                for entry in prompt_log:
+                    if entry.get("category") == "event" and entry.get("projectKey") == key:
+                        cap_at = entry.get("capturedAt", "")
+                        if cap_at:
+                            try:
+                                ev_date_obj = datetime.strptime(cap_at[:10], "%Y-%m-%d").date()
+                                diff_days = (spike_date_obj - ev_date_obj).days
+                                if 0 <= diff_days <= 1:
+                                    correlated_event = entry
+                                    break
+                            except ValueError:
+                                pass
+                                
+                pct_increase = ((count - prev_count) / prev_count * 100) if prev_count > 0 else 100
+                
+                if correlated_event:
+                    ev_title = correlated_event.get("prompt", "")[:50]
+                    title = f"Traffic spiked {pct_increase:.0f}% correlated with event: '{ev_title}'"
+                    evidence = (f"On {date_str}, sessions jumped from {prev_count} to {count}. "
+                                f"This correlates with your timeline event. Top referrers: {ref_str}.")
+                else:
+                    title = f"Unexplained traffic spike ({count} sessions) on {date_str}"
+                    evidence = (f"Traffic jumped from {prev_count} to {count} sessions. "
+                                f"Top referrers: {ref_str}. Do you know what caused this? Use '+ Add Event' to log it.")
+                                
+                observations.append(make_entry(
+                    f"agent_obs_spike_{key}_{date_str}",
+                    title,
+                    evidence
                 ))
 
     return observations
