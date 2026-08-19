@@ -1,5 +1,5 @@
 /**
- * Ripple Tracker  v0.14.0
+ * Ripple Tracker  v0.14.1
  * ========================
  * Drop-in session tracker for any project monitored by Ripple.
  * Matches the sess_*.json schema consumed by session_analytics.py.
@@ -29,7 +29,7 @@
 (function (global) {
     'use strict';
     
-    const RIPPLE_VERSION = 'v0.14.0';
+    const RIPPLE_VERSION = 'v0.14.1';
 
     // ── Config from <script> tag ──────────────────────────────────────────────
     // document.currentScript is null for dynamically injected scripts (e.g.
@@ -54,25 +54,41 @@
         location.hostname.endsWith('.local')
     );
 
-    // Dev / Prompt Capture Mode is enabled if:
-    // 1. Localhost, OR 2. URL ?ripple_dev=1, OR 3. localStorage ripple_dev=true, OR 4. data-ripple-allow-capture="true"
-    const _urlParams = new URLSearchParams(location.search);
-    const _devParam  = _urlParams.get('ripple_dev') || _urlParams.get('ripple_admin');
-    if (_devParam === '1' || _devParam === 'true') {
-        try { localStorage.setItem('ripple_dev', 'true'); } catch(_) {}
-    } else if (_devParam === '0' || _devParam === 'false') {
-        try { localStorage.removeItem('ripple_dev'); } catch(_) {}
-    }
+    // ── Authentication & Developer Gate ───────────────────────────────────────
+    const _AUTH_STORAGE_KEY = '_ripple_auth';
+    const _urlParams        = new URLSearchParams(location.search);
+    let   _authKey          = null;
 
-    const HAS_DEV_STORAGE = (function() {
-        try { return localStorage.getItem('ripple_dev') === 'true'; } catch(_) { return false; }
-    })();
+    try {
+        _authKey = sessionStorage.getItem(_AUTH_STORAGE_KEY) || localStorage.getItem(_AUTH_STORAGE_KEY);
+    } catch (_) {}
+
+    // Check for one-time URL passkey auth (?ripple_auth=PASSKEY)
+    if (_urlParams.has('ripple_auth')) {
+        const passkey = _urlParams.get('ripple_auth');
+        if (passkey) {
+            _authKey = passkey;
+            try {
+                sessionStorage.setItem(_AUTH_STORAGE_KEY, passkey);
+            } catch (_) {}
+            // Clean URL address bar so the passkey is never left in browser history
+            try {
+                _urlParams.delete('ripple_auth');
+                const cleanQuery = _urlParams.toString();
+                const newUrl = location.pathname + (cleanQuery ? '?' + cleanQuery : '') + location.hash;
+                window.history.replaceState(null, '', newUrl);
+            } catch (_) {}
+        }
+    }
 
     const ALLOW_CAPTURE_ATTR = _script && _script.getAttribute('data-ripple-allow-capture') === 'true';
     const HIDE_UI_ATTR       = _script && _script.getAttribute('data-ripple-hide') === 'true';
 
-    // Interactive developer overlays active ONLY on localhost or authenticated dev sessions
-    const DEV_MODE_ACTIVE = IS_LOCALHOST || HAS_DEV_STORAGE || ALLOW_CAPTURE_ATTR;
+    // Dev Mode is active IF:
+    // 1. Localhost / 127.0.0.1 development, OR
+    // 2. An authenticated dev passkey (_authKey) is present, OR
+    // 3. The script tag explicitly specifies data-ripple-allow-capture="true"
+    const DEV_MODE_ACTIVE = IS_LOCALHOST || Boolean(_authKey) || ALLOW_CAPTURE_ATTR;
     const SHOW_UI         = DEV_MODE_ACTIVE && !HIDE_UI_ATTR;
 
     const DEBUG_MODE   = (_urlParams.has('ripple_debug') || localStorage.getItem('ripple_debug') === 'true') && DEV_MODE_ACTIVE;
@@ -1301,9 +1317,15 @@
                 capturePayload.elementContext  = 'project-level';
             }
 
+            const reqHeaders = { 'Content-Type': 'application/json' };
+            if (_authKey) {
+                reqHeaders['X-Ripple-Auth'] = _authKey;
+                capturePayload.auth_key = _authKey;
+            }
+
             fetch(CAPTURE_EP, {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: reqHeaders,
                 body:    JSON.stringify(capturePayload),
             })
             .then(r => r.json())
@@ -1645,6 +1667,33 @@
         });
         _breadcrumbs.length = 0;
         _loadPendingPrompts();
+    };
+
+    /**
+     * Authenticate this browser session as an authorized developer/operator.
+     * Activates prompt capture and debug overlays on remote production environments.
+     * @param {string} passkey
+     */
+    Ripple.auth = function(passkey) {
+        if (!passkey) return false;
+        try {
+            sessionStorage.setItem(_AUTH_STORAGE_KEY, passkey);
+            location.reload();
+            return true;
+        } catch (_) {
+            return false;
+        }
+    };
+
+    /**
+     * Deauthenticate and revert this browser session to standard visitor mode.
+     */
+    Ripple.deauth = function() {
+        try {
+            sessionStorage.removeItem(_AUTH_STORAGE_KEY);
+            localStorage.removeItem(_AUTH_STORAGE_KEY);
+            location.reload();
+        } catch (_) {}
     };
 
     global.Ripple = Ripple;

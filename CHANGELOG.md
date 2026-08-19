@@ -4,6 +4,15 @@ All notable changes to the Ripple tracker and dashboard. Newest first.
 
 ---
 
+## [v0.14.1] 2026-08-19 — Backend Passkey Verification Gate & Clean Dev Auth Protocol
+
+### Changes
+- **Backend Passkey Verification Gate (`api/capture_prompt.php`)** — Closed the "Security Through Obscurity" gap by enforcing cryptographically verified passkey checks (`hash_equals`) on remote production environments. Any unauthenticated POST to `capture_prompt.php` on production is rejected with `HTTP 401 Unauthorized`.
+- **Clean Auth API (`Ripple.auth` / `Ripple.deauth`)** — Removed public hardcoded query parameters (`?ripple_dev=1`). Developers authenticate in the browser via `Ripple.auth('passkey')` or `?ripple_auth=PASSKEY` (which is immediately wiped from the address bar history via `history.replaceState` to prevent token leakage).
+- **Zero-Friction Localhost Experience** — Retained instant zero-authentication workflow on `localhost` and `127.0.0.1` development environments.
+
+---
+
 ## [v0.14.0] 2026-08-19 — Production Privacy Gating, Remote Prompt Queues & SPA Dwell Time Tracking
 
 ### Changes

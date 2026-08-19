@@ -4,14 +4,14 @@
  * ========================================================
  * Accepts POST requests from ripple-tracker.js containing UI-targeted prompts.
  * Writes a structured markdown note for AI agent ingestion:
- *   - Directly to local raw inbox (if running on local workstation)
- *   - Or to project's ./prompts/ queue (if running on remote production server)
+ *   - Directly to local raw inbox (if running on local development workstation)
+ *   - Or to project's ./prompts/ queue (if running on remote production server with valid passkey)
  */
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, X-Ripple-Auth');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -36,6 +36,28 @@ if (!is_array($data)) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'Invalid JSON']);
     exit;
+}
+
+// ── Authentication Gate for Remote Production ───────────────────────────────────
+$hooksPath = __DIR__ . '/ripple.hooks.php';
+if (file_exists($hooksPath)) {
+    require_once $hooksPath;
+}
+
+$isLocal = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']) ||
+           in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1']);
+
+// If on remote server, require developer passkey verification
+if (!$isLocal) {
+    $expectedKey = function_exists('ripple_dev_passkey') ? ripple_dev_passkey() : (getenv('RIPPLE_DEV_KEY') ?: null);
+    if ($expectedKey) {
+        $providedKey = $data['auth_key'] ?? ($_SERVER['HTTP_X_RIPPLE_AUTH'] ?? '');
+        if (empty($providedKey) || !hash_equals((string)$expectedKey, (string)$providedKey)) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'Unauthorized: Invalid or missing Ripple developer passkey.']);
+            exit;
+        }
+    }
 }
 
 $projectKey      = preg_replace('/[^a-zA-Z0-9_\-]/', '', $data['projectKey'] ?? 'default');
