@@ -303,7 +303,7 @@ def _sync_sessions_from_ftp(proj: dict, config: dict):
                     try: existing_prompts = json.loads(prompt_log_path.read_text(encoding="utf-8"))
                     except: existing_prompts = []
 
-                print(f"    📥 Found {len(remote_prompt_files)} new UI prompt(s) on production! Pulling to vault raw inbox...")
+                print(f"    [Prompts] Found {len(remote_prompt_files)} new UI prompt(s) on production! Pulling to inbox...")
                 for pfile in remote_prompt_files:
                     local_target = vault_raw / pfile
                     with open(local_target, "wb") as pf:
